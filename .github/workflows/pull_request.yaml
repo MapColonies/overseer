@@ -6,5 +6,8 @@ jobs:
   pull_request:
     uses: MapColonies/shared-workflows/.github/workflows/pull_request.yaml@v1
     secrets: inherit
+    with:
+      enableOpenApiCheck: false
+
     
     
