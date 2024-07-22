@@ -1,8 +1,8 @@
-# Map Colonies typescript service template
+# Map Colonies Overseer Worker Service
 
 ----------------------------------
 
-This is a basic repo template for building new MapColonies web services in Typescript.
+A worker service designed for geospatial data management. Overseer handles a series of complex workflows including initialization, merge, and finalization tasks for geospatial layers. Features include polling for initialization and finalization tasks, processing merge tasks (new, update, swap), and resilient error handling with capabilities to resume tasks post-failure. It integrates with various APIs like mapproxy-API and GeoServer-API to insert and update layers, and enhances WFS links. The service listens to an ingestion queue, intelligently decides task creation, and commits updates upon successful task completions, ensuring data integrity and seamless workflow execution.
 
 ### Template Features:
 
@@ -21,8 +21,6 @@ This is a basic repo template for building new MapColonies web services in Types
 - git hooks
 
 - logging by [@map-colonies/js-logger](https://github.com/MapColonies/js-logger)
-
-- OpenAPI request validation
 
 - config load with [node-config](https://www.npmjs.com/package/node-config)
 
@@ -47,9 +45,6 @@ This is a basic repo template for building new MapColonies web services in Types
 - lint
 
 - snyk
-
-## API
-Checkout the OpenAPI spec [here](/openapi3.yaml)
 
 ## Installation
 
