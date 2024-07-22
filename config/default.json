@@ -2,11 +2,21 @@
   "telemetry": {
     "logger": {
       "level": "info",
-      "prettyPrint": false
+      "prettyPrint": true
+    },
+    "tracing": {
+      "enabled": "true",
+      "url": "http://localhost:4318/v1/traces"
+    },
+    "metrics": {
+      "enabled": false,
+      "url": "http://localhost:4318/v1/metrics",
+      "interval": 5,
+      "buckets": [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500]
     }
   },
   "server": {
-    "port": "8080",
+    "port": "8083",
     "request": {
       "payload": {
         "limit": "1mb"
@@ -17,6 +27,22 @@
         "enabled": true,
         "options": null
       }
+    },
+    "httpRetry": {
+      "attempts": 5,
+      "delay": "exponential",
+      "shouldResetTimeout": true,
+      "disableHttpClientLogs": true
     }
+  },
+  "queue": {
+    "jobManagerBaseUrl": "http://localhost:8081",
+    "heartbeat": {
+      "baseUrl": "http://localhost:8083",
+      "intervalMs": 3000
+    },
+    "dequeueIntervalMs": 3000,
+    "jobTypes": ["Ingestion_New", "Ingestion_Update", "Ingestion_Swap_Update"],
+    "initTaskType": "init"
   }
 }

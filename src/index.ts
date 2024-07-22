@@ -3,15 +3,14 @@ import 'reflect-metadata';
 import { createServer } from 'http';
 import { createTerminus } from '@godaddy/terminus';
 import { Logger } from '@map-colonies/js-logger';
-import { container } from 'tsyringe';
 import config from 'config';
 import { DEFAULT_SERVER_PORT, SERVICES } from './common/constants';
-
 import { getApp } from './app';
+import { JobProcessor } from './services/jobProcessor';
 
 const port: number = config.get<number>('server.port') || DEFAULT_SERVER_PORT;
 
-const app = getApp();
+const [app, container] = getApp();
 
 const logger = container.resolve<Logger>(SERVICES.LOGGER);
 const stubHealthCheck = async (): Promise<void> => Promise.resolve();
@@ -20,4 +19,17 @@ const server = createTerminus(createServer(app), { healthChecks: { '/liveness': 
 
 server.listen(port, () => {
   logger.info(`app started on port ${port}`);
+});
+
+const jobProcessor = container.resolve(JobProcessor);
+
+async function mainLoop(): Promise<void> {
+  await jobProcessor.consumeAndProcess();
+}
+
+mainLoop().catch((error) => {
+  if (error instanceof Error) {
+    logger.error({ msg: 'error in main loop', error: error.message });
+  }
+  process.exit(1);
 });

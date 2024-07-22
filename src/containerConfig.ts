@@ -1,12 +1,16 @@
 import config from 'config';
 import { getOtelMixin } from '@map-colonies/telemetry';
 import { trace, metrics as OtelMetrics } from '@opentelemetry/api';
+import { instancePerContainerCachingFactory } from 'tsyringe';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import jsLogger, { LoggerOptions } from '@map-colonies/js-logger';
 import { Metrics } from '@map-colonies/telemetry';
-import { SERVICES, SERVICE_NAME } from './common/constants';
+import { JOB_TYPES, SERVICES, SERVICE_NAME } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
+import { NewLayerHandler } from './services/newLayerHandler';
+import { UpdateLayerHandler } from './services/updtaeLayerHandler';
+import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './services/jobHandlerFactory';
 
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
@@ -27,6 +31,9 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.LOGGER, provider: { useValue: logger } },
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
     { token: SERVICES.METER, provider: { useValue: OtelMetrics.getMeterProvider().getMeter(SERVICE_NAME) } },
+    { token: JOB_TYPES.Ingestion_New, provider: { useClass: NewLayerHandler } },
+    { token: JOB_TYPES.Ingestion_Update, provider: { useClass: UpdateLayerHandler } },
+    { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
     {
       token: 'onSignal',
       provider: {
