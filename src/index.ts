@@ -6,7 +6,7 @@ import { Logger } from '@map-colonies/js-logger';
 import config from 'config';
 import { DEFAULT_SERVER_PORT, SERVICES } from './common/constants';
 import { getApp } from './app';
-import { JobProcessor } from './services/jobProcessor';
+import { JobProcessor } from './models/jobProcessor';
 
 const port: number = config.get<number>('server.port') || DEFAULT_SERVER_PORT;
 
@@ -17,19 +17,19 @@ const stubHealthCheck = async (): Promise<void> => Promise.resolve();
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const server = createTerminus(createServer(app), { healthChecks: { '/liveness': stubHealthCheck, onSignal: container.resolve('onSignal') } });
 
-server.listen(port, () => {
-  logger.info(`app started on port ${port}`);
-});
-
 const jobProcessor = container.resolve(JobProcessor);
 
-async function mainLoop(): Promise<void> {
-  await jobProcessor.consumeAndProcess();
+async function startPolling(): Promise<void> {
+  await jobProcessor.start();
 }
 
-mainLoop().catch((error) => {
-  if (error instanceof Error) {
-    logger.error({ msg: 'error in main loop', error: error.message });
-  }
-  process.exit(1);
+server.listen(port, () => {
+  logger.info(`app started on port ${port}`);
+  startPolling().catch((error) => {
+    if (error instanceof Error) {
+      logger.error({ msg: 'error in main loop', error: error.message });
+    }
+    jobProcessor.stop();
+    process.exit(1);
+  });
 });

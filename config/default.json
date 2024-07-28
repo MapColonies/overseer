@@ -2,7 +2,7 @@
   "telemetry": {
     "logger": {
       "level": "info",
-      "prettyPrint": true
+      "prettyPrint": false
     },
     "tracing": {
       "enabled": "true",
@@ -16,7 +16,7 @@
     }
   },
   "server": {
-    "port": "8083",
+    "port": "8080",
     "request": {
       "payload": {
         "limit": "1mb"
@@ -35,14 +35,40 @@
       "disableHttpClientLogs": true
     }
   },
-  "queue": {
-    "jobManagerBaseUrl": "http://localhost:8081",
-    "heartbeat": {
-      "baseUrl": "http://localhost:8083",
-      "intervalMs": 3000
+  "jobManagement": {
+    "config": {
+      "jobManagerBaseUrl": "http://localhost:8081",
+      "heartbeat": {
+        "baseUrl": "http://localhost:8083",
+        "intervalMs": 3000
+      },
+      "dequeueIntervalMs": 3000
     },
-    "dequeueIntervalMs": 3000,
-    "jobTypes": ["Ingestion_New", "Ingestion_Update", "Ingestion_Swap_Update"],
-    "initTaskType": "init"
+    "ingestion": {
+      "init": {
+        "taskType": "init"
+      },
+      "jobs": {
+        "new": {
+          "type": "Ingestion_New",
+          "tasks": {
+            "splitTiles": "tilesSplitting",
+            "mergeTiles": "tilesMerging"
+          }
+        },
+        "update": {
+          "type": "Ingestion_Update",
+          "tasks": {
+            "mergeTiles": "tilesMerging"
+          }
+        },
+        "swapUpdate": {
+          "type": "Ingestion_Swap_Update",
+          "tasks": {
+            "swapTiles": "tilesSwapping"
+          }
+        }
+      }
+    }
   }
 }

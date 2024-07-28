@@ -1,17 +1,10 @@
 import { NewRasterLayer, UpdateRasterLayer } from '@map-colonies/mc-model-types';
 import { IJobResponse } from '@map-colonies/mc-priority-queue';
 
+//#region config interfaces
 export interface IConfig {
   get: <T>(setting: string) => T;
   has: (setting: string) => boolean;
-}
-
-export interface IQueueConfig {
-  jobManagerBaseUrl: string;
-  heartbeat: IHeartbeatConfig;
-  dequeueIntervalMs: number;
-  jobTypes: string[];
-  initTaskType: string;
 }
 
 export interface IHeartbeatConfig {
@@ -19,6 +12,35 @@ export interface IHeartbeatConfig {
   intervalMs: number;
 }
 
+export interface IJobManagerConfig {
+  jobManagerBaseUrl: string;
+  heartbeat: IHeartbeatConfig;
+  dequeueIntervalMs: number;
+}
+
+export interface ITaskConfig {
+  [key: string]: string;
+}
+
+export interface IJobConfig {
+  type: string;
+  tasks: ITaskConfig;
+}
+
+export interface IngestionJobsConfig {
+  [key: string]: IJobConfig | undefined;
+  new: IJobConfig | undefined;
+  update: IJobConfig | undefined;
+  swapUpdate: IJobConfig | undefined;
+}
+
+export interface IngestionConfig {
+  init: {
+    taskType: string;
+  };
+  jobs: IngestionJobsConfig;
+}
+//#endregion config interfaces
 export interface LogContext {
   fileName: string;
   class?: string;
@@ -35,5 +57,5 @@ export interface JobTypeMap {
 
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handle: (job: IJobResponse<any, any>) => Promise<void>;
+  handleJob: (job: IJobResponse<any, any>) => Promise<void>;
 }
