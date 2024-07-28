@@ -58,5 +58,17 @@ describe('configUtil', () => {
 
       expect(action).toThrow(MissingConfigError);
     });
+
+    it('should throw an error if one of the  job types is empty', () => {
+      const ingestionConfig = {
+        new: { type: '', tasks: {} },
+        update: { type: 'Ingestion_Update', tasks: {} },
+        swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
+      };
+
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
+
+      expect(action).toThrow(MissingConfigError);
+    });
   });
 });

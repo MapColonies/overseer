@@ -2,6 +2,10 @@
 import { IngestionJobsConfig } from '../common/interfaces';
 import { MissingConfigError } from '../common/errors';
 
+function isStringEmpty(str: string): boolean {
+  return typeof str === 'string' && str.trim().length === 0;
+}
+
 export const getAvailableJobTypes = (ingestionConfig: IngestionJobsConfig): string[] => {
   const jobTypes: string[] = [];
   for (const jobKey in ingestionConfig) {
@@ -18,19 +22,21 @@ export const getAvailableJobTypes = (ingestionConfig: IngestionJobsConfig): stri
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const validateAndGetHandlersTokens = (ingestionConfig: IngestionJobsConfig) => {
-  if (ingestionConfig.new?.type === undefined) {
+  const { new: newJob, update: updateJob, swapUpdate: swapUpdateJob } = ingestionConfig;
+
+  if (newJob?.type === undefined || isStringEmpty(newJob.type)) {
     throw new MissingConfigError('Missing "new-job" type configuration');
   }
-  if (ingestionConfig.update?.type === undefined) {
+  if (updateJob?.type === undefined || isStringEmpty(updateJob.type)) {
     throw new MissingConfigError('Missing "update-job" type configuration');
   }
-  if (ingestionConfig.swapUpdate?.type === undefined) {
+  if (swapUpdateJob?.type === undefined || isStringEmpty(swapUpdateJob.type)) {
     throw new MissingConfigError('Missing "swap-update-job" type configuration');
   }
 
   return {
-    Ingestion_New: ingestionConfig.new.type,
-    Ingestion_Update: ingestionConfig.update.type,
-    Ingestion_Swap_Update: ingestionConfig.swapUpdate.type,
+    Ingestion_New: newJob.type,
+    Ingestion_Update: updateJob.type,
+    Ingestion_Swap_Update: swapUpdateJob.type,
   } as const satisfies Record<string, string>;
 };
