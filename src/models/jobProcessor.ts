@@ -2,10 +2,9 @@ import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IJobResponse } from '@map-colonies/mc-priority-queue';
 import { getAvailableJobTypes } from '../utils/configUtil';
 import { SERVICES } from '../common/constants';
-import { IConfig, IngestionConfig, LogContext } from '../common/interfaces';
+import { IConfig, IngestionConfig, JobAndTaskType, LogContext } from '../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
@@ -64,7 +63,7 @@ export class JobProcessor {
     }
   }
 
-  private async processJob(jobAndTaskType: { job: IJobResponse<unknown, unknown>; taskType: string }): Promise<void> {
+  private async processJob(jobAndTaskType: JobAndTaskType): Promise<void> {
     const { job, taskType } = jobAndTaskType;
     const taskTypes = this.ingestionConfig.pollingTasks;
     const jobHandler = this.jobHandlerFactory(job.type);
@@ -79,7 +78,7 @@ export class JobProcessor {
     }
   }
 
-  private async getJobWithTaskType(): Promise<{ job: IJobResponse<unknown, unknown>; taskType: string } | undefined> {
+  private async getJobWithTaskType(): Promise<JobAndTaskType | undefined> {
     const logCtx: LogContext = { ...this.logContext, function: this.getJobWithTaskType.name };
     for (const taskType of this.pollingTaskTypes) {
       for (const jobType of this.jobTypes) {

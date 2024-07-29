@@ -1,4 +1,3 @@
-import { NewRasterLayer, UpdateRasterLayer } from '@map-colonies/mc-model-types';
 import { IJobResponse } from '@map-colonies/mc-priority-queue';
 
 //#region config interfaces
@@ -54,4 +53,9 @@ export interface IJobHandler {
   handleJobInit: (job: IJobResponse<any, any>) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleJobFinalize: (job: IJobResponse<any, any>) => Promise<void>;
+}
+
+export interface JobAndTaskType {
+  job: IJobResponse<unknown, unknown>;
+  taskType: string;
 }
