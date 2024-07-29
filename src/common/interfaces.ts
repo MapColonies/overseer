@@ -34,28 +34,24 @@ export interface IngestionJobsConfig {
   swapUpdate: IJobConfig | undefined;
 }
 
+export interface IPollingTasks {
+  init: string;
+  finalize: string;
+}
+
 export interface IngestionConfig {
-  init: {
-    taskType: string;
-  };
+  pollingTasks: IPollingTasks;
   jobs: IngestionJobsConfig;
 }
-//#endregion config interfaces
+//#endregion config
 export interface LogContext {
   fileName: string;
   class?: string;
   function?: string;
 }
-
-/* eslint-disable @typescript-eslint/naming-convention */
-export interface JobTypeMap {
-  Ingestion_New: NewRasterLayer;
-  Ingestion_Update: UpdateRasterLayer;
-  Ingestion_Swap_Update: UpdateRasterLayer;
-}
-/* eslint-disable @typescript-eslint/naming-convention */
-
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJob: (job: IJobResponse<any, any>) => Promise<void>;
+  handleJobInit: (job: IJobResponse<any, any>) => Promise<void>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handleJobFinalize: (job: IJobResponse<any, any>) => Promise<void>;
 }

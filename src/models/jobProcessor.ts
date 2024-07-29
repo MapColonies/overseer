@@ -12,8 +12,9 @@ import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFacto
 export class JobProcessor {
   private readonly logContext: LogContext;
   private readonly jobTypes: string[];
-  private readonly initTaskType: string;
+  private readonly pollingTaskTypes: string[];
   private readonly dequeueIntervalMs: number;
+  private readonly ingestionConfig: IngestionConfig;
   private isRunning = true;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
@@ -22,10 +23,10 @@ export class JobProcessor {
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
-    const { jobs, init } = this.config.get<IngestionConfig>('jobManagement.ingestion');
+    this.ingestionConfig = this.config.get<IngestionConfig>('jobManagement.ingestion');
+    const { jobs, pollingTasks } = this.ingestionConfig;
     this.jobTypes = getAvailableJobTypes(jobs);
-    this.initTaskType = init.taskType;
-
+    this.pollingTaskTypes = [pollingTasks.init, pollingTasks.finalize];
     this.logContext = {
       fileName: __filename,
       class: JobProcessor.name,
@@ -49,35 +50,50 @@ export class JobProcessor {
   private async consumeAndProcess(): Promise<void> {
     const logCtx: LogContext = { ...this.logContext, function: this.consumeAndProcess.name };
     try {
-      const job = await this.getJob();
+      const jobAndTaskType = await this.getJobWithTaskType();
 
-      if (!job) {
+      if (!jobAndTaskType) {
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
 
-      const jobHandler = this.jobHandlerFactory(job.type);
-      await jobHandler.handleJob(job);
+      await this.processJob(jobAndTaskType);
     } catch (error) {
       this.logger.error({ msg: 'Failed processing the job', error, logContext: logCtx });
       await setTimeoutPromise(this.dequeueIntervalMs);
     }
   }
 
-  private async getJob(): Promise<IJobResponse<unknown, unknown> | undefined> {
-    const logCtx: LogContext = { ...this.logContext, function: this.getJob.name };
-    for (const jobType of this.jobTypes) {
-      this.logger.debug({ msg: `try to dequeue task of type "${this.initTaskType}" and job of type "${jobType}"`, logContext: logCtx });
-      const task = await this.queueClient.dequeue(jobType, this.initTaskType);
+  private async processJob(jobAndTaskType: { job: IJobResponse<unknown, unknown>; taskType: string }): Promise<void> {
+    const { job, taskType } = jobAndTaskType;
+    const taskTypes = this.ingestionConfig.pollingTasks;
+    const jobHandler = this.jobHandlerFactory(job.type);
 
-      if (!task) {
-        continue;
+    switch (taskType) {
+      case taskTypes.init:
+        await jobHandler.handleJobInit(job);
+        break;
+      case taskTypes.finalize:
+        await jobHandler.handleJobFinalize(job);
+        break;
+    }
+  }
+
+  private async getJobWithTaskType(): Promise<{ job: IJobResponse<unknown, unknown>; taskType: string } | undefined> {
+    const logCtx: LogContext = { ...this.logContext, function: this.getJobWithTaskType.name };
+    for (const taskType of this.pollingTaskTypes) {
+      for (const jobType of this.jobTypes) {
+        this.logger.debug({ msg: `try to dequeue task of type "${taskType}" and job of type "${jobType}"`, logContext: logCtx });
+        const task = await this.queueClient.dequeue(jobType, taskType);
+
+        if (!task) {
+          continue;
+        }
+        this.logger.info({ msg: `dequeued task ${task.id}`, metadata: task, logContext: this.logContext });
+        const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
+        this.logger.info({ msg: `got job ${job.id}`, metadata: job, logContext: this.logContext });
+        return { job, taskType: task.type };
       }
-
-      this.logger.info({ msg: `dequeued task ${task.id}`, metadata: task, logContext: this.logContext });
-      const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
-      this.logger.info({ msg: `got job ${job.id}`, metadata: job, logContext: this.logContext });
-      return job;
     }
   }
 }

@@ -27,7 +27,7 @@ server.listen(port, () => {
   logger.info(`app started on port ${port}`);
   startPolling().catch((error) => {
     if (error instanceof Error) {
-      logger.error({ msg: 'error in main loop', error: error.message });
+      logger.fatal({ msg: 'error in main loop', error: error.message });
     }
     jobProcessor.stop();
     process.exit(1);

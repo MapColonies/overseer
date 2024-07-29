@@ -1,5 +1,5 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { Logger } from '@map-colonies/js-logger';
+import jsLogger from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { JobProcessor } from '../../../src/models/jobProcessor';
 import { JobHandlerFactory } from '../../../src/models/jobHandlerFactory';
@@ -17,11 +17,7 @@ export interface JobProcessorTestContext {
 }
 
 export function setupJobProcessorTest(): JobProcessorTestContext {
-  const mockLogger = {
-    info: jest.fn(),
-    fatal: jest.fn(),
-    debug: jest.fn(),
-  } as unknown as jest.Mocked<Logger>;
+  const mockLogger = jsLogger({ enabled: false });
 
   const mockJobHandlerFactory = jest.fn();
 
