@@ -81,9 +81,9 @@ const registerDefaultConfig = (): void => {
     },
     jobManagement: {
       config: {
-        jobManagerBaseUrl: 'http://localhost:8081',
+        jobManagerBaseUrl: 'http://job-manager',
         heartbeat: {
-          baseUrl: 'http://localhost:8083',
+          baseUrl: 'http://heart-beat',
           intervalMs: 3000,
         },
         dequeueIntervalMs: 3000,

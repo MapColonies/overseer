@@ -1,4 +1,4 @@
-import { ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { registerDefaultConfig } from '../mocks/configMock';
 import { ingestionNewJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import {
@@ -106,7 +106,7 @@ describe('JobProcessor', () => {
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
       };
       mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
-      mockGetJob.mockResolvedValueOnce(job);
+      mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       mockJobHandlerFactory.mockReturnValueOnce(mockHandler);
 
       const processPromise = jobProcessor.start();
@@ -129,7 +129,7 @@ describe('JobProcessor', () => {
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
       };
       mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
-      mockGetJob.mockResolvedValueOnce(job);
+      mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       mockJobHandlerFactory.mockReturnValueOnce(mockHandler);
 
       const processPromise = jobProcessor.start();
