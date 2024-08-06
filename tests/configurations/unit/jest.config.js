@@ -14,6 +14,11 @@ module.exports = {
     '!**/routes/**',
     '!<rootDir>/src/*',
   ],
+  modulePathIgnorePatterns: [
+    '<rootDir>/src/models/newJobHandler.ts',
+    '<rootDir>/src/models/swapJobHandler.ts',
+    '<rootDir>/src/models/updateJobHandler.ts',
+  ],
   coverageDirectory: '<rootDir>/coverage',
   reporters: [
     'default',
@@ -25,10 +30,10 @@ module.exports = {
   testEnvironment: 'node',
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 0,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: -10,
     },
   },
 };

@@ -1,16 +1,16 @@
 import jsLogger from '@map-colonies/js-logger';
 import { container, instancePerContainerCachingFactory } from 'tsyringe';
 import { trace } from '@opentelemetry/api';
-import { InjectionObject } from '../../../src/common/dependencyRegistration';
-import { configMock, getMock, hasMock, registerDefaultConfig } from '../../unit/mocks/configMock';
-import { IngestionJobsConfig } from '../../../src/common/interfaces';
-import { validateAndGetHandlersTokens } from '../../../src/utils/configUtil';
-import { SERVICES } from '../../../src/common/constants';
-import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from '../../../src/models/jobHandlerFactory';
-import { queueClientFactory } from '../../../src/containerConfig';
-import { NewJobHandler } from '../../../src/models/newJobHandler';
-import { UpdateJobHandler } from '../../../src/models/updateJobHandler';
-import { SwapJobHandler } from '../../../src/models/swapJobHandler';
+import { InjectionObject } from '../../src/common/dependencyRegistration';
+import { configMock, getMock, hasMock, registerDefaultConfig } from '../unit/mocks/configMock';
+import { SERVICES } from '../../src/common/constants';
+import { queueClientFactory } from '../../src/containerConfig';
+import { IngestionJobsConfig } from '../../src/common/interfaces';
+import { validateAndGetHandlersTokens } from '../../src/utils/configUtil';
+import { NewJobHandler } from '../../src/models/newJobHandler';
+import { UpdateJobHandler } from '../../src/models/updateJobHandler';
+import { SwapJobHandler } from '../../src/models/swapJobHandler';
+import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from '../../src/models/jobHandlerFactory';
 
 function getTestContainerConfig(): InjectionObject<unknown>[] {
   registerDefaultConfig();
