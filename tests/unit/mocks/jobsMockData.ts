@@ -1,8 +1,9 @@
-import { ProductType, Transparency } from '@map-colonies/mc-model-types';
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
+import { NewRasterLayer, ProductType, Transparency, UpdateRasterLayer } from '@map-colonies/mc-model-types';
+import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { PolygonPart } from '@map-colonies/mc-model-types';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-const partData = [
+const partData: PolygonPart[] = [
   {
     id: 'avi',
     name: 'string',
@@ -24,14 +25,14 @@ const partData = [
     description: 'string',
     resolutionMeter: 8000,
     resolutionDegree: 0.703125,
-    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z',
-    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z',
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     sourceResolutionMeter: 8000,
     horizontalAccuracyCE90: 10,
   },
 ];
 
-export const ingestionNewJob = {
+export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
   id: 'de57d743-3155-4a28-86c8-9c181faabd94',
   resourceId: 'some-product-id',
   version: '1.0',
@@ -64,7 +65,7 @@ export const ingestionNewJob = {
   domain: 'RASTER',
   isCleaned: false,
   priority: 1000,
-  expirationDate: '2024-07-21T10:59:23.510Z',
+  expirationDate: '2024-07-21T10:59:23.510Z' as unknown as Date,
   internalId: 'some-internal-id',
   producerName: 'string',
   productName: 'akProduct',
@@ -81,7 +82,7 @@ export const ingestionNewJob = {
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionUpdateJob = {
+export const ingestionUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {
   id: 'd027b3aa-272b-4dc9-91d7-ba8343af5ed1',
   resourceId: 'another-product-id',
   version: '1.0',
@@ -103,7 +104,7 @@ export const ingestionUpdateJob = {
   domain: 'RASTER',
   isCleaned: false,
   priority: 1000,
-  expirationDate: '2024-07-21T10:59:23.510Z',
+  expirationDate: '2024-07-21T10:59:23.510Z' as unknown as Date,
   internalId: '2024-07-21T10:59:23.510Z',
   producerName: 'string',
   productName: 'akProduct',
@@ -120,7 +121,7 @@ export const ingestionUpdateJob = {
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionSwapUpdateJob = {
+export const ingestionSwapUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {
   id: 'c023b3ba-272b-4dc9-92d7-ba8343af5ed9',
   resourceId: 'another-product-id',
   version: '1.0',
@@ -142,7 +143,7 @@ export const ingestionSwapUpdateJob = {
   domain: 'RASTER',
   isCleaned: false,
   priority: 1000,
-  expirationDate: '2024-07-21T10:59:23.510Z',
+  expirationDate: '2024-07-21T10:59:23.510Z' as unknown as Date,
   internalId: 'some-internal-id',
   producerName: 'string',
   productName: 'akProduct',

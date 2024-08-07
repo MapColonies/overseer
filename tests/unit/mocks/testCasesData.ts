@@ -1,3 +1,4 @@
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { ingestionNewJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import {
   finalizeTaskForIngestionNew,
@@ -5,9 +6,17 @@ import {
   finalizeTaskForIngestionUpdate,
   initTaskForIngestionNew,
   initTaskForIngestionUpdate,
+  IPollingTaskParameters,
 } from '../mocks/tasksMockData';
 
-export const initTestCases = [
+interface IngestionTestCase {
+  jobType: string;
+  taskType: string;
+  job: IJobResponse<unknown, unknown>;
+  task: ITaskResponse<IPollingTaskParameters>;
+}
+
+export const initTestCases: IngestionTestCase[] = [
   {
     jobType: ingestionNewJob.type,
     taskType: initTaskForIngestionNew.type,
