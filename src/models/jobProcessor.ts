@@ -36,7 +36,7 @@ export class JobProcessor {
     const logCtx: LogContext = { ...this.logContext, function: this.start.name };
     this.logger.info({ msg: 'starting polling', logContext: logCtx });
     while (this.isRunning) {
-      await this.consumeAndProcess();
+      await Promise.all([this.jobByTaskTypePolling(), this.jobStatusPolling()]);
     }
   }
 
@@ -46,8 +46,16 @@ export class JobProcessor {
     this.isRunning = false;
   }
 
-  private async consumeAndProcess(): Promise<void> {
-    const logCtx: LogContext = { ...this.logContext, function: this.consumeAndProcess.name };
+  public async jobStatusPolling(): Promise<void> {
+    try {
+      await Promise.reject('not implemented');
+    } catch (error) {
+      this.logger.error({ msg: 'not implemented', error });
+    }
+  }
+
+  private async jobByTaskTypePolling(): Promise<void> {
+    const logCtx: LogContext = { ...this.logContext, function: this.jobByTaskTypePolling.name };
     try {
       const jobAndTaskType = await this.getJobWithTaskType();
 

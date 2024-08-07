@@ -51,7 +51,7 @@ describe('JobProcessor', () => {
     });
   });
 
-  describe('consumeAndProcess', () => {
+  describe('jobByTaskTypePolling', () => {
     test.each(initTestCases)('should process job of type $jobType and init task successfully', async ({ job, task }) => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
