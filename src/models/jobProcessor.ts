@@ -9,10 +9,10 @@ import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFacto
 
 @injectable()
 export class JobProcessor {
+  private readonly dequeueIntervalMs: number;
   private readonly logContext: LogContext;
   private readonly jobTypes: string[];
   private readonly pollingTaskTypes: string[];
-  private readonly dequeueIntervalMs: number;
   private readonly ingestionConfig: IngestionConfig;
   private isRunning = true;
   public constructor(
@@ -82,7 +82,7 @@ export class JobProcessor {
     const logCtx: LogContext = { ...this.logContext, function: this.getJobWithTaskType.name };
     for (const taskType of this.pollingTaskTypes) {
       for (const jobType of this.jobTypes) {
-        this.logger.debug({ msg: `try to dequeue task of type "${taskType}" and job of type "${jobType}"`, logContext: logCtx });
+        this.logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"`, logContext: logCtx });
         const task = await this.queueClient.dequeue(jobType, taskType);
 
         if (!task) {

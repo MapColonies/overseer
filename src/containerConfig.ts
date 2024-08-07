@@ -18,7 +18,7 @@ import { validateAndGetHandlersTokens } from './utils/configUtil';
 import { SwapJobHandler } from './models/swapJobHandler';
 import { IConfig, IJobManagerConfig, IngestionJobsConfig } from './common/interfaces';
 
-const queueClientFactory = (container: DependencyContainer): QueueClient => {
+export const queueClientFactory = (container: DependencyContainer): QueueClient => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
   const config = container.resolve<IConfig>(SERVICES.CONFIG);
   const queueConfig = config.get<IJobManagerConfig>('jobManagement.config');
