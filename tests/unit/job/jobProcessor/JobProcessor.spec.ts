@@ -1,8 +1,8 @@
 import nock from 'nock';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { registerDefaultConfig } from '../mocks/configMock';
-import { IJobHandler, IngestionConfig } from '../../../src/common/interfaces';
-import { finalizeTestCases, initTestCases } from '../mocks/testCasesData';
+import { registerDefaultConfig } from '../../mocks/configMock';
+import { IJobHandler, IngestionConfig } from '../../../../src/common/interfaces';
+import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
 import { JobProcessorTestContext, setupJobProcessorTest } from './jobProcessorSetup';
 
 jest.mock('timers/promises', () => ({
@@ -54,14 +54,16 @@ describe('JobProcessor', () => {
   describe('consumeAndProcess', () => {
     test.each(initTestCases)('should process job of type $jobType and init task successfully', async ({ job, task }) => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
-      const { jobProcessor, mockDequeue, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
+      const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
 
       const mockHandler: jest.Mocked<IJobHandler> = {
         handleJobInit: jest.fn().mockResolvedValue(undefined),
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
       };
+
       mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockUpdateJob.mockResolvedValueOnce(undefined);
       mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       mockJobHandlerFactory.mockReturnValueOnce(mockHandler);
 
@@ -73,12 +75,12 @@ describe('JobProcessor', () => {
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
-      expect(mockHandler.handleJobInit).toHaveBeenCalledWith(job);
+      expect(mockHandler.handleJobInit).toHaveBeenCalledWith(job, task.id);
     });
 
     test.each(finalizeTestCases)('should process job of type $jobType and finalize task successfully', async ({ job, task }) => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
-      const { jobProcessor, mockDequeue, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
+      const { jobProcessor, mockDequeue, mockGetJob, mockJobHandlerFactory, configMock, mockUpdateJob } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
 
       const mockHandler: jest.Mocked<IJobHandler> = {
@@ -86,6 +88,7 @@ describe('JobProcessor', () => {
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
       };
       mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockUpdateJob.mockResolvedValueOnce(undefined);
       mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       mockJobHandlerFactory.mockReturnValueOnce(mockHandler);
 
@@ -97,11 +100,11 @@ describe('JobProcessor', () => {
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
-      expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job);
+      expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job, task.id);
     });
   });
 
-  describe('getJobWithTaskType', () => {
+  describe('getJobWithPhaseTask', () => {
     test.each([...initTestCases, ...finalizeTestCases])(
       'dequeue $taskType task and get $jobType job with corresponding taskType',
       async ({ jobType, taskType, job, task }) => {
@@ -113,6 +116,7 @@ describe('JobProcessor', () => {
         const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
         const heartbeatBaseUrl = configMock.get<string>('jobManagement.config.heartbeat.baseUrl');
         const consumeTaskUrl = `/tasks/${jobType}/${taskType}/startPending`;
+        const updateJobUrl = `/jobs/${task.jobId}`;
         const misMatchRegex = /^\/tasks\/[^/]+\/[^/]+\/startPending$/;
 
         nock.emitter.on('no match', () => {
@@ -123,6 +127,9 @@ describe('JobProcessor', () => {
           .post(consumeTaskUrl)
           .reply(200, { ...task })
           .persist()
+          .put(updateJobUrl)
+          .reply(200)
+          .persist()
           .get(`/jobs/${task.jobId}?shouldReturnTasks=false`)
           .reply(200, { ...job })
           .persist();
@@ -132,11 +139,11 @@ describe('JobProcessor', () => {
         const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
         const getJobSpy = jest.spyOn(queueClient.jobManagerClient, 'getJob');
 
-        const jobAndTaskType = await jobProcessor['getJobWithTaskType']();
+        const jobAndTaskType = await jobProcessor['getJobWithPhaseTask']();
 
         expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
         expect(getJobSpy).toHaveBeenCalledWith(task.jobId);
-        expect(jobAndTaskType?.taskType).toEqual(taskType);
+        expect(jobAndTaskType?.task.type).toEqual(taskType);
         expect(jobAndTaskType?.job).toEqual(job);
 
         await queueClient.heartbeatClient.stop(task.id);

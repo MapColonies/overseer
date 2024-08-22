@@ -97,7 +97,6 @@ const registerDefaultConfig = (): void => {
           new: {
             type: 'Ingestion_New',
             tasks: {
-              splitTiles: 'tilesSplitting',
               mergeTiles: 'tilesMerging',
             },
           },
@@ -112,6 +111,18 @@ const registerDefaultConfig = (): void => {
             tasks: {
               swapTiles: 'tilesSwapping',
             },
+          },
+        },
+        tasks: {
+          tilesMerging: {
+            type: 'tilesMerging',
+            tileBatchSize: 10000,
+            taskBatchSize: 2,
+          },
+          tilesSwapping: {
+            type: 'tilesSwapping',
+            maxRetries: 3,
+            retryDelay: 1000,
           },
         },
       },

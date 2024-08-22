@@ -1,4 +1,8 @@
-import { IJobResponse } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
+import { TilesMimeFormat } from '@map-colonies/types';
+import { BBox, GeoJSON } from 'geojson';
+import { Footprint, ITileRange } from '@map-colonies/mc-utils';
 
 //#region config interfaces
 export interface IConfig {
@@ -50,12 +54,81 @@ export interface LogContext {
 }
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobInit: (job: IJobResponse<any, any>) => Promise<void>;
+  handleJobInit: (job: IJobResponse<any, any>, task: string) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobFinalize: (job: IJobResponse<any, any>) => Promise<void>;
+  handleJobFinalize: (job: IJobResponse<any, any>, task: string) => Promise<void>;
 }
 
-export interface JobAndTaskType {
+export interface JobAndPhaseTask {
   job: IJobResponse<unknown, unknown>;
-  taskType: string;
+  task: ITaskResponse<unknown>;
+}
+
+export interface OverseerNewRasterLayerMetadata extends NewRasterLayerMetadata {
+  id: string;
+  displayPath: string;
+  layerRelativePath: string;
+  tileOutputFormat: TileOutputFormat;
+  tileMimeType: TilesMimeFormat | undefined;
+  grid: Grid;
+}
+
+export interface MergeTilesTaskParams {
+  inputFiles: InputFiles;
+  taskMetadata: MergeTilesMetadata;
+  partData: PolygonPart[];
+}
+
+export interface MergeTilesMetadata {
+  layerRelativePath: string;
+  tileOutputFormat: TileOutputFormat;
+  isNewTarget: boolean;
+  grid: Grid;
+}
+
+export enum Grid {
+  TWO_ON_ONE = '2x1',
+}
+//#region task
+export interface ILayerMergeData {
+  fileName: string;
+  tilesPath: string;
+  footprint?: GeoJSON;
+  extent: BBox;
+}
+
+export interface IMergeParameters {
+  layers: ILayerMergeData[];
+  destPath: string;
+  maxZoom: number;
+  grid: Grid;
+  targetFormat: TileOutputFormat;
+  isNewTarget: boolean;
+}
+
+export interface IMergeSources {
+  type: string;
+  path: string;
+  grid?: Grid;
+  extent?: IBBox;
+}
+
+export interface IMergeTaskParameters {
+  targetFormat: TileOutputFormat;
+  isNewTarget: boolean;
+  sources: IMergeSources[];
+  batches: ITileRange[];
+}
+
+export interface IMergeOverlaps {
+  layers: ILayerMergeData[];
+  intersection: Footprint;
+}
+//#endregion task
+
+export interface IBBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
 }

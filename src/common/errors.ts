@@ -11,3 +11,10 @@ export class JobHandlerNotFoundError extends Error {
     this.name = JobHandlerNotFoundError.name;
   }
 }
+
+export class UnsupportedTransparencyError extends Error {
+  public constructor(transparency: string) {
+    super(`unsupported transparency value: ${transparency}`);
+    this.name = UnsupportedTransparencyError.name;
+  }
+}

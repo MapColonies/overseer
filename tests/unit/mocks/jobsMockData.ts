@@ -3,7 +3,7 @@ import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 import { PolygonPart } from '@map-colonies/mc-model-types';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-const partData: PolygonPart[] = [
+export const partData: PolygonPart[] = [
   {
     id: 'avi',
     name: 'string',
@@ -24,7 +24,55 @@ const partData: PolygonPart[] = [
     countries: ['string'],
     description: 'string',
     resolutionMeter: 8000,
-    resolutionDegree: 0.703125,
+    resolutionDegree: 0.0439453125,
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    sourceResolutionMeter: 8000,
+    horizontalAccuracyCE90: 10,
+  },
+];
+
+export const multiPartData: PolygonPart[] = [
+  { ...partData[0] },
+  {
+    id: 'avi',
+    name: 'string',
+    cities: ['string'],
+    sensors: ['string'],
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [37.85149443279957, 30.30543192283443],
+          [37.85149443279957, 30.29430955805424],
+          [37.86824157112912, 30.29430955805424],
+          [37.86824157112912, 30.30543192283443],
+          [37.85149443279957, 30.30543192283443],
+        ],
+      ],
+    } as unknown as GeoJSON.Polygon,
+    countries: ['string'],
+    description: 'string',
+    resolutionMeter: 8000,
+    resolutionDegree: 0.0439453125,
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    sourceResolutionMeter: 8000,
+    horizontalAccuracyCE90: 10,
+  },
+];
+
+export const partDataWithoutFootPrint: PolygonPart[] = [
+  {
+    id: 'avi',
+    name: 'string',
+    cities: ['string'],
+    sensors: ['string'],
+    geometry: undefined,
+    countries: ['string'],
+    description: 'string',
+    resolutionMeter: 8000,
+    resolutionDegree: 0.0439453125,
     imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     sourceResolutionMeter: 8000,

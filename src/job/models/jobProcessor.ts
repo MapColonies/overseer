@@ -1,10 +1,10 @@
 import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { getAvailableJobTypes } from '../utils/configUtil';
-import { SERVICES } from '../common/constants';
-import { IConfig, IngestionConfig, JobAndTaskType, LogContext } from '../common/interfaces';
+import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getAvailableJobTypes } from '../../utils/configUtil';
+import { SERVICES } from '../../common/constants';
+import { IConfig, IngestionConfig, JobAndPhaseTask, LogContext } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
@@ -49,7 +49,7 @@ export class JobProcessor {
   private async consumeAndProcess(): Promise<void> {
     const logCtx: LogContext = { ...this.logContext, function: this.consumeAndProcess.name };
     try {
-      const jobAndTaskType = await this.getJobWithTaskType();
+      const jobAndTaskType = await this.getJobWithPhaseTask();
 
       if (!jobAndTaskType) {
         await setTimeoutPromise(this.dequeueIntervalMs);
@@ -63,35 +63,35 @@ export class JobProcessor {
     }
   }
 
-  private async processJob(jobAndTaskType: JobAndTaskType): Promise<void> {
-    const { job, taskType } = jobAndTaskType;
+  private async processJob(jobAndTaskType: JobAndPhaseTask): Promise<void> {
+    const { job, task } = jobAndTaskType;
     const taskTypes = this.ingestionConfig.pollingTasks;
     const jobHandler = this.jobHandlerFactory(job.type);
 
-    switch (taskType) {
+    switch (task.type) {
       case taskTypes.init:
-        await jobHandler.handleJobInit(job);
+        await jobHandler.handleJobInit(job, task.id);
         break;
       case taskTypes.finalize:
-        await jobHandler.handleJobFinalize(job);
+        await jobHandler.handleJobFinalize(job, task.id);
         break;
     }
   }
 
-  private async getJobWithTaskType(): Promise<JobAndTaskType | undefined> {
-    const logCtx: LogContext = { ...this.logContext, function: this.getJobWithTaskType.name };
+  private async getJobWithPhaseTask(): Promise<JobAndPhaseTask | undefined> {
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJobWithPhaseTask.name } });
     for (const taskType of this.pollingTaskTypes) {
       for (const jobType of this.jobTypes) {
-        this.logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"`, logContext: logCtx });
+        logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
         const task = await this.queueClient.dequeue(jobType, taskType);
-
         if (!task) {
           continue;
         }
-        this.logger.info({ msg: `dequeued task ${task.id}`, metadata: task, logContext: this.logContext });
+        await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.IN_PROGRESS });
+        logger.info({ msg: `dequeued task ${task.id}`, metadata: task });
         const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
-        this.logger.info({ msg: `got job ${job.id}`, metadata: job, logContext: this.logContext });
-        return { job, taskType: task.type };
+        logger.info({ msg: `got job ${job.id}`, metadata: job });
+        return { job, task };
       }
     }
   }

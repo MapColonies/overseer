@@ -15,9 +15,9 @@ module.exports = {
     '!<rootDir>/src/*',
   ],
   modulePathIgnorePatterns: [
-    '<rootDir>/src/models/newJobHandler.ts',
-    '<rootDir>/src/models/swapJobHandler.ts',
-    '<rootDir>/src/models/updateJobHandler.ts',
+    '<rootDir>/src/job/models/newJobHandler.ts',
+    '<rootDir>/src/job/models/swapJobHandler.ts',
+    '<rootDir>/src/job/models/updateJobHandler.ts',
   ],
   coverageDirectory: '<rootDir>/coverage',
   reporters: [

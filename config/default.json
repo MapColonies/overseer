@@ -35,6 +35,7 @@
       "disableHttpClientLogs": true
     }
   },
+  "mapServerCacheType": "FS",
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "http://localhost:8081",
