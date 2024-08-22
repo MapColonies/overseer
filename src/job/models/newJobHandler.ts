@@ -64,8 +64,8 @@ export class NewJobHandler implements IJobHandler {
   }
 
   public async handleJobFinalize(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
-    const logCtx: LogContext = { ...this.logContext, function: this.handleJobFinalize.name };
-    this.logger.info({ msg: `handling ${job.type} job with "finalize"`, metadata: { job }, logContext: logCtx });
+    const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobFinalize.name } });
+    logger.info({ msg: `handling ${job.type} job with "finalize"`, metadata: { job } });
     await Promise.reject('not implemented');
   }
 

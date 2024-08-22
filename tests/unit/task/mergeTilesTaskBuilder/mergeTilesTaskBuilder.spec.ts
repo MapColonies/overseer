@@ -3,7 +3,6 @@ import nock from 'nock';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { multiPartData, partData, partDataWithoutFootPrint } from '../../mocks/jobsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
-import { MergeTilesTaskBuilder } from '../../../../src/task/models/mergeTilesTaskBuilder';
 import { Grid, IMergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './mergeTilesTaskBuilderSetup';
 

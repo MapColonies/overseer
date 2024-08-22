@@ -12,8 +12,6 @@ export type MockUpdateJob = jest.MockedFunction<(jobId: string, update: Record<s
 
 export interface MergeTilesTaskBuilderContext {
   mergeTilesTaskBuilder: MergeTilesTaskBuilder;
-  configMock: typeof configMock;
-  queueClient: QueueClient;
 }
 
 export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): MergeTilesTaskBuilderContext {
@@ -45,7 +43,5 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   const mergeTilesTaskBuilder = new MergeTilesTaskBuilder(mockLogger, configMock, new TileRanger(), queueClient);
   return {
     mergeTilesTaskBuilder,
-    configMock,
-    queueClient,
   };
 }
