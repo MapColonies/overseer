@@ -70,16 +70,16 @@ export class NewJobHandler implements IJobHandler {
   }
 
   private readonly mapToOverseerNewLayerMetadata = (metadata: NewRasterLayerMetadata): OverseerNewRasterLayerMetadata => {
-    const id = randomUUID();
+    const catalogId = randomUUID();
     const displayPath = randomUUID();
-    const layerRelativePath = `${id}/${displayPath}`;
+    const layerRelativePath = `${catalogId}/${displayPath}`;
     const tileOutputFormat = getTileOutputFormat(metadata.transparency);
     const tileMimeType = mimeLookup(tileOutputFormat) as TilesMimeFormat;
     const grid = Grid.TWO_ON_ONE;
 
     return {
       ...metadata,
-      id,
+      catalogId,
       displayPath,
       layerRelativePath,
       tileOutputFormat,

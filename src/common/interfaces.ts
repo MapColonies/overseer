@@ -65,7 +65,7 @@ export interface JobAndPhaseTask {
 }
 
 export interface OverseerNewRasterLayerMetadata extends NewRasterLayerMetadata {
-  id: string;
+  catalogId: string;
   displayPath: string;
   layerRelativePath: string;
   tileOutputFormat: TileOutputFormat;
