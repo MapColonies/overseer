@@ -25,8 +25,8 @@ export class NewJobHandler implements IJobHandler {
   }
 
   public async handleJobInit(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobInit.name } });
     try {
-      const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobInit.name } });
       logger.info({ msg: `Handling ${job.type} job with "init" task`, metadata: { job } });
 
       const { inputFiles, metadata, partData } = job.parameters;
@@ -57,7 +57,7 @@ export class NewJobHandler implements IJobHandler {
       logger.info({ msg: 'Job init completed successfully' });
     } catch (err) {
       if (err instanceof Error) {
-        this.logger.error({ msg: 'Failed to handle job init', error: err, logContext: { ...this.logContext, function: this.handleJobInit.name } });
+        logger.error({ msg: 'Failed to handle job init', error: err, logContext: { ...this.logContext, function: this.handleJobInit.name } });
         await this.queueClient.reject(job.id, taskId, true, err.message);
       }
     }
