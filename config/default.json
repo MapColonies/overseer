@@ -70,6 +70,19 @@
             "swapTiles": "tilesSwapping"
           }
         }
+      },
+      "tasks": {
+        "tilesMerging": {
+          "type": "tilesMerging",
+          "tileBatchSize": 10000,
+          "taskBatchSize": 5,
+          "useNewTargetFlagInUpdate": true
+        },
+        "tilesSwapping": {
+          "type": "tilesSwapping",
+          "maxRetries": 3,
+          "retryDelay": 1000
+        }
       }
     }
   }
