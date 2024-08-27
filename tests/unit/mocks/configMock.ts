@@ -89,6 +89,7 @@ const registerDefaultConfig = (): void => {
         dequeueIntervalMs: 3000,
       },
       ingestion: {
+        taskMaxTaskAttempts: 3,
         pollingTasks: {
           init: 'init',
           finalize: 'finalize',

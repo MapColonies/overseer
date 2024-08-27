@@ -46,7 +46,7 @@
       "dequeueIntervalMs": 3000
     },
     "ingestion": {
-      "maxTaskAttempts": 3,
+      "taskMaxTaskAttempts": 3,
       "pollingTasks": {
         "init": "init",
         "finalize": "finalize"

@@ -45,7 +45,7 @@ export interface IPollingTasks {
 export interface IngestionConfig {
   pollingTasks: IPollingTasks;
   jobs: IngestionJobsConfig;
-  maxTaskAttempts: number;
+  taskMaxTaskAttempts: number;
 }
 //#endregion config
 export interface LogContext {

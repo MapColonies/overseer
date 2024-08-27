@@ -94,7 +94,7 @@ export class JobProcessor {
           logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
           continue;
         }
-        if (task.attempts === this.ingestionConfig.maxTaskAttempts) {
+        if (task.attempts === this.ingestionConfig.taskMaxTaskAttempts) {
           logger.warn({ msg: `task ${task.id} reached max attempts, skipping`, metadata: task });
           continue;
         }

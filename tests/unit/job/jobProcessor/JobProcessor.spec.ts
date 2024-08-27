@@ -1,6 +1,6 @@
 import nock from 'nock';
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { registerDefaultConfig } from '../../mocks/configMock';
+import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { IJobHandler, IngestionConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
 import { JobProcessorTestContext, setupJobProcessorTest } from './jobProcessorSetup';
@@ -102,6 +102,31 @@ describe('JobProcessor', () => {
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
       expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job, task.id);
     });
+
+    it('should reject task if an error occurred during processing', async () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient, mockJobHandlerFactory } = testContext;
+      const error = new Error('test error');
+      const job = initTestCases[0].job;
+      const task = initTestCases[0].task;
+
+      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockUpdateJob.mockResolvedValue(undefined);
+      mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
+      queueClient.reject = jest.fn().mockResolvedValue(undefined);
+      const rejectSpy = jest.spyOn(queueClient, 'reject');
+
+      mockJobHandlerFactory.mockImplementationOnce(() => {
+        throw error;
+      });
+
+      await jobProcessor['consumeAndProcess']();
+
+      expect(mockDequeue).toHaveBeenCalledTimes(1);
+      expect(mockUpdateJob).toHaveBeenCalledTimes(1);
+      expect(mockGetJob).toHaveBeenCalledTimes(1);
+      expect(rejectSpy).toHaveBeenCalledWith(job.id, task.id, true, error.message);
+    });
   });
 
   describe('getJobWithPhaseTask', () => {
@@ -149,5 +174,41 @@ describe('JobProcessor', () => {
         await queueClient.heartbeatClient.stop(task.id);
       }
     );
+
+    it('should continue to the next iteration if task reached max attempts', async () => {
+      jest.useRealTimers();
+
+      testContext = setupJobProcessorTest({ useMockQueueClient: false });
+      setValue('jobManagement.ingestion.taskMaxTaskAttempts', 3);
+
+      const { jobProcessor, configMock, queueClient } = testContext;
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const heartbeatBaseUrl = configMock.get<string>('jobManagement.config.heartbeat.baseUrl');
+      const jobType = initTestCases[0].jobType;
+      const taskType = initTestCases[0].taskType;
+      const consumeTaskUrl = `/tasks/${jobType}/${taskType}/startPending`;
+      const misMatchRegex = /^\/tasks\/[^/]+\/[^/]+\/startPending$/;
+      const dequeuedTask = { ...initTestCases[0].task, attempts: 3 };
+
+      nock.emitter.on('no match', () => {
+        nock(jobManagerBaseUrl).post(misMatchRegex).reply(404, undefined).persist();
+      });
+
+      nock(jobManagerBaseUrl)
+        .post(consumeTaskUrl)
+        .reply(200, { ...dequeuedTask })
+        .persist();
+
+      nock(heartbeatBaseUrl).post(`/heartbeat/${dequeuedTask.id}`).reply(200, 'ok').persist();
+
+      const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
+
+      const jobAndTaskType = await jobProcessor['getJobWithPhaseTask']();
+
+      expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
+      expect(jobAndTaskType).toBeUndefined();
+
+      await queueClient.heartbeatClient.stop(dequeuedTask.id);
+    });
   });
 });
