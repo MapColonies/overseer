@@ -52,59 +52,74 @@ export class JobProcessor {
     try {
       jobAndTaskType = await this.getJobWithPhaseTask();
       if (!jobAndTaskType) {
+        logger.debug({ msg: 'waiting for next dequeue', metadata: { dequeueIntervalMs: this.dequeueIntervalMs } });
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
 
       await this.processJob(jobAndTaskType);
     } catch (error) {
-      if (error instanceof Error) {
-        logger.error({ msg: `Failed processing the job: ${error.message}`, error });
-        if (jobAndTaskType) {
-          const { job, task } = jobAndTaskType;
-          await this.queueClient.reject(job.id, task.id, true, error.message);
-        }
+      if (error instanceof Error && jobAndTaskType) {
+        const { job, task } = jobAndTaskType;
+        logger.error({ msg: 'rejecting task', error, metadata: { job, task } });
+        await this.queueClient.reject(job.id, task.id, true, error.message);
       }
+      logger.debug({ msg: 'waiting for next dequeue', metadata: { dequeueIntervalMs: this.dequeueIntervalMs } });
       await setTimeoutPromise(this.dequeueIntervalMs);
     }
   }
 
   private async processJob(jobAndTaskType: JobAndPhaseTask): Promise<void> {
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.processJob.name } });
     const { job, task } = jobAndTaskType;
-    const taskTypes = this.ingestionConfig.pollingTasks;
-    const jobHandler = this.jobHandlerFactory(job.type);
+    try {
+      const taskTypes = this.ingestionConfig.pollingTasks;
+      const jobHandler = this.jobHandlerFactory(job.type);
 
-    switch (task.type) {
-      case taskTypes.init:
-        await jobHandler.handleJobInit(job, task.id);
-        break;
-      case taskTypes.finalize:
-        await jobHandler.handleJobFinalize(job, task.id);
-        break;
+      switch (task.type) {
+        case taskTypes.init:
+          await jobHandler.handleJobInit(job, task.id);
+          break;
+        case taskTypes.finalize:
+          await jobHandler.handleJobFinalize(job, task.id);
+          break;
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        logger.error({ msg: `Failed processing the job: ${error.message}`, error });
+      }
+      throw error;
     }
   }
 
   private async getJobWithPhaseTask(): Promise<JobAndPhaseTask | undefined> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJobWithPhaseTask.name } });
-    for (const taskType of this.pollingTaskTypes) {
-      for (const jobType of this.jobTypes) {
-        logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
-        const task = await this.queueClient.dequeue(jobType, taskType);
-        if (!task) {
-          logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
-          continue;
-        }
-        if (task.attempts === this.ingestionConfig.taskMaxTaskAttempts) {
-          logger.warn({ msg: `task ${task.id} reached max attempts, skipping`, metadata: task });
-          continue;
-        }
-        logger.info({ msg: `dequeued task ${task.id}`, metadata: task });
+    try {
+      for (const taskType of this.pollingTaskTypes) {
+        for (const jobType of this.jobTypes) {
+          logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
+          const task = await this.queueClient.dequeue(jobType, taskType);
+          if (!task) {
+            logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
+            continue;
+          }
+          if (task.attempts === this.ingestionConfig.taskMaxTaskAttempts) {
+            logger.warn({ msg: `task ${task.id} reached max attempts, skipping`, metadata: task });
+            continue;
+          }
+          logger.info({ msg: `dequeued task ${task.id}`, metadata: task });
 
-        await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.IN_PROGRESS });
-        const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
-        logger.info({ msg: `got job ${job.id}`, metadata: job });
-        return { job, task };
+          await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.IN_PROGRESS });
+          const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
+          logger.info({ msg: `got job ${job.id}`, metadata: job });
+          return { job, task };
+        }
       }
+    } catch (error) {
+      if (error instanceof Error) {
+        logger.error({ msg: `Failed to get job with phase task: ${error.message}`, error });
+      }
+      throw error;
     }
   }
 }

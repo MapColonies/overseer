@@ -9,6 +9,7 @@ export const jobHandlerFactory = (container: DependencyContainer) => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
   return (jobType: string): IJobHandler => {
     try {
+      logger.info(`Getting job handler for job type ${jobType}`);
       const jobHandler = container.resolve<IJobHandler | null>(jobType);
       if (!jobHandler) {
         const errorMsg = `Job handler for job type ${jobType} not found`;

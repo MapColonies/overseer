@@ -210,5 +210,29 @@ describe('JobProcessor', () => {
 
       await queueClient.heartbeatClient.stop(dequeuedTask.id);
     });
+
+    it('should throw an error if an error occurred during dequeue task and get job', async () => {
+      jest.useRealTimers();
+
+      testContext = setupJobProcessorTest({ useMockQueueClient: false });
+
+      const { jobProcessor, configMock, queueClient } = testContext;
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const jobType = initTestCases[0].jobType;
+      const taskType = initTestCases[0].taskType;
+      const consumeTaskUrl = `/tasks/${jobType}/${taskType}/startPending`;
+      const misMatchRegex = /^\/tasks\/[^/]+\/[^/]+\/startPending$/;
+
+      nock.emitter.on('no match', () => {
+        nock(jobManagerBaseUrl).post(misMatchRegex).reply(404, undefined).persist();
+      });
+
+      nock(jobManagerBaseUrl).post(consumeTaskUrl).reply(500, 'Request failed with status code 500').persist();
+
+      const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
+
+      await expect(jobProcessor['getJobWithPhaseTask']()).rejects.toThrow('Request failed with status code 500');
+      expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
+    });
   });
 });
