@@ -1,5 +1,5 @@
 import nock from 'nock';
-import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { IJobHandler, IngestionConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
