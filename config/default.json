@@ -46,6 +46,7 @@
       "dequeueIntervalMs": 3000
     },
     "ingestion": {
+      "maxTaskAttempts": 3,
       "pollingTasks": {
         "init": "init",
         "finalize": "finalize"
@@ -54,7 +55,6 @@
         "new": {
           "type": "Ingestion_New",
           "tasks": {
-            "splitTiles": "tilesSplitting",
             "mergeTiles": "tilesMerging"
           }
         },
@@ -67,7 +67,7 @@
         "swapUpdate": {
           "type": "Ingestion_Swap_Update",
           "tasks": {
-            "swapTiles": "tilesSwapping"
+            "mergeTiles": "tilesMerging"
           }
         }
       },
@@ -77,11 +77,6 @@
           "tileBatchSize": 10000,
           "taskBatchSize": 5,
           "useNewTargetFlagInUpdate": true
-        },
-        "tilesSwapping": {
-          "type": "tilesSwapping",
-          "maxRetries": 3,
-          "retryDelay": 1000
         }
       }
     }

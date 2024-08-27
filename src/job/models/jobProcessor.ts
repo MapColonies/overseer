@@ -47,10 +47,10 @@ export class JobProcessor {
   }
 
   private async consumeAndProcess(): Promise<void> {
-    const logCtx: LogContext = { ...this.logContext, function: this.consumeAndProcess.name };
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.consumeAndProcess.name } });
+    let jobAndTaskType: JobAndPhaseTask | undefined = undefined;
     try {
-      const jobAndTaskType = await this.getJobWithPhaseTask();
-
+      jobAndTaskType = await this.getJobWithPhaseTask();
       if (!jobAndTaskType) {
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
@@ -58,7 +58,13 @@ export class JobProcessor {
 
       await this.processJob(jobAndTaskType);
     } catch (error) {
-      this.logger.error({ msg: 'Failed processing the job', error, logContext: logCtx });
+      if (error instanceof Error) {
+        logger.error({ msg: `Failed processing the job: ${error.message}`, error });
+        if (jobAndTaskType) {
+          const { job, task } = jobAndTaskType;
+          await this.queueClient.reject(job.id, task.id, true, error.message);
+        }
+      }
       await setTimeoutPromise(this.dequeueIntervalMs);
     }
   }
@@ -85,10 +91,16 @@ export class JobProcessor {
         logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
         const task = await this.queueClient.dequeue(jobType, taskType);
         if (!task) {
+          logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
           continue;
         }
-        await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.IN_PROGRESS });
+        if (task.attempts === this.ingestionConfig.maxTaskAttempts) {
+          logger.warn({ msg: `task ${task.id} reached max attempts, skipping`, metadata: task });
+          continue;
+        }
         logger.info({ msg: `dequeued task ${task.id}`, metadata: task });
+
+        await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.IN_PROGRESS });
         const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
         logger.info({ msg: `got job ${job.id}`, metadata: job });
         return { job, task };
