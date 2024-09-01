@@ -125,6 +125,11 @@ export interface IMergeOverlaps {
   layers: ILayerMergeData[];
   intersection: Footprint;
 }
+
+export interface OverlapProcessingState {
+  accumulatedOverlap: Footprint | null;
+  currentIntersection: Footprint | null;
+}
 //#endregion task
 
 export interface IBBox {

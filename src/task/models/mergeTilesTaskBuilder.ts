@@ -4,7 +4,8 @@ import { Logger } from '@map-colonies/js-logger';
 import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, Footprint, multiIntersect, subGroupsGen, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, featureCollection, intersect } from '@turf/turf';
+import { bbox, featureCollection, union } from '@turf/turf';
+import { difference } from '@turf/difference';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import {
@@ -17,6 +18,7 @@ import {
   IMergeTaskParameters,
   LogContext,
   MergeTilesTaskParams,
+  OverlapProcessingState,
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
@@ -160,9 +162,9 @@ export class MergeTilesTaskBuilder {
 
     logger.debug({ msg: 'Creating batched tasks', metadata: { layers, destPath, maxZoom, targetFormat } });
 
-    for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      const layerOverLaps = this.createLayerOverlaps(layers);
+    const layerOverLaps = this.createLayerOverlaps(layers);
 
+    for (let zoom = maxZoom; zoom >= 0; zoom--) {
       for (const layerOverlap of layerOverLaps) {
         const footprint = convertToFeature(layerOverlap.intersection);
         const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
@@ -204,25 +206,23 @@ export class MergeTilesTaskBuilder {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createLayerOverlaps.name } });
     logger.info({ msg: 'Creating layer overlaps', metadata: { layers } });
 
-    let totalIntersection: Footprint | undefined = undefined;
+    //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not overlapping and we can yield them as is
+    let state: OverlapProcessingState = { currentIntersection: null, accumulatedOverlap: null };
+
     const subGroups = subGroupsGen(layers, layers.length);
 
     for (const subGroup of subGroups) {
       const subGroupFootprints = subGroup.map((layer) => layer.footprint as Footprint);
       logger.debug({ msg: 'Processing sub group', metadata: { subGroup } });
       try {
-        const intersection = this.calculateIntersection(totalIntersection, subGroupFootprints);
-        if (intersection === null) {
-          continue;
+        state = this.calculateOverlapState(state, subGroupFootprints);
+        if (state.currentIntersection) {
+          logger.debug({ msg: 'Yielding layer overlaps', metadata: { subGroup, intersection: state.currentIntersection } });
+          yield {
+            layers: subGroup,
+            intersection: state.currentIntersection,
+          };
         }
-
-        totalIntersection = intersection;
-
-        logger.debug({ msg: 'Yielding layer overlaps', metadata: { subGroup, intersection } });
-        yield {
-          layers: subGroup,
-          intersection,
-        };
       } catch (error) {
         const errorMessage = (error as Error).message;
         this.logger.error({ msg: `Failed to calculate overlaps, error: ${errorMessage}`, error, metadata: { subGroup } });
@@ -233,26 +233,48 @@ export class MergeTilesTaskBuilder {
     logger.info({ msg: `Completed creating layer overlaps` });
   }
 
-  private calculateIntersection(totalIntersection: Footprint | undefined, subGroupFootprints: Footprint[]): Footprint | null {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.calculateIntersection.name } });
-    logger.debug({ msg: 'Calculating intersection', metadata: { totalIntersection, subGroupFootprints } });
+  private calculateOverlapState(state: OverlapProcessingState, subGroupFootprints: Footprint[]): OverlapProcessingState {
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.calculateOverlapState.name } });
+    logger.debug({ msg: 'Calculating intersection', metadata: { overlapState: state, subGroupFootprints } });
 
-    let intersection = multiIntersect(subGroupFootprints);
-    if (intersection === null) {
-      logger.debug({ msg: 'No intersection found for the current subgroup', metadata: { subGroupFootprints } });
-      return null;
+    // Calculate the intersection of all footprints in the subgroup
+    const intersection = multiIntersect(subGroupFootprints);
+    if (!intersection) {
+      // If no intersection is found, return the state with null current intersection
+      logger.debug({ msg: 'No intersection found for the current subgroup', metadata: { overlapState: state, subGroupFootprints } });
+      return { ...state, currentIntersection: null };
     }
 
-    if (totalIntersection !== undefined) {
-      const featureCollectionToIntersect = featureCollection([convertToFeature(totalIntersection), convertToFeature(intersection)]);
-      logger.debug({
-        msg: 'Calculating intersection between totalIntersection and current intersection',
-        metadata: { totalIntersection, intersection },
-      });
-      intersection = intersect(featureCollectionToIntersect);
+    if (!state.accumulatedOverlap) {
+      // If there's no accumulated overlap yet, return the current intersection as both current and accumulated
+      logger.debug({ msg: 'No accumulated overlap found, returning current intersection', metadata: { overlapState: state, subGroupFootprints } });
+      return {
+        currentIntersection: intersection,
+        accumulatedOverlap: intersection,
+      };
     }
-    logger.debug({ msg: 'Intersection calculation completed', metadata: { intersection } });
 
-    return intersection;
+    const differenceFeatureCollection = featureCollection([convertToFeature(intersection), convertToFeature(state.accumulatedOverlap)]);
+    // Calculate the difference between the current intersection and the accumulated overlap
+    const newIntersection = difference(differenceFeatureCollection);
+    logger.debug({
+      msg: 'New intersection calculated by difference between current intersection and accumulated overlap',
+      metadata: { newIntersection },
+    });
+    console.log('newIntersection', newIntersection);
+    if (!newIntersection) {
+      // If no new intersection is found, return the state with null current intersection
+      logger.debug({ msg: 'No new intersection found', metadata: { overlapState: state, subGroupFootprints } });
+      return { ...state, currentIntersection: null };
+    }
+    const unionFeatureCollection = featureCollection([convertToFeature(state.accumulatedOverlap), convertToFeature(newIntersection)]);
+
+    logger.debug({ msg: 'Returning new intersection and accumulated overlap', metadata: { newIntersection, unionFeatureCollection } });
+
+    //Calculate the union of the accumulated overlap and the new intersection and return the updated state with the new intersection and accumulated overlap
+    return {
+      currentIntersection: newIntersection,
+      accumulatedOverlap: union(unionFeatureCollection),
+    };
   }
 }
