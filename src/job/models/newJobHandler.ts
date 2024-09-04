@@ -27,12 +27,12 @@ export class NewJobHandler implements IJobHandler {
   public async handleJobInit(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobInit.name } });
     try {
-      logger.info({ msg: `Handling ${job.type} job with "init" task`, metadata: { job } });
+      logger.debug({ msg: `Handling ${job.type} job with "init" task`, metadata: { job } });
 
       const { inputFiles, metadata, partData } = job.parameters;
       const overseerLayerMetadata = this.mapToOverseerNewLayerMetadata(metadata);
 
-      this.logger.info({ msg: 'Updating job with new metadata', metadata: { job, overseerLayerMetadata } });
+      this.logger.debug({ msg: 'Updating job with new metadata', metadata: { job, overseerLayerMetadata } });
       await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { metadata: overseerLayerMetadata, partData, inputFiles } });
 
       const buildTasksParams: MergeTilesTaskParams = {
@@ -46,15 +46,15 @@ export class NewJobHandler implements IJobHandler {
         partData,
       };
 
-      logger.info({ msg: 'Building tasks', metadata: { buildTasksParams } });
+      logger.debug({ msg: 'Building tasks', metadata: { buildTasksParams } });
       const mergeTasks = this.taskBuilder.buildTasks(buildTasksParams);
 
-      logger.info({ msg: 'Pushing tasks', metadata: { mergeTasks } });
+      logger.debug({ msg: 'Pushing tasks', metadata: { mergeTasks } });
       await this.taskBuilder.pushTasks(job.id, taskId, mergeTasks);
 
       await this.queueClient.ack(job.id, taskId);
 
-      logger.info({ msg: 'Job init completed successfully' });
+      logger.debug({ msg: 'Job init completed successfully' });
     } catch (err) {
       if (err instanceof Error) {
         logger.error({ msg: 'Failed to handle job init', error: err, logContext: { ...this.logContext, function: this.handleJobInit.name } });
@@ -65,7 +65,7 @@ export class NewJobHandler implements IJobHandler {
 
   public async handleJobFinalize(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobFinalize.name } });
-    logger.info({ msg: `handling ${job.type} job with "finalize"`, metadata: { job } });
+    logger.debug({ msg: `handling ${job.type} job with "finalize"`, metadata: { job } });
     await Promise.reject('not implemented');
   }
 

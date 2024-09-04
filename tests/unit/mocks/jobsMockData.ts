@@ -1,84 +1,8 @@
 import { NewRasterLayer, ProductType, Transparency, UpdateRasterLayer } from '@map-colonies/mc-model-types';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
-import { PolygonPart } from '@map-colonies/mc-model-types';
+import { partData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-export const partData: PolygonPart[] = [
-  {
-    id: 'avi',
-    name: 'string',
-    cities: ['string'],
-    sensors: ['string'],
-    geometry: {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [34.85149443279957, 32.30543192283443],
-          [34.85149443279957, 32.29430955805424],
-          [34.86824157112912, 32.29430955805424],
-          [34.86824157112912, 32.30543192283443],
-          [34.85149443279957, 32.30543192283443],
-        ],
-      ],
-    } as unknown as GeoJSON.Polygon,
-    countries: ['string'],
-    description: 'string',
-    resolutionMeter: 8000,
-    resolutionDegree: 0.0439453125,
-    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    sourceResolutionMeter: 8000,
-    horizontalAccuracyCE90: 10,
-  },
-];
-
-export const multiPartData: PolygonPart[] = [
-  { ...partData[0] },
-  {
-    id: 'avi',
-    name: 'string',
-    cities: ['string'],
-    sensors: ['string'],
-    geometry: {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [37.85149443279957, 30.30543192283443],
-          [37.85149443279957, 30.29430955805424],
-          [37.86824157112912, 30.29430955805424],
-          [37.86824157112912, 30.30543192283443],
-          [37.85149443279957, 30.30543192283443],
-        ],
-      ],
-    } as unknown as GeoJSON.Polygon,
-    countries: ['string'],
-    description: 'string',
-    resolutionMeter: 8000,
-    resolutionDegree: 0.0439453125,
-    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    sourceResolutionMeter: 8000,
-    horizontalAccuracyCE90: 10,
-  },
-];
-
-export const partDataWithoutFootPrint: PolygonPart[] = [
-  {
-    id: 'avi',
-    name: 'string',
-    cities: ['string'],
-    sensors: ['string'],
-    geometry: undefined,
-    countries: ['string'],
-    description: 'string',
-    resolutionMeter: 8000,
-    resolutionDegree: 0.0439453125,
-    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    sourceResolutionMeter: 8000,
-    horizontalAccuracyCE90: 10,
-  },
-];
 
 export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
   id: 'de57d743-3155-4a28-86c8-9c181faabd94',

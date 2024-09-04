@@ -96,6 +96,7 @@ export interface ILayerMergeData {
   tilesPath: string;
   footprint?: GeoJSON;
   extent: BBox;
+  maxZoom: number;
 }
 
 export interface IMergeParameters {

@@ -3,7 +3,7 @@ import nock from 'nock';
 import { booleanEqual } from '@turf/turf';
 import { Feature } from 'geojson';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
-import { partData, partDataWithoutFootPrint } from '../../mocks/jobsMockData';
+import { partData, partDataWithoutFootPrint } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, IMergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { testData } from '../../mocks/mergeTilesTaskBuilderMockData';
@@ -21,7 +21,7 @@ describe('mergeTilesTaskBuilder', () => {
   });
 
   describe('buildTasks', () => {
-    it('should build tasks successfully for Ingestion New task', async () => {
+    it('should build tasks successfully for Ingestion New init task', async () => {
       const { mergeTilesTaskBuilder } = testContext;
       const buildTasksParams: MergeTilesTaskParams = {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
@@ -113,7 +113,6 @@ describe('mergeTilesTaskBuilder', () => {
     it('should return new intersection and updated accumulated overlap', () => {
       const { mergeTilesTaskBuilder } = testContext;
       const { input } = testData[2];
-      console.log('input', input);
       const result = mergeTilesTaskBuilder['calculateOverlapState'](input.state, input.subGroupFootprints);
       const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedOverlap as Feature);
 

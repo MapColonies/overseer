@@ -112,18 +112,20 @@ export class MergeTilesTaskBuilder {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createPartLayers.name } });
     logger.debug({ msg: 'creating part layers', metadata: { partData, inputFiles, numberOfFiles: inputFiles.fileNames.length } });
     return inputFiles.fileNames.map<ILayerMergeData>((fileName) => {
-      const filePath = join(inputFiles.originDirectory, fileName);
+      const tilesPath = join(inputFiles.originDirectory, fileName);
       const footprint = partData.geometry;
       if (!footprint) {
         logger.error({ msg: 'Part does not have a geometry', metadata: { partData } });
         throw new Error('Part does not have a geometry');
       }
       const extent: BBox = bbox(footprint);
+      const maxZoom = degreesPerPixelToZoomLevel(partData.resolutionDegree ?? 0);
       return {
         fileName,
-        tilesPath: filePath,
+        tilesPath,
         footprint,
         extent,
+        maxZoom,
       };
     });
   }
@@ -139,45 +141,46 @@ export class MergeTilesTaskBuilder {
     partData.forEach((part: PolygonPart) => {
       const partLayers = this.createPartLayers(part, inputFiles);
       partsLayers.push(...partLayers);
-
-      const currentZoom = degreesPerPixelToZoomLevel(part.resolutionDegree ?? 0);
-      maxZoom = Math.max(maxZoom, currentZoom);
+      maxZoom = Math.max(maxZoom, degreesPerPixelToZoomLevel(part.resolutionDegree ?? 0));
     });
-
-    logger.debug({ msg: `Calculated max zoom level`, metadata: { maxZoom } });
 
     return {
       layers: partsLayers,
-      maxZoom,
       destPath: taskMetadata.layerRelativePath,
       grid: taskMetadata.grid,
       targetFormat: taskMetadata.tileOutputFormat,
       isNewTarget: taskMetadata.isNewTarget,
+      maxZoom,
     };
   }
 
   private async *createBatchedTasks(params: IMergeParameters): AsyncGenerator<IMergeTaskParameters, void, void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createBatchedTasks.name } });
-    const { layers, destPath, maxZoom, targetFormat, isNewTarget, grid } = params;
+    const { layers, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
 
-    logger.debug({ msg: 'Creating batched tasks', metadata: { layers, destPath, maxZoom, targetFormat } });
-
-    const layerOverLaps = this.createLayerOverlaps(layers);
-
+    logger.debug({ msg: 'Creating batched tasks', metadata: { layers, destPath, targetFormat } });
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      for (const layerOverlap of layerOverLaps) {
-        const footprint = convertToFeature(layerOverlap.intersection);
-        const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
-        const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
+      const layerOverLaps = this.createLayerOverlaps(layers);
 
-        for await (const batch of batches) {
-          logger.debug({ msg: 'Yielding batch task', metadata: { batchSize: batch.length, zoom } });
-          yield {
-            targetFormat,
-            isNewTarget: isNewTarget,
-            batches: batch,
-            sources: [{ type: this.mapServerCacheType, path: destPath }, ...this.createSourceLayers(layerOverlap, grid)],
-          };
+      for (const layerOverlap of layerOverLaps) {
+        for (const part of layerOverlap.layers) {
+          if (part.maxZoom < zoom) {
+            // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
+            continue;
+          }
+          const footprint = convertToFeature(layerOverlap.intersection);
+          const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
+          const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
+
+          for await (const batch of batches) {
+            logger.debug({ msg: 'Yielding batch task', metadata: { batchSize: batch.length, zoom } });
+            yield {
+              targetFormat,
+              isNewTarget: isNewTarget,
+              batches: batch,
+              sources: [{ type: this.mapServerCacheType, path: destPath }, ...this.createSourceLayers(layerOverlap, grid)],
+            };
+          }
         }
       }
     }
@@ -204,7 +207,7 @@ export class MergeTilesTaskBuilder {
 
   private *createLayerOverlaps(layers: ILayerMergeData[]): Generator<IMergeOverlaps> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createLayerOverlaps.name } });
-    logger.info({ msg: 'Creating layer overlaps', metadata: { layers } });
+    logger.debug({ msg: 'Creating layer overlaps', metadata: { layers } });
 
     //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not overlapping and we can yield them as is
     let state: OverlapProcessingState = { currentIntersection: null, accumulatedOverlap: null };
@@ -261,7 +264,6 @@ export class MergeTilesTaskBuilder {
       msg: 'New intersection calculated by difference between current intersection and accumulated overlap',
       metadata: { newIntersection },
     });
-    console.log('newIntersection', newIntersection);
     if (!newIntersection) {
       // If no new intersection is found, return the state with null current intersection
       logger.debug({ msg: 'No new intersection found', metadata: { overlapState: state, subGroupFootprints } });
