@@ -46,24 +46,24 @@ export class MergeTilesTaskBuilder {
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
   }
 
-  public buildTasks(newLayer: MergeTilesTaskParams): AsyncGenerator<IMergeTaskParameters, void, void> {
+  public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<IMergeTaskParameters, void, void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.buildTasks.name } });
 
-    logger.debug({ msg: `Building tasks for ${this.taskType} task`, metadata: { newLayer } });
+    logger.debug({ msg: `Building tasks for ${this.taskType} task`, metadata: { taskBuildParams } });
 
     try {
-      const mergeParams = this.createTaskParams(newLayer);
+      const mergeParams = this.createTaskParams(taskBuildParams);
       const mergeTasks = this.createBatchedTasks(mergeParams);
-      logger.debug({ msg: `Successfully built tasks for ${this.taskType} task`, metadata: { newLayer } });
+      logger.debug({ msg: `Successfully built tasks for ${this.taskType} task`, metadata: { taskBuildParams } });
       return mergeTasks;
     } catch (error) {
-      const errorMessage = (error as Error).message;
-      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMessage}`, error, metadata: { newLayer } });
+      const errorMag = (error as Error).message;
+      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMag}`, error, metadata: { taskBuildParams } });
       throw error;
     }
   }
 
-  public async pushTasks(jobId: string, pollingTaskId: string, tasks: AsyncGenerator<IMergeTaskParameters, void, void>): Promise<void> {
+  public async pushTasks(jobId: string, tasks: AsyncGenerator<IMergeTaskParameters, void, void>): Promise<void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.pushTasks.name } });
     let taskBatch: ICreateTaskBody<IMergeTaskParameters>[] = [];
 
@@ -75,14 +75,14 @@ export class MergeTilesTaskBuilder {
 
         if (taskBatch.length === this.taskBatchSize) {
           logger.debug({ msg: 'Pushing task batch to queue', metadata: { jobId, batchLength: taskBatch.length, taskBatch } });
-          await this.processTaskBatch(jobId, pollingTaskId, taskBatch);
+          await this.processTaskBatch(jobId, taskBatch);
           taskBatch = [];
         }
       }
 
       if (taskBatch.length > 0) {
         logger.debug({ msg: 'Pushing last task batch to queue', metadata: { jobId, batchLength: taskBatch.length, taskBatch } });
-        await this.processTaskBatch(jobId, pollingTaskId, taskBatch);
+        await this.processTaskBatch(jobId, taskBatch);
       }
     } catch (error) {
       this.logger.error({ msg: 'Failed to push tasks to queue', error, metadata: { jobId } });
@@ -92,7 +92,7 @@ export class MergeTilesTaskBuilder {
     this.logger.info({ msg: `Successfully pushed all tasks to queue`, jobId });
   }
 
-  private async processTaskBatch(jobId: string, taskId: string, tasks: ICreateTaskBody<IMergeTaskParameters>[]): Promise<void> {
+  private async processTaskBatch(jobId: string, tasks: ICreateTaskBody<IMergeTaskParameters>[]): Promise<void> {
     //do we need some retry mechanism?
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.processTaskBatch.name } });
     logger.debug({ msg: `Attempting to push task batch to queue`, metadata: { jobId } });
@@ -101,8 +101,8 @@ export class MergeTilesTaskBuilder {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
       logger.info({ msg: `Successfully pushed task batch to queue`, metadata: { jobId } });
     } catch (error) {
-      const errorMessage = (error as Error).message;
-      const message = `Failed to push tasks to queue: ${errorMessage}`;
+      const errorMsg = (error as Error).message;
+      const message = `Failed to push tasks to queue: ${errorMsg}`;
       logger.error({ msg: message, error, metadata: { jobId } });
       throw error;
     }
@@ -115,8 +115,9 @@ export class MergeTilesTaskBuilder {
       const tilesPath = join(inputFiles.originDirectory, fileName);
       const footprint = partData.geometry;
       if (!footprint) {
-        logger.error({ msg: 'Part does not have a geometry', metadata: { partData } });
-        throw new Error('Part does not have a geometry');
+        const errorMsg = 'Part does not have a geometry';
+        logger.error({ msg: errorMsg, metadata: { partData } });
+        throw new Error(errorMsg);
       }
       const extent: BBox = bbox(footprint);
       const maxZoom = degreesPerPixelToZoomLevel(partData.resolutionDegree ?? 0);
@@ -130,9 +131,9 @@ export class MergeTilesTaskBuilder {
     });
   }
 
-  private createTaskParams(newLayer: MergeTilesTaskParams): IMergeParameters {
+  private createTaskParams(taskBuildParams: MergeTilesTaskParams): IMergeParameters {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createTaskParams.name } });
-    const { taskMetadata, inputFiles, partData } = newLayer;
+    const { taskMetadata, inputFiles, partData } = taskBuildParams;
 
     logger.debug({ msg: 'Creating task parameters', metadata: { taskMetadata, partData, inputFiles, taskType: this.taskType } });
     const partsLayers: ILayerMergeData[] = [];
@@ -227,8 +228,8 @@ export class MergeTilesTaskBuilder {
           };
         }
       } catch (error) {
-        const errorMessage = (error as Error).message;
-        this.logger.error({ msg: `Failed to calculate overlaps, error: ${errorMessage}`, error, metadata: { subGroup } });
+        const errorMag = (error as Error).message;
+        this.logger.error({ msg: `Failed to calculate overlaps, error: ${errorMag}`, error, metadata: { subGroup } });
         throw error;
       }
     }
@@ -259,23 +260,26 @@ export class MergeTilesTaskBuilder {
 
     const differenceFeatureCollection = featureCollection([convertToFeature(intersection), convertToFeature(state.accumulatedOverlap)]);
     // Calculate the difference between the current intersection and the accumulated overlap
-    const newIntersection = difference(differenceFeatureCollection);
+    const intersectionDifference = difference(differenceFeatureCollection);
     logger.debug({
-      msg: 'New intersection calculated by difference between current intersection and accumulated overlap',
-      metadata: { newIntersection },
+      msg: 'new intersection calculated by difference between current intersection and accumulated overlap',
+      metadata: { intersectionDifference },
     });
-    if (!newIntersection) {
+    if (!intersectionDifference) {
       // If no new intersection is found, return the state with null current intersection
-      logger.debug({ msg: 'No new intersection found', metadata: { overlapState: state, subGroupFootprints } });
+      logger.debug({
+        msg: 'no difference found between current intersection and accumulated overlap',
+        metadata: { overlapState: state, subGroupFootprints },
+      });
       return { ...state, currentIntersection: null };
     }
-    const unionFeatureCollection = featureCollection([convertToFeature(state.accumulatedOverlap), convertToFeature(newIntersection)]);
+    const unionFeatureCollection = featureCollection([convertToFeature(state.accumulatedOverlap), convertToFeature(intersectionDifference)]);
 
-    logger.debug({ msg: 'Returning new intersection and accumulated overlap', metadata: { newIntersection, unionFeatureCollection } });
+    logger.debug({ msg: 'calculating union of accumulated overlap and intersection difference', metadata: { unionFeatureCollection } });
 
     //Calculate the union of the accumulated overlap and the new intersection and return the updated state with the new intersection and accumulated overlap
     return {
-      currentIntersection: newIntersection,
+      currentIntersection: intersectionDifference,
       accumulatedOverlap: union(unionFeatureCollection),
     };
   }

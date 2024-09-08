@@ -5,7 +5,7 @@ import { IJobResponse } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { Grid, IJobHandler, LogContext, MergeTilesTaskParams, OverseerNewRasterLayerMetadata } from '../../common/interfaces';
+import { Grid, IJobHandler, LogContext, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
 import { MergeTilesTaskBuilder } from '../../task/models/mergeTilesTaskBuilder';
@@ -25,36 +25,45 @@ export class NewJobHandler implements IJobHandler {
   }
 
   public async handleJobInit(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobInit.name } });
+    const logger = this.logger.child({
+      jobId: job.id,
+      jobType: job.type,
+      taskId,
+      logContext: { ...this.logContext, function: this.handleJobInit.name },
+    });
     try {
-      logger.debug({ msg: `Handling ${job.type} job with "init" task`, metadata: { job } });
+      logger.info({ msg: `handling ${job.type} job with "init" task` });
 
       const { inputFiles, metadata, partData } = job.parameters;
-      const overseerLayerMetadata = this.mapToOverseerNewLayerMetadata(metadata);
+      const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
 
-      this.logger.debug({ msg: 'Updating job with new metadata', metadata: { job, overseerLayerMetadata } });
-      await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { metadata: overseerLayerMetadata, partData, inputFiles } });
-
-      const buildTasksParams: MergeTilesTaskParams = {
+      const taskBuildParams: MergeTilesTaskParams = {
         inputFiles,
         taskMetadata: {
-          layerRelativePath: overseerLayerMetadata.layerRelativePath,
-          tileOutputFormat: overseerLayerMetadata.tileOutputFormat,
+          layerRelativePath: extendedLayerMetadata.layerRelativePath,
+          tileOutputFormat: extendedLayerMetadata.tileOutputFormat,
           isNewTarget: true,
-          grid: overseerLayerMetadata.grid,
+          grid: extendedLayerMetadata.grid,
         },
         partData,
       };
 
-      logger.debug({ msg: 'Building tasks', metadata: { buildTasksParams } });
-      const mergeTasks = this.taskBuilder.buildTasks(buildTasksParams);
+      logger.info({ msg: 'building tasks' });
+      logger.debug({ msg: 'building tasks', metadata: { taskBuildParams } });
+      const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
-      logger.debug({ msg: 'Pushing tasks', metadata: { mergeTasks } });
-      await this.taskBuilder.pushTasks(job.id, taskId, mergeTasks);
+      logger.info({ msg: 'pushing tasks' });
+      logger.debug({ msg: 'pushing tasks', metadata: { mergeTasks } });
+      await this.taskBuilder.pushTasks(job.id, mergeTasks);
 
+      logger.info({ msg: 'Updating job with new metadata' });
+      this.logger.debug({ msg: 'Updating job with new metadata', metadata: { job, extendedLayerMetadata } });
+      await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { metadata: extendedLayerMetadata, partData, inputFiles } });
+
+      logger.info({ msg: 'Acking task' });
       await this.queueClient.ack(job.id, taskId);
 
-      logger.debug({ msg: 'Job init completed successfully' });
+      logger.info({ msg: 'Job init completed successfully' });
     } catch (err) {
       if (err instanceof Error) {
         logger.error({ msg: 'Failed to handle job init', error: err, logContext: { ...this.logContext, function: this.handleJobInit.name } });
@@ -65,11 +74,11 @@ export class NewJobHandler implements IJobHandler {
 
   public async handleJobFinalize(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobFinalize.name } });
-    logger.debug({ msg: `handling ${job.type} job with "finalize"`, metadata: { job } });
+    logger.info({ msg: `handling ${job.type} job with "finalize"` });
     await Promise.reject('not implemented');
   }
 
-  private readonly mapToOverseerNewLayerMetadata = (metadata: NewRasterLayerMetadata): OverseerNewRasterLayerMetadata => {
+  private readonly mapToExtendedNewLayerMetadata = (metadata: NewRasterLayerMetadata): ExtendedRasterLayerMetadata => {
     const catalogId = randomUUID();
     const displayPath = randomUUID();
     const layerRelativePath = `${catalogId}/${displayPath}`;

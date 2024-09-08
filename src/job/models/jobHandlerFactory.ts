@@ -13,16 +13,17 @@ export const jobHandlerFactory = (container: DependencyContainer) => {
       const jobHandler = container.resolve<IJobHandler | null>(jobType);
       if (!jobHandler) {
         const errorMsg = `Job handler for job type ${jobType} not found`;
-        logger.error(errorMsg);
         throw new JobHandlerNotFoundError(errorMsg);
       }
       return jobHandler;
     } catch (err) {
       if (err instanceof JobHandlerNotFoundError) {
+        logger.error({ msg: err.message });
         throw err;
       } else {
-        const message = (err as Error).message;
-        throw new Error(`Error in Job handler for job type ${jobType}: err:${message}`);
+        const errorMsg = `Error in Job handler for job type ${jobType}: err:${(err as Error).message}`;
+        logger.error({ msg: errorMsg });
+        throw new Error(errorMsg);
       }
     }
   };

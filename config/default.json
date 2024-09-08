@@ -46,29 +46,20 @@
       "dequeueIntervalMs": 3000
     },
     "ingestion": {
-      "taskMaxTaskAttempts": 3,
+      "maxTaskAttempts": 3,
       "pollingTasks": {
         "init": "init",
         "finalize": "finalize"
       },
       "jobs": {
         "new": {
-          "type": "Ingestion_New",
-          "tasks": {
-            "mergeTiles": "tilesMerging"
-          }
+          "type": "Ingestion_New"
         },
         "update": {
-          "type": "Ingestion_Update",
-          "tasks": {
-            "mergeTiles": "tilesMerging"
-          }
+          "type": "Ingestion_Update"
         },
         "swapUpdate": {
-          "type": "Ingestion_Swap_Update",
-          "tasks": {
-            "mergeTiles": "tilesMerging"
-          }
+          "type": "Ingestion_Swap_Update"
         }
       },
       "tasks": {

@@ -155,7 +155,6 @@ describe('mergeTilesTaskBuilder', () => {
         };
 
         const jobId = randomUUID();
-        const taskId = randomUUID();
 
         const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
         const path = `/jobs/${jobId}/tasks`;
@@ -165,7 +164,7 @@ describe('mergeTilesTaskBuilder', () => {
 
         let error: Error | null = null;
         try {
-          await mergeTilesTaskBuilder.pushTasks(jobId, taskId, tasks);
+          await mergeTilesTaskBuilder.pushTasks(jobId, tasks);
         } catch (err) {
           error = err as Error;
         }
@@ -182,7 +181,6 @@ describe('mergeTilesTaskBuilder', () => {
         };
 
         const jobId = randomUUID();
-        const taskId = randomUUID();
 
         const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
         const path = `/jobs/${jobId}/tasks`;
@@ -190,7 +188,7 @@ describe('mergeTilesTaskBuilder', () => {
 
         const tasks = mergeTilesTaskBuilder.buildTasks(buildTasksParams);
 
-        const action = async () => mergeTilesTaskBuilder.pushTasks(jobId, taskId, tasks);
+        const action = async () => mergeTilesTaskBuilder.pushTasks(jobId, tasks);
 
         await expect(action).rejects.toThrow();
       });

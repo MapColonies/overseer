@@ -129,7 +129,7 @@ describe('JobProcessor', () => {
     });
   });
 
-  describe('getJobWithPhaseTask', () => {
+  describe('getJobAndTaskResponse', () => {
     test.each([...initTestCases, ...finalizeTestCases])(
       'dequeue $taskType task and get $jobType job with corresponding taskType',
       async ({ jobType, taskType, job, task }) => {
@@ -164,7 +164,7 @@ describe('JobProcessor', () => {
         const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
         const getJobSpy = jest.spyOn(queueClient.jobManagerClient, 'getJob');
 
-        const jobAndTaskType = await jobProcessor['getJobWithPhaseTask']();
+        const jobAndTaskType = await jobProcessor['getJobAndTaskResponse']();
 
         expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
         expect(getJobSpy).toHaveBeenCalledWith(task.jobId);
@@ -179,16 +179,22 @@ describe('JobProcessor', () => {
       jest.useRealTimers();
 
       testContext = setupJobProcessorTest({ useMockQueueClient: false });
-      setValue('jobManagement.ingestion.taskMaxTaskAttempts', 3);
+      setValue('jobManagement.ingestion.maxTaskAttempts', 3);
 
       const { jobProcessor, configMock, queueClient } = testContext;
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const heartbeatBaseUrl = configMock.get<string>('jobManagement.config.heartbeat.baseUrl');
-      const jobType = initTestCases[0].jobType;
-      const taskType = initTestCases[0].taskType;
+      const job = initTestCases[0].job;
+      const task = initTestCases[0].task;
+      const jobType = job.type;
+      const taskType = task.type;
+
+      // nock setup
       const consumeTaskUrl = `/tasks/${jobType}/${taskType}/startPending`;
+      const updateTaskUrl = `/jobs/${job.id}/tasks/${task.id}`;
+      const updateJobUrl = `/jobs/${job.id}`;
       const misMatchRegex = /^\/tasks\/[^/]+\/[^/]+\/startPending$/;
-      const dequeuedTask = { ...initTestCases[0].task, attempts: 3 };
+      const dequeuedTask = { ...task, attempts: 3 };
 
       nock.emitter.on('no match', () => {
         nock(jobManagerBaseUrl).post(misMatchRegex).reply(404, undefined).persist();
@@ -199,11 +205,16 @@ describe('JobProcessor', () => {
         .reply(200, { ...dequeuedTask })
         .persist();
 
+      // rejecting the task when it reaches max attempts
+      nock(jobManagerBaseUrl).put(updateTaskUrl).reply(200).persist();
+
+      nock(jobManagerBaseUrl).put(updateJobUrl).reply(200).persist();
+
       nock(heartbeatBaseUrl).post(`/heartbeat/${dequeuedTask.id}`).reply(200, 'ok').persist();
 
       const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
 
-      const jobAndTaskType = await jobProcessor['getJobWithPhaseTask']();
+      const jobAndTaskType = await jobProcessor['getJobAndTaskResponse']();
 
       expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
       expect(jobAndTaskType).toBeUndefined();
@@ -231,7 +242,7 @@ describe('JobProcessor', () => {
 
       const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
 
-      await expect(jobProcessor['getJobWithPhaseTask']()).rejects.toThrow('Request failed with status code 500');
+      await expect(jobProcessor['getJobAndTaskResponse']()).rejects.toThrow('Request failed with status code 500');
       expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
     });
   });

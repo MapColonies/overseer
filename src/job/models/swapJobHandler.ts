@@ -12,15 +12,15 @@ export class SwapJobHandler implements IJobHandler {
     this.logContext = { fileName: __filename, class: SwapJobHandler.name };
   }
 
-  public async handleJobInit(job: IJobResponse<UpdateRasterLayer, unknown>): Promise<void> {
-    const logCtx: LogContext = { ...this.logContext, function: this.handleJobInit.name };
-    this.logger.info({ msg: `handling ${job.type} job with "init" task`, metadata: { job }, logContext: logCtx });
+  public async handleJobInit(job: IJobResponse<UpdateRasterLayer, unknown>, taskId: string): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobInit.name } });
+    logger.info({ msg: `handling ${job.type} job with "init" task` });
     await Promise.reject('not implemented');
   }
 
-  public async handleJobFinalize(job: IJobResponse<UpdateRasterLayer, unknown>): Promise<void> {
-    const logCtx: LogContext = { ...this.logContext, function: this.handleJobFinalize.name };
-    this.logger.info({ msg: `handling ${job.type} job with "finalize" task`, metadata: { job }, logContext: logCtx });
+  public async handleJobFinalize(job: IJobResponse<UpdateRasterLayer, unknown>, taskId: string): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, taskId, logContext: { ...this.logContext, function: this.handleJobFinalize.name } });
+    logger.info({ msg: `handling ${job.type} job with "finalize" task` });
     await Promise.reject('not implemented');
   }
 }

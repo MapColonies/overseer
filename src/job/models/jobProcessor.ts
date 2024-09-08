@@ -1,10 +1,10 @@
 import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
-import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { getAvailableJobTypes } from '../../utils/configUtil';
 import { SERVICES } from '../../common/constants';
-import { IConfig, IngestionConfig, JobAndPhaseTask, LogContext } from '../../common/interfaces';
+import { IConfig, IngestionConfig, JobAndTaskResponse, LogContext, TaskResponse } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
@@ -48,19 +48,19 @@ export class JobProcessor {
 
   private async consumeAndProcess(): Promise<void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.consumeAndProcess.name } });
-    let jobAndTaskType: JobAndPhaseTask | undefined = undefined;
+    let jobAndTask: JobAndTaskResponse | undefined = undefined;
     try {
-      jobAndTaskType = await this.getJobWithPhaseTask();
-      if (!jobAndTaskType) {
+      jobAndTask = await this.getJobAndTaskResponse();
+      if (!jobAndTask) {
         logger.debug({ msg: 'waiting for next dequeue', metadata: { dequeueIntervalMs: this.dequeueIntervalMs } });
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
 
-      await this.processJob(jobAndTaskType);
+      await this.processJob(jobAndTask);
     } catch (error) {
-      if (error instanceof Error && jobAndTaskType) {
-        const { job, task } = jobAndTaskType;
+      if (error instanceof Error && jobAndTask) {
+        const { job, task } = jobAndTask;
         logger.error({ msg: 'rejecting task', error, metadata: { job, task } });
         await this.queueClient.reject(job.id, task.id, true, error.message);
       }
@@ -69,7 +69,7 @@ export class JobProcessor {
     }
   }
 
-  private async processJob(jobAndTaskType: JobAndPhaseTask): Promise<void> {
+  private async processJob(jobAndTaskType: JobAndTaskResponse): Promise<void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.processJob.name } });
     const { job, task } = jobAndTaskType;
     try {
@@ -86,40 +86,70 @@ export class JobProcessor {
       }
     } catch (error) {
       if (error instanceof Error) {
-        logger.error({ msg: `Failed processing the job: ${error.message}`, error });
+        logger.error({ msg: `failed processing the job: ${error.message}`, error });
       }
       throw error;
     }
   }
 
-  private async getJobWithPhaseTask(): Promise<JobAndPhaseTask | undefined> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJobWithPhaseTask.name } });
+  private async getJobAndTaskResponse(): Promise<JobAndTaskResponse | undefined> {
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJobAndTaskResponse.name } });
     try {
       for (const taskType of this.pollingTaskTypes) {
         for (const jobType of this.jobTypes) {
-          logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
-          const task = await this.queueClient.dequeue(jobType, taskType);
-          if (!task) {
-            logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
-            continue;
-          }
-          if (task.attempts === this.ingestionConfig.taskMaxTaskAttempts) {
-            logger.warn({ msg: `task ${task.id} reached max attempts, skipping`, metadata: task });
-            continue;
-          }
-          logger.info({ msg: `dequeued task ${task.id}`, metadata: task });
+          const { task, shouldSkipTask } = await this.getTask(jobType, taskType);
 
-          await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.IN_PROGRESS });
-          const job = await this.queueClient.jobManagerClient.getJob(task.jobId);
-          logger.info({ msg: `got job ${job.id}`, metadata: job });
+          if (shouldSkipTask) {
+            logger.debug({ msg: `skipping task of type "${taskType}" and job of type "${jobType}"` });
+            continue;
+          }
+
+          const job = await this.getJob(task.jobId);
+          logger.info({ msg: `got job and task response`, jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
+
           return { job, task };
         }
       }
     } catch (error) {
       if (error instanceof Error) {
-        logger.error({ msg: `Failed to get job with phase task: ${error.message}`, error });
+        logger.error({ msg: `Failed to get job and task response: ${error.message}`, error });
       }
       throw error;
     }
+  }
+
+  private async getJob(jobId: string): Promise<IJobResponse<unknown, unknown>> {
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJob.name }, jobId });
+
+    logger.info({ msg: `updating job status to ${OperationStatus.IN_PROGRESS}` });
+    await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
+
+    const job = await this.queueClient.jobManagerClient.getJob(jobId);
+    logger.info({ msg: `got job ${job.id}`, jobType: job.type });
+
+    return job;
+  }
+
+  private async getTask(jobType: string, taskType: string): Promise<TaskResponse<unknown>> {
+    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getTask.name }, jobType, taskType });
+    logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
+    const task = await this.queueClient.dequeue(jobType, taskType);
+
+    if (!task) {
+      logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
+      return { task: null, shouldSkipTask: true };
+    }
+    if (task.attempts >= this.ingestionConfig.maxTaskAttempts) {
+      const message = `${taskType} task ${task.id} reached max attempts, rejects as unrecoverable`;
+
+      logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
+      await this.queueClient.reject(task.jobId, task.id, false);
+
+      logger.error({ msg: `updating job status to ${OperationStatus.FAILED}`, jobId: task.jobId });
+      await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.FAILED, reason: message });
+      return { task: null, shouldSkipTask: true };
+    }
+    logger.info({ msg: `dequeued task ${task.id} successfully` });
+    return { task, shouldSkipTask: false };
   }
 }

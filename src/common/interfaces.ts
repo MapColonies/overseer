@@ -45,7 +45,7 @@ export interface IPollingTasks {
 export interface IngestionConfig {
   pollingTasks: IPollingTasks;
   jobs: IngestionJobsConfig;
-  taskMaxTaskAttempts: number;
+  maxTaskAttempts: number;
 }
 //#endregion config
 export interface LogContext {
@@ -55,17 +55,19 @@ export interface LogContext {
 }
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobInit: (job: IJobResponse<any, any>, task: string) => Promise<void>;
+  handleJobInit: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobFinalize: (job: IJobResponse<any, any>, task: string) => Promise<void>;
+  handleJobFinalize: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
 }
 
-export interface JobAndPhaseTask {
+export interface JobAndTaskResponse {
   job: IJobResponse<unknown, unknown>;
   task: ITaskResponse<unknown>;
 }
 
-export interface OverseerNewRasterLayerMetadata extends NewRasterLayerMetadata {
+export type TaskResponse<T> = { task: ITaskResponse<T>; shouldSkipTask: false } | { task: null; shouldSkipTask: true };
+
+export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
   catalogId: string;
   displayPath: string;
   layerRelativePath: string;
