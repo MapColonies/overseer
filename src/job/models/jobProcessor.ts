@@ -2,9 +2,10 @@ import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { extractBindingsMetadata, LogContext } from '../../common/logging';
 import { getAvailableJobTypes } from '../../utils/configUtil';
 import { SERVICES } from '../../common/constants';
-import { IConfig, IngestionConfig, JobAndTaskResponse, LogContext, TaskResponse } from '../../common/interfaces';
+import { IConfig, IngestionConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
@@ -69,9 +70,9 @@ export class JobProcessor {
     }
   }
 
-  private async processJob(jobAndTaskType: JobAndTaskResponse): Promise<void> {
+  private async processJob(jobAndTask: JobAndTaskResponse): Promise<void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.processJob.name } });
-    const { job, task } = jobAndTaskType;
+    const { job, task } = jobAndTask;
     try {
       const taskTypes = this.ingestionConfig.pollingTasks;
       const jobHandler = this.jobHandlerFactory(job.type);
@@ -131,7 +132,9 @@ export class JobProcessor {
   }
 
   private async getTask(jobType: string, taskType: string): Promise<TaskResponse<unknown>> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getTask.name }, jobType, taskType });
+    const logger = this.logger.child({ metadata: { jobType, taskType }, logContext: { ...this.logContext, function: this.getTask.name } }, {});
+    const metadata = extractBindingsMetadata(logger);
+
     logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
     const task = await this.queueClient.dequeue(jobType, taskType);
 
@@ -141,11 +144,10 @@ export class JobProcessor {
     }
     if (task.attempts >= this.ingestionConfig.maxTaskAttempts) {
       const message = `${taskType} task ${task.id} reached max attempts, rejects as unrecoverable`;
-
       logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
       await this.queueClient.reject(task.jobId, task.id, false);
 
-      logger.error({ msg: `updating job status to ${OperationStatus.FAILED}`, jobId: task.jobId });
+      logger.error({ msg: `updating job status to ${OperationStatus.FAILED}`, metadata: { jobId: task.jobId, ...metadata } });
       await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.FAILED, reason: message });
       return { task: null, shouldSkipTask: true };
     }

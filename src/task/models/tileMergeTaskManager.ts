@@ -11,20 +11,20 @@ import { SERVICES } from '../../common/constants';
 import {
   Grid,
   IConfig,
-  ILayerMergeData,
+  IPolygonPartMergeData,
   IMergeOverlaps,
   IMergeParameters,
   IMergeSources,
   IMergeTaskParameters,
-  LogContext,
   MergeTilesTaskParams,
   OverlapProcessingState,
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
+import { LogContext } from '../../common/logging';
 
 @injectable()
-export class MergeTilesTaskBuilder {
+export class TileMergeTaskManager {
   private readonly logContext: LogContext;
   private readonly mapServerCacheType: string;
   private readonly tileBatchSize: number;
@@ -38,7 +38,7 @@ export class MergeTilesTaskBuilder {
   ) {
     this.logContext = {
       fileName: __filename,
-      class: MergeTilesTaskBuilder.name,
+      class: TileMergeTaskManager.name,
     };
     this.mapServerCacheType = this.config.get<string>('mapServerCacheType');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
@@ -57,8 +57,8 @@ export class MergeTilesTaskBuilder {
       logger.debug({ msg: `Successfully built tasks for ${this.taskType} task`, metadata: { taskBuildParams } });
       return mergeTasks;
     } catch (error) {
-      const errorMag = (error as Error).message;
-      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMag}`, error, metadata: { taskBuildParams } });
+      const errorMsg = (error as Error).message;
+      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, error, metadata: { taskBuildParams } });
       throw error;
     }
   }
@@ -67,7 +67,7 @@ export class MergeTilesTaskBuilder {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.pushTasks.name } });
     let taskBatch: ICreateTaskBody<IMergeTaskParameters>[] = [];
 
-    logger.info({ msg: `Pushing tasks to queue`, metadata: { jobId } });
+    logger.debug({ msg: `Pushing tasks to queue`, metadata: { jobId, tasks } });
     try {
       for await (const task of tasks) {
         const taskBody: ICreateTaskBody<IMergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
@@ -108,10 +108,10 @@ export class MergeTilesTaskBuilder {
     }
   }
 
-  private createPartLayers(partData: PolygonPart, inputFiles: InputFiles): ILayerMergeData[] {
+  private createPartLayers(partData: PolygonPart, inputFiles: InputFiles): IPolygonPartMergeData[] {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createPartLayers.name } });
     logger.debug({ msg: 'creating part layers', metadata: { partData, inputFiles, numberOfFiles: inputFiles.fileNames.length } });
-    return inputFiles.fileNames.map<ILayerMergeData>((fileName) => {
+    return inputFiles.fileNames.map<IPolygonPartMergeData>((fileName) => {
       const tilesPath = join(inputFiles.originDirectory, fileName);
       const footprint = partData.geometry;
       if (!footprint) {
@@ -136,7 +136,7 @@ export class MergeTilesTaskBuilder {
     const { taskMetadata, inputFiles, partData } = taskBuildParams;
 
     logger.debug({ msg: 'Creating task parameters', metadata: { taskMetadata, partData, inputFiles, taskType: this.taskType } });
-    const partsLayers: ILayerMergeData[] = [];
+    const partsLayers: IPolygonPartMergeData[] = [];
     let maxZoom = 0;
 
     partData.forEach((part: PolygonPart) => {
@@ -146,7 +146,7 @@ export class MergeTilesTaskBuilder {
     });
 
     return {
-      layers: partsLayers,
+      polygonParts: partsLayers,
       destPath: taskMetadata.layerRelativePath,
       grid: taskMetadata.grid,
       targetFormat: taskMetadata.tileOutputFormat,
@@ -157,14 +157,14 @@ export class MergeTilesTaskBuilder {
 
   private async *createBatchedTasks(params: IMergeParameters): AsyncGenerator<IMergeTaskParameters, void, void> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createBatchedTasks.name } });
-    const { layers, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
+    const { polygonParts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
 
-    logger.debug({ msg: 'Creating batched tasks', metadata: { layers, destPath, targetFormat } });
+    logger.debug({ msg: 'Creating batched tasks', metadata: { polygonParts, destPath, targetFormat } });
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      const layerOverLaps = this.createLayerOverlaps(layers);
+      const layerOverLaps = this.createLayerOverlaps(polygonParts);
 
       for (const layerOverlap of layerOverLaps) {
-        for (const part of layerOverlap.layers) {
+        for (const part of layerOverlap.polygonParts) {
           if (part.maxZoom < zoom) {
             // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
             continue;
@@ -190,23 +190,23 @@ export class MergeTilesTaskBuilder {
   private createSourceLayers(overlap: IMergeOverlaps, grid: Grid): IMergeSources[] {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createSourceLayers.name } });
     logger.debug({ msg: 'Creating source layers', metadata: { overlap } });
-    return overlap.layers.map((layer) => {
-      const fileExtension = fileExtensionExtractor(layer.fileName);
+    return overlap.polygonParts.map((part) => {
+      const fileExtension = fileExtensionExtractor(part.fileName);
       return {
         type: fileExtension.toUpperCase(),
-        path: layer.tilesPath,
+        path: part.tilesPath,
         grid,
         extent: {
-          minX: layer.extent[0],
-          minY: layer.extent[1],
-          maxX: layer.extent[2],
-          maxY: layer.extent[3],
+          minX: part.extent[0],
+          minY: part.extent[1],
+          maxX: part.extent[2],
+          maxY: part.extent[3],
         },
       };
     });
   }
 
-  private *createLayerOverlaps(layers: ILayerMergeData[]): Generator<IMergeOverlaps> {
+  private *createLayerOverlaps(layers: IPolygonPartMergeData[]): Generator<IMergeOverlaps> {
     const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createLayerOverlaps.name } });
     logger.debug({ msg: 'Creating layer overlaps', metadata: { layers } });
 
@@ -223,13 +223,13 @@ export class MergeTilesTaskBuilder {
         if (state.currentIntersection) {
           logger.debug({ msg: 'Yielding layer overlaps', metadata: { subGroup, intersection: state.currentIntersection } });
           yield {
-            layers: subGroup,
+            polygonParts: subGroup,
             intersection: state.currentIntersection,
           };
         }
       } catch (error) {
-        const errorMag = (error as Error).message;
-        this.logger.error({ msg: `Failed to calculate overlaps, error: ${errorMag}`, error, metadata: { subGroup } });
+        const errorMsg = (error as Error).message;
+        this.logger.error({ msg: `Failed to calculate overlaps, error: ${errorMsg}`, error, metadata: { subGroup } });
         throw error;
       }
     }

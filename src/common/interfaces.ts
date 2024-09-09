@@ -48,11 +48,7 @@ export interface IngestionConfig {
   maxTaskAttempts: number;
 }
 //#endregion config
-export interface LogContext {
-  fileName: string;
-  class?: string;
-  function?: string;
-}
+
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleJobInit: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
@@ -93,7 +89,7 @@ export enum Grid {
   TWO_ON_ONE = '2x1',
 }
 //#region task
-export interface ILayerMergeData {
+export interface IPolygonPartMergeData {
   fileName: string;
   tilesPath: string;
   footprint?: GeoJSON;
@@ -102,7 +98,7 @@ export interface ILayerMergeData {
 }
 
 export interface IMergeParameters {
-  layers: ILayerMergeData[];
+  polygonParts: IPolygonPartMergeData[];
   destPath: string;
   maxZoom: number;
   grid: Grid;
@@ -125,7 +121,7 @@ export interface IMergeTaskParameters {
 }
 
 export interface IMergeOverlaps {
-  layers: ILayerMergeData[];
+  polygonParts: IPolygonPartMergeData[];
   intersection: Footprint;
 }
 

@@ -2,8 +2,9 @@ import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
 import { IJobResponse } from '@map-colonies/mc-priority-queue';
 import { UpdateRasterLayer } from '@map-colonies/mc-model-types';
-import { IJobHandler, LogContext } from '../../common/interfaces';
+import { IJobHandler } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
+import { LogContext } from '../../common/logging';
 
 @injectable()
 export class SwapJobHandler implements IJobHandler {

@@ -164,12 +164,12 @@ describe('JobProcessor', () => {
         const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
         const getJobSpy = jest.spyOn(queueClient.jobManagerClient, 'getJob');
 
-        const jobAndTaskType = await jobProcessor['getJobAndTaskResponse']();
+        const jobAndTask = await jobProcessor['getJobAndTaskResponse']();
 
         expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
         expect(getJobSpy).toHaveBeenCalledWith(task.jobId);
-        expect(jobAndTaskType?.task.type).toEqual(taskType);
-        expect(jobAndTaskType?.job).toEqual(job);
+        expect(jobAndTask?.task.type).toEqual(taskType);
+        expect(jobAndTask?.job).toEqual(job);
 
         await queueClient.heartbeatClient.stop(task.id);
       }
@@ -214,10 +214,10 @@ describe('JobProcessor', () => {
 
       const dequeueSpy = jest.spyOn(queueClient, 'dequeue');
 
-      const jobAndTaskType = await jobProcessor['getJobAndTaskResponse']();
+      const jobAndTask = await jobProcessor['getJobAndTaskResponse']();
 
       expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
-      expect(jobAndTaskType).toBeUndefined();
+      expect(jobAndTask).toBeUndefined();
 
       await queueClient.heartbeatClient.stop(dequeuedTask.id);
     });

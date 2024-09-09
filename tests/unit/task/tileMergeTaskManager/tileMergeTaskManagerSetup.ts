@@ -4,14 +4,14 @@ import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
 import { configMock } from '../../mocks/configMock';
 import { IJobManagerConfig } from '../../../../src/common/interfaces';
-import { MergeTilesTaskBuilder } from '../../../../src/task/models/mergeTilesTaskBuilder';
+import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
 export type MockUpdateJob = jest.MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
 
 export interface MergeTilesTaskBuilderContext {
-  mergeTilesTaskBuilder: MergeTilesTaskBuilder;
+  tileMergeTaskManager: TileMergeTaskManager;
 }
 
 export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): MergeTilesTaskBuilderContext {
@@ -40,8 +40,8 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const mergeTilesTaskBuilder = new MergeTilesTaskBuilder(mockLogger, configMock, new TileRanger(), queueClient);
+  const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, configMock, new TileRanger(), queueClient);
   return {
-    mergeTilesTaskBuilder,
+    tileMergeTaskManager,
   };
 }
