@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { PolygonPart } from '@map-colonies/mc-model-types';
 
-export const partData: PolygonPart[] = [
+export const partsData: PolygonPart[] = [
   {
-    id: 'avi',
-    name: 'string',
+    sourceId: 'avi',
+    sourceName: 'string',
     cities: ['string'],
     sensors: ['string'],
     geometry: {
@@ -31,10 +31,10 @@ export const partData: PolygonPart[] = [
 ];
 
 export const multiPartData: PolygonPart[] = [
-  { ...partData[0] },
+  { ...partsData[0] },
   {
-    id: 'avi',
-    name: 'string',
+    sourceId: 'avi',
+    sourceName: 'string',
     cities: ['string'],
     sensors: ['string'],
     geometry: {
@@ -62,8 +62,8 @@ export const multiPartData: PolygonPart[] = [
 
 export const multiPartDataWithDifferentResolution: PolygonPart[] = [
   {
-    id: 'westBank1',
-    name: 'westBank1',
+    sourceId: 'westBank1',
+    sourceName: 'westBank1',
     imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     resolutionDegree: 0.00000536441802978516,
@@ -88,8 +88,8 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
     },
   },
   {
-    id: 'westBank2',
-    name: 'westBank2',
+    sourceId: 'westBank2',
+    sourceName: 'westBank2',
     imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
     resolutionDegree: 0.00000268220901489258,
@@ -112,23 +112,5 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
         ],
       ],
     },
-  },
-];
-
-export const partDataWithoutFootPrint: PolygonPart[] = [
-  {
-    id: 'avi',
-    name: 'string',
-    cities: ['string'],
-    sensors: ['string'],
-    geometry: undefined,
-    countries: ['string'],
-    description: 'string',
-    resolutionMeter: 8000,
-    resolutionDegree: 0.0439453125,
-    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
-    sourceResolutionMeter: 8000,
-    horizontalAccuracyCE90: 10,
   },
 ];

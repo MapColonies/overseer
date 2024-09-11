@@ -1,19 +1,19 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
 import { Footprint } from '@map-colonies/mc-utils';
-import { OverlapProcessingState } from '../../../src/common/interfaces';
+import { IntersectionState } from '../../../src/common/interfaces';
 
 export const testData: {
   description: string;
   input: {
-    state: OverlapProcessingState;
+    state: IntersectionState;
     subGroupFootprints: Footprint[];
   };
 }[] = [
   {
     description: 'No intersection found',
     input: {
-      state: { currentIntersection: null, accumulatedOverlap: null },
+      state: { currentIntersection: null, accumulatedIntersection: null },
       subGroupFootprints: [
         {
           type: 'Polygon',
@@ -45,7 +45,7 @@ export const testData: {
   {
     description: 'Intersection found, no accumulated overlap',
     input: {
-      state: { currentIntersection: null, accumulatedOverlap: null },
+      state: { currentIntersection: null, accumulatedIntersection: null },
       subGroupFootprints: [
         {
           type: 'Polygon',
@@ -80,7 +80,7 @@ export const testData: {
     input: {
       state: {
         currentIntersection: null,
-        accumulatedOverlap: {
+        accumulatedIntersection: {
           type: 'Polygon',
           coordinates: [
             [

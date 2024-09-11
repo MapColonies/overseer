@@ -2,7 +2,6 @@ import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
 import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { extractBindingsMetadata, LogContext } from '../../common/logging';
 import { getAvailableJobTypes } from '../../utils/configUtil';
 import { SERVICES } from '../../common/constants';
 import { IConfig, IngestionConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
@@ -11,7 +10,6 @@ import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFacto
 @injectable()
 export class JobProcessor {
   private readonly dequeueIntervalMs: number;
-  private readonly logContext: LogContext;
   private readonly jobTypes: string[];
   private readonly pollingTaskTypes: string[];
   private readonly ingestionConfig: IngestionConfig;
@@ -27,33 +25,26 @@ export class JobProcessor {
     const { jobs, pollingTasks } = this.ingestionConfig;
     this.jobTypes = getAvailableJobTypes(jobs);
     this.pollingTaskTypes = [pollingTasks.init, pollingTasks.finalize];
-    this.logContext = {
-      fileName: __filename,
-      class: JobProcessor.name,
-    };
   }
 
   public async start(): Promise<void> {
-    const logCtx: LogContext = { ...this.logContext, function: this.start.name };
-    this.logger.info({ msg: 'starting polling', logContext: logCtx });
+    this.logger.info({ msg: 'starting polling' });
     while (this.isRunning) {
       await this.consumeAndProcess();
     }
   }
 
   public stop(): void {
-    const logCtx: LogContext = { ...this.logContext, function: this.stop.name };
-    this.logger.info({ msg: 'stopping polling', logContext: logCtx });
+    this.logger.info({ msg: 'stopping polling' });
     this.isRunning = false;
   }
 
   private async consumeAndProcess(): Promise<void> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.consumeAndProcess.name } });
     let jobAndTask: JobAndTaskResponse | undefined = undefined;
     try {
       jobAndTask = await this.getJobAndTaskResponse();
       if (!jobAndTask) {
-        logger.debug({ msg: 'waiting for next dequeue', metadata: { dequeueIntervalMs: this.dequeueIntervalMs } });
+        this.logger.debug({ msg: 'waiting for next dequeue', dequeueIntervalMs: this.dequeueIntervalMs });
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
@@ -62,16 +53,15 @@ export class JobProcessor {
     } catch (error) {
       if (error instanceof Error && jobAndTask) {
         const { job, task } = jobAndTask;
-        logger.error({ msg: 'rejecting task', error, metadata: { job, task } });
+        this.logger.error({ msg: 'rejecting task', error, job, task });
         await this.queueClient.reject(job.id, task.id, true, error.message);
       }
-      logger.debug({ msg: 'waiting for next dequeue', metadata: { dequeueIntervalMs: this.dequeueIntervalMs } });
+      this.logger.debug({ msg: 'waiting for next dequeue', dequeueIntervalMs: this.dequeueIntervalMs });
       await setTimeoutPromise(this.dequeueIntervalMs);
     }
   }
 
   private async processJob(jobAndTask: JobAndTaskResponse): Promise<void> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.processJob.name } });
     const { job, task } = jobAndTask;
     try {
       const taskTypes = this.ingestionConfig.pollingTasks;
@@ -87,40 +77,39 @@ export class JobProcessor {
       }
     } catch (error) {
       if (error instanceof Error) {
-        logger.error({ msg: `failed processing the job: ${error.message}`, error });
+        this.logger.error({ msg: `failed processing the job: ${error.message}`, error });
       }
       throw error;
     }
   }
 
   private async getJobAndTaskResponse(): Promise<JobAndTaskResponse | undefined> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJobAndTaskResponse.name } });
     try {
       for (const taskType of this.pollingTaskTypes) {
         for (const jobType of this.jobTypes) {
           const { task, shouldSkipTask } = await this.getTask(jobType, taskType);
 
           if (shouldSkipTask) {
-            logger.debug({ msg: `skipping task of type "${taskType}" and job of type "${jobType}"` });
+            this.logger.debug({ msg: `skipping task of type "${taskType}" and job of type "${jobType}"` });
             continue;
           }
 
           const job = await this.getJob(task.jobId);
-          logger.info({ msg: `got job and task response`, jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
+          this.logger.info({ msg: `got job and task response`, jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
 
           return { job, task };
         }
       }
     } catch (error) {
       if (error instanceof Error) {
-        logger.error({ msg: `Failed to get job and task response: ${error.message}`, error });
+        this.logger.error({ msg: `Failed to get job and task response: ${error.message}`, error });
       }
       throw error;
     }
   }
 
   private async getJob(jobId: string): Promise<IJobResponse<unknown, unknown>> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.getJob.name }, jobId });
+    const logger = this.logger.child({ jobId });
 
     logger.info({ msg: `updating job status to ${OperationStatus.IN_PROGRESS}` });
     await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
@@ -132,8 +121,7 @@ export class JobProcessor {
   }
 
   private async getTask(jobType: string, taskType: string): Promise<TaskResponse<unknown>> {
-    const logger = this.logger.child({ metadata: { jobType, taskType }, logContext: { ...this.logContext, function: this.getTask.name } }, {});
-    const metadata = extractBindingsMetadata(logger);
+    const logger = this.logger.child({ jobType, taskType });
 
     logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
     const task = await this.queueClient.dequeue(jobType, taskType);
@@ -147,7 +135,7 @@ export class JobProcessor {
       logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
       await this.queueClient.reject(task.jobId, task.id, false);
 
-      logger.error({ msg: `updating job status to ${OperationStatus.FAILED}`, metadata: { jobId: task.jobId, ...metadata } });
+      logger.error({ msg: `updating job status to ${OperationStatus.FAILED}`, jobId: task.jobId });
       await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.FAILED, reason: message });
       return { task: null, shouldSkipTask: true };
     }

@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { BBox } from 'geojson';
 import { Logger } from '@map-colonies/js-logger';
-import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
+import { InputFiles, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, Footprint, multiIntersect, subGroupsGen, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
 import { bbox, featureCollection, union } from '@turf/turf';
@@ -11,21 +11,19 @@ import { SERVICES } from '../../common/constants';
 import {
   Grid,
   IConfig,
-  IPolygonPartMergeData,
-  IMergeOverlaps,
   IMergeParameters,
   IMergeSources,
   IMergeTaskParameters,
   MergeTilesTaskParams,
-  OverlapProcessingState,
+  IPartsIntersection,
+  IPartSourceContext,
+  IntersectionState,
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
-import { LogContext } from '../../common/logging';
 
 @injectable()
 export class TileMergeTaskManager {
-  private readonly logContext: LogContext;
   private readonly mapServerCacheType: string;
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
@@ -36,10 +34,6 @@ export class TileMergeTaskManager {
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
   ) {
-    this.logContext = {
-      fileName: __filename,
-      class: TileMergeTaskManager.name,
-    };
     this.mapServerCacheType = this.config.get<string>('mapServerCacheType');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
@@ -47,106 +41,80 @@ export class TileMergeTaskManager {
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<IMergeTaskParameters, void, void> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.buildTasks.name } });
+    const logger = this.logger.child({ taskBuildParams });
 
-    logger.debug({ msg: `Building tasks for ${this.taskType} task`, metadata: { taskBuildParams } });
+    logger.debug({ msg: `Building tasks for ${this.taskType} task` });
 
     try {
-      const mergeParams = this.createTaskParams(taskBuildParams);
-      const mergeTasks = this.createBatchedTasks(mergeParams);
-      logger.debug({ msg: `Successfully built tasks for ${this.taskType} task`, metadata: { taskBuildParams } });
-      return mergeTasks;
+      const mergeParams = this.prepareMergeParameters(taskBuildParams);
+      const tasks = this.createZoomLevelTasks(mergeParams);
+      logger.debug({ msg: `Successfully built tasks for ${this.taskType} task` });
+      return tasks;
     } catch (error) {
       const errorMsg = (error as Error).message;
-      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, error, metadata: { taskBuildParams } });
+      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, error });
       throw error;
     }
   }
 
   public async pushTasks(jobId: string, tasks: AsyncGenerator<IMergeTaskParameters, void, void>): Promise<void> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.pushTasks.name } });
+    const logger = this.logger.child({ jobId, taskType: this.taskType });
     let taskBatch: ICreateTaskBody<IMergeTaskParameters>[] = [];
 
-    logger.debug({ msg: `Pushing tasks to queue`, metadata: { jobId, tasks } });
+    logger.debug({ msg: `Pushing tasks to queue`, tasks });
     try {
       for await (const task of tasks) {
         const taskBody: ICreateTaskBody<IMergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
         taskBatch.push(taskBody);
 
         if (taskBatch.length === this.taskBatchSize) {
-          logger.debug({ msg: 'Pushing task batch to queue', metadata: { jobId, batchLength: taskBatch.length, taskBatch } });
-          await this.processTaskBatch(jobId, taskBatch);
+          logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });
+          await this.enqueueTasks(jobId, taskBatch);
           taskBatch = [];
         }
       }
 
       if (taskBatch.length > 0) {
-        logger.debug({ msg: 'Pushing last task batch to queue', metadata: { jobId, batchLength: taskBatch.length, taskBatch } });
-        await this.processTaskBatch(jobId, taskBatch);
+        logger.debug({ msg: 'Pushing last task batch to queue', batchLength: taskBatch.length, taskBatch });
+        await this.enqueueTasks(jobId, taskBatch);
       }
     } catch (error) {
-      this.logger.error({ msg: 'Failed to push tasks to queue', error, metadata: { jobId } });
+      logger.error({ msg: 'Failed to push tasks to queue', error });
       throw error;
     }
 
-    this.logger.info({ msg: `Successfully pushed all tasks to queue`, jobId });
+    logger.info({ msg: `Successfully pushed all tasks to queue` });
   }
 
-  private async processTaskBatch(jobId: string, tasks: ICreateTaskBody<IMergeTaskParameters>[]): Promise<void> {
-    //do we need some retry mechanism?
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.processTaskBatch.name } });
-    logger.debug({ msg: `Attempting to push task batch to queue`, metadata: { jobId } });
+  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<IMergeTaskParameters>[]): Promise<void> {
+    const logger = this.logger.child({ jobId });
+    logger.debug({ msg: `Attempting to enqueue task batch` });
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
-      logger.info({ msg: `Successfully pushed task batch to queue`, metadata: { jobId } });
+      logger.info({ msg: `Successfully enqueued task batch` });
     } catch (error) {
       const errorMsg = (error as Error).message;
-      const message = `Failed to push tasks to queue: ${errorMsg}`;
-      logger.error({ msg: message, error, metadata: { jobId } });
+      const message = `Failed to enqueue tasks: ${errorMsg}`;
+      logger.error({ msg: message, error });
       throw error;
     }
   }
 
-  private createPartLayers(partData: PolygonPart, inputFiles: InputFiles): IPolygonPartMergeData[] {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createPartLayers.name } });
-    logger.debug({ msg: 'creating part layers', metadata: { partData, inputFiles, numberOfFiles: inputFiles.fileNames.length } });
-    return inputFiles.fileNames.map<IPolygonPartMergeData>((fileName) => {
-      const tilesPath = join(inputFiles.originDirectory, fileName);
-      const footprint = partData.geometry;
-      if (!footprint) {
-        const errorMsg = 'Part does not have a geometry';
-        logger.error({ msg: errorMsg, metadata: { partData } });
-        throw new Error(errorMsg);
-      }
-      const extent: BBox = bbox(footprint);
-      const maxZoom = degreesPerPixelToZoomLevel(partData.resolutionDegree ?? 0);
-      return {
-        fileName,
-        tilesPath,
-        footprint,
-        extent,
-        maxZoom,
-      };
-    });
-  }
+  private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): IMergeParameters {
+    const logger = this.logger.child({ taskType: this.taskType });
+    const { taskMetadata, inputFiles, partsData } = taskBuildParams;
 
-  private createTaskParams(taskBuildParams: MergeTilesTaskParams): IMergeParameters {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createTaskParams.name } });
-    const { taskMetadata, inputFiles, partData } = taskBuildParams;
+    logger.info({ msg: 'creating task parameters' });
 
-    logger.debug({ msg: 'Creating task parameters', metadata: { taskMetadata, partData, inputFiles, taskType: this.taskType } });
-    const partsLayers: IPolygonPartMergeData[] = [];
-    let maxZoom = 0;
+    logger.info({ msg: 'creating polygon parts with source context' });
+    const parts: IPartSourceContext[] = this.createPartsWithSourceContext(partsData, inputFiles);
 
-    partData.forEach((part: PolygonPart) => {
-      const partLayers = this.createPartLayers(part, inputFiles);
-      partsLayers.push(...partLayers);
-      maxZoom = Math.max(maxZoom, degreesPerPixelToZoomLevel(part.resolutionDegree ?? 0));
-    });
+    logger.info({ msg: 'calculating max zoom level' });
+    const maxZoom = this.calculatePartsMaxZoom(parts);
 
     return {
-      polygonParts: partsLayers,
+      parts,
       destPath: taskMetadata.layerRelativePath,
       grid: taskMetadata.grid,
       targetFormat: taskMetadata.tileOutputFormat,
@@ -155,42 +123,92 @@ export class TileMergeTaskManager {
     };
   }
 
-  private async *createBatchedTasks(params: IMergeParameters): AsyncGenerator<IMergeTaskParameters, void, void> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createBatchedTasks.name } });
-    const { polygonParts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
+  private createPartsWithSourceContext(parts: PolygonPart[], inputFiles: InputFiles): IPartSourceContext[] {
+    return parts.flatMap((part) => this.linkPartToInputFiles(part, inputFiles));
+  }
 
-    logger.debug({ msg: 'Creating batched tasks', metadata: { polygonParts, destPath, targetFormat } });
+  private linkPartToInputFiles(part: PolygonPart, inputFiles: InputFiles): IPartSourceContext[] {
+    this.logger.debug({ msg: 'linking parts to input files', part, inputFiles, numberOfFiles: inputFiles.fileNames.length });
+    return inputFiles.fileNames.map<IPartSourceContext>((fileName) => this.linkPartToFile(part, fileName, inputFiles.originDirectory));
+  }
+
+  private linkPartToFile(part: PolygonPart, fileName: string, originDirectory: string): IPartSourceContext {
+    const logger = this.logger.child({
+      partName: part.sourceName,
+      fileName,
+      originDirectory,
+    });
+
+    logger.info({ msg: 'Linking part to input file' });
+    const tilesPath = join(originDirectory, fileName);
+    const footprint = part.geometry;
+    const extent: BBox = bbox(footprint);
+    const maxZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
+
+    return {
+      fileName,
+      tilesPath,
+      footprint,
+      extent,
+      maxZoom,
+    };
+  }
+
+  private calculatePartsMaxZoom(parts: IPartSourceContext[]): number {
+    this.logger.debug({ msg: 'Calculating max zoom level', parts });
+    return Math.max(...parts.map((part) => part.maxZoom));
+  }
+
+  private async *createZoomLevelTasks(params: IMergeParameters): AsyncGenerator<IMergeTaskParameters, void, void> {
+    const { parts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
+
+    this.logger.debug({ msg: 'Creating batched tasks', parts, destPath, targetFormat });
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      const layerOverLaps = this.createLayerOverlaps(polygonParts);
-
-      for (const layerOverlap of layerOverLaps) {
-        for (const part of layerOverlap.polygonParts) {
-          if (part.maxZoom < zoom) {
-            // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
-            continue;
-          }
-          const footprint = convertToFeature(layerOverlap.intersection);
-          const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
-          const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
-
-          for await (const batch of batches) {
-            logger.debug({ msg: 'Yielding batch task', metadata: { batchSize: batch.length, zoom } });
-            yield {
-              targetFormat,
-              isNewTarget: isNewTarget,
-              batches: batch,
-              sources: [{ type: this.mapServerCacheType, path: destPath }, ...this.createSourceLayers(layerOverlap, grid)],
-            };
-          }
-        }
+      const partsIntersections = this.findPartsIntersections(parts);
+      for (const partsIntersection of partsIntersections) {
+        yield* this.createTasksForParts(partsIntersection, zoom, { destPath, grid, isNewTarget, targetFormat });
       }
     }
   }
 
-  private createSourceLayers(overlap: IMergeOverlaps, grid: Grid): IMergeSources[] {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createSourceLayers.name } });
-    logger.debug({ msg: 'Creating source layers', metadata: { overlap } });
-    return overlap.polygonParts.map((part) => {
+  private async *createTasksForParts(
+    partsIntersection: IPartsIntersection,
+    zoom: number,
+    params: { destPath: string; targetFormat: TileOutputFormat; isNewTarget: boolean; grid: Grid }
+  ): AsyncGenerator<IMergeTaskParameters, void, void> {
+    const { destPath, grid, isNewTarget, targetFormat } = params;
+    const logger = this.logger.child({ zoomLevel: zoom, isNewTarget, destPath, targetFormat, grid });
+    const { parts, intersection } = partsIntersection;
+
+    for (const part of parts) {
+      if (part.maxZoom < zoom) {
+        // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
+        continue;
+      }
+
+      const footprint = convertToFeature(intersection);
+      const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
+      const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
+      const sources = this.createPartSources(parts, grid, destPath);
+
+      for await (const batch of batches) {
+        logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
+        yield {
+          targetFormat,
+          isNewTarget: isNewTarget,
+          batches: batch,
+          sources,
+        };
+      }
+    }
+  }
+
+  private createPartSources(parts: IPartSourceContext[], grid: Grid, destPath: string): IMergeSources[] {
+    const logger = this.logger.child({ partsLength: parts.length });
+    logger.debug({ msg: 'Creating source layers', parts });
+
+    const sourceEntry: IMergeSources = { type: this.mapServerCacheType, path: destPath };
+    const sources = parts.map((part) => {
       const fileExtension = fileExtensionExtractor(part.fileName);
       return {
         type: fileExtension.toUpperCase(),
@@ -204,83 +222,93 @@ export class TileMergeTaskManager {
         },
       };
     });
+
+    return [sourceEntry, ...sources];
   }
 
-  private *createLayerOverlaps(layers: IPolygonPartMergeData[]): Generator<IMergeOverlaps> {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.createLayerOverlaps.name } });
-    logger.debug({ msg: 'Creating layer overlaps', metadata: { layers } });
+  private *findPartsIntersections(parts: IPartSourceContext[]): Generator<IPartsIntersection> {
+    this.logger.debug({ msg: 'Searching for parts intersection', parts });
 
-    //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not overlapping and we can yield them as is
-    let state: OverlapProcessingState = { currentIntersection: null, accumulatedOverlap: null };
+    //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not intersect and we can yield them as is
+    let state: IntersectionState = { currentIntersection: null, accumulatedIntersection: null };
 
-    const subGroups = subGroupsGen(layers, layers.length);
+    const subGroups = subGroupsGen(parts, parts.length);
 
     for (const subGroup of subGroups) {
       const subGroupFootprints = subGroup.map((layer) => layer.footprint as Footprint);
-      logger.debug({ msg: 'Processing sub group', metadata: { subGroup } });
+      this.logger.debug({ msg: 'Processing sub group', subGroup });
       try {
-        state = this.calculateOverlapState(state, subGroupFootprints);
+        state = this.calculateIntersectionState(state, subGroupFootprints);
         if (state.currentIntersection) {
-          logger.debug({ msg: 'Yielding layer overlaps', metadata: { subGroup, intersection: state.currentIntersection } });
+          this.logger.debug({ msg: 'Yielding part intersection', subGroup, intersection: state.currentIntersection });
           yield {
-            polygonParts: subGroup,
+            parts: subGroup,
             intersection: state.currentIntersection,
           };
         }
       } catch (error) {
         const errorMsg = (error as Error).message;
-        this.logger.error({ msg: `Failed to calculate overlaps, error: ${errorMsg}`, error, metadata: { subGroup } });
+        this.logger.error({ msg: `Failed to calculate intersection, error: ${errorMsg}`, error, subGroup });
         throw error;
       }
     }
 
-    logger.info({ msg: `Completed creating layer overlaps` });
+    this.logger.info({ msg: `Completed finding parts intersection` });
   }
 
-  private calculateOverlapState(state: OverlapProcessingState, subGroupFootprints: Footprint[]): OverlapProcessingState {
-    const logger = this.logger.child({ logContext: { ...this.logContext, function: this.calculateOverlapState.name } });
-    logger.debug({ msg: 'Calculating intersection', metadata: { overlapState: state, subGroupFootprints } });
+  private calculateIntersectionState(state: IntersectionState, subGroupFootprints: Footprint[]): IntersectionState {
+    const logger = this.logger.child({ intersectionState: state, subGroupFootprints });
+    logger.debug({ msg: 'Calculating intersection for current subGroup' });
 
     // Calculate the intersection of all footprints in the subgroup
     const intersection = multiIntersect(subGroupFootprints);
     if (!intersection) {
       // If no intersection is found, return the state with null current intersection
-      logger.debug({ msg: 'No intersection found for the current subgroup', metadata: { overlapState: state, subGroupFootprints } });
+      logger.debug({ msg: 'No intersection found for the current subgroup' });
       return { ...state, currentIntersection: null };
     }
 
-    if (!state.accumulatedOverlap) {
-      // If there's no accumulated overlap yet, return the current intersection as both current and accumulated
-      logger.debug({ msg: 'No accumulated overlap found, returning current intersection', metadata: { overlapState: state, subGroupFootprints } });
+    if (!state.accumulatedIntersection) {
+      // If there's no accumulated intersection yet, return the current intersection as both current and accumulated
+      logger.debug({ msg: 'No accumulated intersection yet (first iteration), returning current intersection' });
       return {
         currentIntersection: intersection,
-        accumulatedOverlap: intersection,
+        accumulatedIntersection: intersection,
       };
     }
 
-    const differenceFeatureCollection = featureCollection([convertToFeature(intersection), convertToFeature(state.accumulatedOverlap)]);
-    // Calculate the difference between the current intersection and the accumulated overlap
-    const intersectionDifference = difference(differenceFeatureCollection);
+    // Calculate the difference between the current intersection and the accumulated intersection
+    const intersectionDifference = this.calculateIntersectionDifference(intersection, state.accumulatedIntersection);
     logger.debug({
-      msg: 'new intersection calculated by difference between current intersection and accumulated overlap',
-      metadata: { intersectionDifference },
+      msg: 'new intersection calculated by difference between current intersection and accumulated intersection',
+      intersectionDifference,
     });
+
     if (!intersectionDifference) {
       // If no new intersection is found, return the state with null current intersection
       logger.debug({
-        msg: 'no difference found between current intersection and accumulated overlap',
-        metadata: { overlapState: state, subGroupFootprints },
+        msg: 'no difference found between current intersection and accumulated intersection',
       });
       return { ...state, currentIntersection: null };
     }
-    const unionFeatureCollection = featureCollection([convertToFeature(state.accumulatedOverlap), convertToFeature(intersectionDifference)]);
 
-    logger.debug({ msg: 'calculating union of accumulated overlap and intersection difference', metadata: { unionFeatureCollection } });
+    logger.debug({ msg: 'calculating union of accumulated intersection and intersection difference', intersectionDifference });
+    //Calculate the union of the accumulated intersection and the new intersection and return the updated state with the new intersection and accumulated intersection
+    const newAccumulatedIntersection = this.calculateNewAccumulatedIntersection(state.accumulatedIntersection, intersectionDifference);
 
-    //Calculate the union of the accumulated overlap and the new intersection and return the updated state with the new intersection and accumulated overlap
     return {
       currentIntersection: intersectionDifference,
-      accumulatedOverlap: union(unionFeatureCollection),
+      accumulatedIntersection: newAccumulatedIntersection,
     };
+  }
+
+  private calculateIntersectionDifference(intersection: Footprint, accumulatedIntersection: Footprint): Footprint | null {
+    const differenceFeatureCollection = featureCollection([convertToFeature(intersection), convertToFeature(accumulatedIntersection)]);
+    return difference(differenceFeatureCollection);
+  }
+
+  private calculateNewAccumulatedIntersection(accumulatedIntersection: Footprint, intersectionDifference: Footprint): Footprint | null {
+    const unionFeatureCollection = featureCollection([convertToFeature(accumulatedIntersection), convertToFeature(intersectionDifference)]);
+    return union(unionFeatureCollection);
   }
 }

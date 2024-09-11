@@ -1,6 +1,6 @@
 import { NewRasterLayer, ProductType, Transparency, UpdateRasterLayer } from '@map-colonies/mc-model-types';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
-import { partData } from './partsMockData';
+import { partsData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
@@ -25,7 +25,7 @@ export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
       classification: '6',
       productSubType: 'string',
     },
-    partData,
+    partData: partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
@@ -64,7 +64,7 @@ export const ingestionUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {
     metadata: {
       classification: '6',
     },
-    partData,
+    partData: partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
@@ -103,7 +103,7 @@ export const ingestionSwapUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = 
     metadata: {
       classification: '6',
     },
-    partData,
+    partData: partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',

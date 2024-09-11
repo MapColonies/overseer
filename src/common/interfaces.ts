@@ -75,7 +75,7 @@ export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
 export interface MergeTilesTaskParams {
   inputFiles: InputFiles;
   taskMetadata: MergeTilesMetadata;
-  partData: PolygonPart[];
+  partsData: PolygonPart[];
 }
 
 export interface MergeTilesMetadata {
@@ -89,7 +89,7 @@ export enum Grid {
   TWO_ON_ONE = '2x1',
 }
 //#region task
-export interface IPolygonPartMergeData {
+export interface IPartSourceContext {
   fileName: string;
   tilesPath: string;
   footprint?: GeoJSON;
@@ -98,7 +98,7 @@ export interface IPolygonPartMergeData {
 }
 
 export interface IMergeParameters {
-  polygonParts: IPolygonPartMergeData[];
+  parts: IPartSourceContext[];
   destPath: string;
   maxZoom: number;
   grid: Grid;
@@ -120,13 +120,13 @@ export interface IMergeTaskParameters {
   batches: ITileRange[];
 }
 
-export interface IMergeOverlaps {
-  polygonParts: IPolygonPartMergeData[];
+export interface IPartsIntersection {
+  parts: IPartSourceContext[];
   intersection: Footprint;
 }
 
-export interface OverlapProcessingState {
-  accumulatedOverlap: Footprint | null;
+export interface IntersectionState {
+  accumulatedIntersection: Footprint | null;
   currentIntersection: Footprint | null;
 }
 //#endregion task

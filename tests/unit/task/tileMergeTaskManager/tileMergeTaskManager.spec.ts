@@ -3,7 +3,7 @@ import nock from 'nock';
 import { booleanEqual } from '@turf/turf';
 import { Feature } from 'geojson';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
-import { partData, partDataWithoutFootPrint } from '../../mocks/partsMockData';
+import { partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, IMergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { testData } from '../../mocks/mergeTilesTaskBuilderMockData';
@@ -25,7 +25,7 @@ describe('tileMergeTaskManager', () => {
       const { tileMergeTaskManager } = testContext;
       const buildTasksParams: MergeTilesTaskParams = {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partData: partData,
+        partsData,
         inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
       };
 
@@ -48,13 +48,13 @@ describe('tileMergeTaskManager', () => {
     it('should handle errors in buildTasks correctly', () => {
       const { tileMergeTaskManager } = testContext;
 
-      jest.spyOn(tileMergeTaskManager as unknown as { createTaskParams: jest.Func }, 'createTaskParams').mockImplementationOnce(() => {
+      jest.spyOn(tileMergeTaskManager as unknown as { prepareMergeParameters: jest.Func }, 'prepareMergeParameters').mockImplementationOnce(() => {
         throw new Error('Mocked error');
       });
 
       const buildTasksParams: MergeTilesTaskParams = {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partData: partData,
+        partsData,
         inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
       };
 
@@ -68,32 +68,18 @@ describe('tileMergeTaskManager', () => {
 
       expect(error).not.toBeNull();
     });
-
-    it('should throw an error if polygonPart foot print is missing', () => {
-      const { tileMergeTaskManager } = testContext;
-
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partData: partDataWithoutFootPrint,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-      };
-
-      const action = () => tileMergeTaskManager.buildTasks(buildTasksParams);
-
-      expect(action).toThrow();
-    });
   });
 
-  describe('calculateOverlapState', () => {
+  describe('calculateIntersectionState', () => {
     // Test case 1: No intersection found
     it('should return null intersection when no overlap is found', () => {
       const { tileMergeTaskManager } = testContext;
 
       const { input } = testData[0];
-      const result = tileMergeTaskManager['calculateOverlapState'](input.state, input.subGroupFootprints);
+      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
 
       expect(result.currentIntersection).toBeNull();
-      expect(result.accumulatedOverlap).toBeNull();
+      expect(result.accumulatedIntersection).toBeNull();
     });
 
     // Test case 2: Intersection found, no accumulated overlap
@@ -101,11 +87,11 @@ describe('tileMergeTaskManager', () => {
       const { tileMergeTaskManager } = testContext;
       const { input } = testData[1];
 
-      const result = tileMergeTaskManager['calculateOverlapState'](input.state, input.subGroupFootprints);
-      const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedOverlap as Feature);
+      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
+      const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedIntersection as Feature);
 
       expect(result.currentIntersection).not.toBeNull();
-      expect(result.accumulatedOverlap).not.toBeNull();
+      expect(result.accumulatedIntersection).not.toBeNull();
       expect(isCurrentEqualAccumulated).toBe(true);
     });
 
@@ -113,11 +99,11 @@ describe('tileMergeTaskManager', () => {
     it('should return new intersection and updated accumulated overlap', () => {
       const { tileMergeTaskManager } = testContext;
       const { input } = testData[2];
-      const result = tileMergeTaskManager['calculateOverlapState'](input.state, input.subGroupFootprints);
-      const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedOverlap as Feature);
+      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
+      const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedIntersection as Feature);
 
       expect(result.currentIntersection).not.toBeNull();
-      expect(result.accumulatedOverlap).not.toBeNull();
+      expect(result.accumulatedIntersection).not.toBeNull();
       expect(isCurrentEqualAccumulated).toBe(false);
     });
 
@@ -126,7 +112,7 @@ describe('tileMergeTaskManager', () => {
       const { tileMergeTaskManager } = testContext;
       const { input } = testData[2];
 
-      input.state.accumulatedOverlap = {
+      input.state.accumulatedIntersection = {
         type: 'Polygon',
         coordinates: [
           [
@@ -139,10 +125,10 @@ describe('tileMergeTaskManager', () => {
         ],
       };
 
-      const result = tileMergeTaskManager['calculateOverlapState'](input.state, input.subGroupFootprints);
+      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
 
       expect(result.currentIntersection).toBeNull();
-      expect(result.accumulatedOverlap).not.toBeNull();
+      expect(result.accumulatedIntersection).not.toBeNull();
     });
 
     describe('pushTasks', () => {
@@ -150,7 +136,7 @@ describe('tileMergeTaskManager', () => {
         const { tileMergeTaskManager } = testContext;
         const buildTasksParams: MergeTilesTaskParams = {
           taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-          partData: partData,
+          partsData,
           inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
         };
 
@@ -176,7 +162,7 @@ describe('tileMergeTaskManager', () => {
         const { tileMergeTaskManager } = testContext;
         const buildTasksParams: MergeTilesTaskParams = {
           taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-          partData: partData,
+          partsData,
           inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
         };
 
