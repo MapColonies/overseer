@@ -1,7 +1,7 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
-import { BBox, GeoJSON } from 'geojson';
+import { BBox, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
 
 //#region config interfaces
@@ -92,7 +92,7 @@ export enum Grid {
 export interface IPartSourceContext {
   fileName: string;
   tilesPath: string;
-  footprint?: GeoJSON;
+  footprint: Polygon;
   extent: BBox;
   maxZoom: number;
 }
