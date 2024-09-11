@@ -246,4 +246,65 @@ describe('JobProcessor', () => {
       expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
     });
   });
+
+  describe('getTask', () => {
+    it('should return a task if it exists', async () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      const { jobProcessor, mockDequeue } = testContext;
+      const jobType = initTestCases[0].jobType;
+      const taskType = initTestCases[0].taskType;
+      const task = initTestCases[0].task;
+
+      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+
+      const result = await jobProcessor['getTask'](jobType, taskType);
+      expect(result.task).toEqual(task);
+      expect(result.shouldSkipTask).toBe(false);
+    });
+
+    it('should return null if task does not exist', async () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      const { jobProcessor, mockDequeue } = testContext;
+      const jobType = initTestCases[0].jobType;
+      const taskType = initTestCases[0].taskType;
+
+      mockDequeue.mockResolvedValueOnce(null);
+
+      const result = await jobProcessor['getTask'](jobType, taskType);
+
+      expect(result.task).toBeNull();
+      expect(result.shouldSkipTask).toBe(true);
+    });
+
+    it('should return null if task reached max attempts', async () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      setValue('jobManagement.ingestion.maxTaskAttempts', 3);
+
+      const { jobProcessor, mockDequeue, mockReject, mockUpdateJob } = testContext;
+      const jobType = initTestCases[0].jobType;
+      const taskType = initTestCases[0].taskType;
+      const task = { ...initTestCases[0].task, attempts: 3 };
+
+      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockReject.mockResolvedValueOnce(undefined);
+      mockUpdateJob.mockResolvedValueOnce(undefined);
+
+      const result = await jobProcessor['getTask'](jobType, taskType);
+
+      expect(result.task).toBeNull();
+      expect(result.shouldSkipTask).toBe(true);
+    });
+
+    it('should throw an error if an error occurred during dequeue task', async () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      const { jobProcessor, mockDequeue } = testContext;
+      const jobType = initTestCases[0].jobType;
+      const taskType = initTestCases[0].taskType;
+      const error = new Error('test error');
+
+      mockDequeue.mockRejectedValueOnce(error);
+
+      await expect(jobProcessor['getTask'](jobType, taskType)).rejects.toThrow(error);
+    });
+  });
 });

@@ -9,12 +9,14 @@ import { IJobManagerConfig } from '../../../../src/common/interfaces';
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
 export type MockUpdateJob = jest.MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
+export type MockReject = jest.MockedFunction<(jobId: string, taskId: string, isRecoverable: boolean, message: string) => Promise<void>>;
 
 export interface JobProcessorTestContext {
   jobProcessor: JobProcessor;
   mockJobHandlerFactory: jest.MockedFunction<JobHandlerFactory>;
   mockDequeue: MockDequeue;
   mockGetJob: MockGetJob;
+  mockReject: MockReject;
   mockUpdateJob: MockUpdateJob;
   configMock: typeof configMock;
   queueClient: QueueClient;
@@ -28,9 +30,11 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
   const mockDequeue = jest.fn() as MockDequeue;
   const mockGetJob = jest.fn() as MockGetJob;
   const mockUpdateJob = jest.fn() as MockUpdateJob;
+  const mockReject = jest.fn() as MockReject;
 
   const mockQueueClient = {
     dequeue: mockDequeue,
+    reject: mockReject,
     jobManagerClient: {
       getJob: mockGetJob,
       updateJob: mockUpdateJob,
@@ -55,6 +59,7 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
     mockDequeue,
     mockGetJob,
     mockUpdateJob,
+    mockReject,
     configMock,
     queueClient,
   };

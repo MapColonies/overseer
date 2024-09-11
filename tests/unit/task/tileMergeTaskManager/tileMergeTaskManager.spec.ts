@@ -6,7 +6,7 @@ import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, IMergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
-import { testData } from '../../mocks/mergeTilesTaskBuilderMockData';
+import { testData } from '../../mocks/tileMergeTaskManagerMockData';
 import { MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
