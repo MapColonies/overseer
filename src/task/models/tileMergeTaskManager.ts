@@ -92,7 +92,7 @@ export class TileMergeTaskManager {
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
-      logger.info({ msg: `Successfully enqueued task batch` });
+      logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
     } catch (error) {
       const errorMsg = (error as Error).message;
       const message = `Failed to enqueue tasks: ${errorMsg}`;
@@ -112,6 +112,7 @@ export class TileMergeTaskManager {
 
     logger.info({ msg: 'calculating max zoom level' });
     const maxZoom = this.calculatePartsMaxZoom(parts);
+    logger.info({ msg: 'max zoom level calculated', maxZoom });
 
     return {
       parts,
