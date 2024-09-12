@@ -291,6 +291,7 @@ describe('JobProcessor', () => {
 
       const result = await jobProcessor['getTask'](jobType, taskType);
 
+      expect(mockReject).toHaveBeenCalledTimes(1);
       expect(result.task).toBeNull();
       expect(result.shouldSkipTask).toBe(true);
     });
