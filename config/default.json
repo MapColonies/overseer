@@ -35,6 +35,7 @@
       "disableHttpClientLogs": true
     }
   },
+  "mapServerCacheType": "FS",
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "http://localhost:8081",
@@ -45,29 +46,28 @@
       "dequeueIntervalMs": 3000
     },
     "ingestion": {
+      "maxTaskAttempts": 3,
       "pollingTasks": {
         "init": "init",
         "finalize": "finalize"
       },
       "jobs": {
         "new": {
-          "type": "Ingestion_New",
-          "tasks": {
-            "splitTiles": "tilesSplitting",
-            "mergeTiles": "tilesMerging"
-          }
+          "type": "Ingestion_New"
         },
         "update": {
-          "type": "Ingestion_Update",
-          "tasks": {
-            "mergeTiles": "tilesMerging"
-          }
+          "type": "Ingestion_Update"
         },
         "swapUpdate": {
-          "type": "Ingestion_Swap_Update",
-          "tasks": {
-            "swapTiles": "tilesSwapping"
-          }
+          "type": "Ingestion_Swap_Update"
+        }
+      },
+      "tasks": {
+        "tilesMerging": {
+          "type": "tilesMerging",
+          "tileBatchSize": 10000,
+          "taskBatchSize": 5,
+          "useNewTargetFlagInUpdate": true
         }
       }
     }

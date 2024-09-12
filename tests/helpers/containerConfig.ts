@@ -7,10 +7,10 @@ import { SERVICES } from '../../src/common/constants';
 import { queueClientFactory } from '../../src/containerConfig';
 import { IngestionJobsConfig } from '../../src/common/interfaces';
 import { validateAndGetHandlersTokens } from '../../src/utils/configUtil';
-import { NewJobHandler } from '../../src/models/newJobHandler';
-import { UpdateJobHandler } from '../../src/models/updateJobHandler';
-import { SwapJobHandler } from '../../src/models/swapJobHandler';
-import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from '../../src/models/jobHandlerFactory';
+import { NewJobHandler } from '../../src/job/models/newJobHandler';
+import { UpdateJobHandler } from '../../src/job/models/updateJobHandler';
+import { SwapJobHandler } from '../../src/job/models/swapJobHandler';
+import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from '../../src/job/models/jobHandlerFactory';
 
 function getTestContainerConfig(): InjectionObject<unknown>[] {
   registerDefaultConfig();

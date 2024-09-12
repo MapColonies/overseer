@@ -13,6 +13,7 @@ export const SERVICES = {
   TRACER: Symbol('Tracer'),
   METER: Symbol('Meter'),
   QUEUE_CLIENT: Symbol('QueueClient'),
+  TILE_RANGER: Symbol('TileRanger'),
 } satisfies Record<string, symbol>;
 
 /* eslint-enable @typescript-eslint/naming-convention */

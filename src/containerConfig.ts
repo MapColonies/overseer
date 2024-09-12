@@ -2,7 +2,7 @@
 import config from 'config';
 import { getOtelMixin } from '@map-colonies/telemetry';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { IHttpRetryConfig, TileRanger } from '@map-colonies/mc-utils';
 import { trace, metrics as OtelMetrics } from '@opentelemetry/api';
 import { instancePerContainerCachingFactory } from 'tsyringe';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
@@ -11,11 +11,11 @@ import { Metrics } from '@map-colonies/telemetry';
 import { SERVICES, SERVICE_NAME } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
-import { NewJobHandler } from './models/newJobHandler';
-import { UpdateJobHandler } from './models/updateJobHandler';
-import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './models/jobHandlerFactory';
+import { NewJobHandler } from './job/models/newJobHandler';
+import { UpdateJobHandler } from './job/models/updateJobHandler';
+import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { validateAndGetHandlersTokens } from './utils/configUtil';
-import { SwapJobHandler } from './models/swapJobHandler';
+import { SwapJobHandler } from './job/models/swapJobHandler';
 import { IConfig, IJobManagerConfig, IngestionJobsConfig } from './common/interfaces';
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
@@ -60,6 +60,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
     { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
     { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
+    { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
     {
       token: 'onSignal',
       provider: {

@@ -89,6 +89,7 @@ const registerDefaultConfig = (): void => {
         dequeueIntervalMs: 3000,
       },
       ingestion: {
+        maxTaskAttempts: 3,
         pollingTasks: {
           init: 'init',
           finalize: 'finalize',
@@ -96,22 +97,19 @@ const registerDefaultConfig = (): void => {
         jobs: {
           new: {
             type: 'Ingestion_New',
-            tasks: {
-              splitTiles: 'tilesSplitting',
-              mergeTiles: 'tilesMerging',
-            },
           },
           update: {
             type: 'Ingestion_Update',
-            tasks: {
-              mergeTiles: 'tilesMerging',
-            },
           },
           swapUpdate: {
             type: 'Ingestion_Swap_Update',
-            tasks: {
-              swapTiles: 'tilesSwapping',
-            },
+          },
+        },
+        tasks: {
+          tilesMerging: {
+            type: 'tilesMerging',
+            tileBatchSize: 10000,
+            taskBatchSize: 2,
           },
         },
       },
