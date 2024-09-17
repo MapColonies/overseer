@@ -17,7 +17,11 @@
     "metrics": {
       "enabled": "TELEMETRY_METRICS_ENABLED",
       "url": "TELEMETRY_METRICS_URL",
-      "interval": "TELEMETRY_METRICS_INTERVAL"
+      "interval": "TELEMETRY_METRICS_INTERVAL",
+      "buckets": {
+        "__name": "TELEMETRY_METRICS_BUCKETS",
+        "__format": "json"
+      }
     }
   },
   "server": {
@@ -32,6 +36,57 @@
         "enabled": {
           "__name": "RESPONSE_COMPRESSION_ENABLED",
           "__format": "boolean"
+        }
+      }
+    },
+    "httpRetry": {
+      "attempts": "HTTP_RETRY_ATTEMPTS",
+      "delay": "HTTP_RETRY_DELAY",
+      "shouldResetTimeout": {
+        "__name": "HTTP_RETRY_RESET_TIMEOUT",
+        "__format": "boolean"
+      },
+      "disableHttpClientLogs": {
+        "__name": "HTTP_RETRY_DISABLE_LOGS",
+        "__format": "boolean"
+      }
+    }
+  },
+  "mapServerCacheType": "MAP_SERVER_CACHE_TYPE",
+  "jobManagement": {
+    "config": {
+      "jobManagerBaseUrl": "JOB_MANAGER_BASE_URL",
+      "heartbeat": {
+        "baseUrl": "HEARTBEAT_BASE_URL",
+        "intervalMs": "HEARTBEAT_INTERVAL_MS"
+      },
+      "dequeueIntervalMs": "DEQUEUE_INTERVAL_MS"
+    },
+    "ingestion": {
+      "pollingTasks": {
+        "init": "INGESTION_POLLING_INIT_TASK",
+        "finalize": "INGESTION_POLLING_FINALIZE_TASK"
+      },
+      "jobs": {
+        "new": {
+          "type": "INGESTION_NEW_JOB_TYPE"
+        },
+        "update": {
+          "type": "INGESTION_UPDATE_JOB_TYPE"
+        },
+        "swapUpdate": {
+          "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
+        }
+      },
+      "task": {
+        "tilesMerging": {
+          "type": "TILES_MERGING_TASK_TYPE",
+          "tileBatchSize": "TILES_MERGING_TILE_BATCH_SIZE",
+          "taskBatchSize": "TILES_MERGING_TASK_BATCH_SIZE",
+          "useNewTargetFlagInUpdate": {
+            "__name": "TILES_MERGING_USE_NEW_TARGET_FLAG",
+            "__format": "boolean"
+          }
         }
       }
     }
