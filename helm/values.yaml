@@ -1,16 +1,11 @@
 global:
-  cloudProvider: {}
+  imageRegistry: ""
+  imagePullSecrets: []
+  deploymentFlavor: "openshift"
+  pullPolicy: "IfNotPresent"
   tracing: {}
   metrics: {}
   environment: ''
-  serviceUrls:
-    jobManager: ""
-    heartbeatManager: ""
-  ca:    
-    caSecretName: ''
-    caPath: '/usr/local/share/ca-certificates'
-    caKey: 'ca.crt'
-  gracefulReloadMaxSeconds: 300    
 
 enabled: true
 environment: development
@@ -51,47 +46,16 @@ args: []
 
 sidecars: []
 
-cloudProvider:
-  dockerRegistryUrl: 'my-registry-url.io'
-  imagePullSecretName: 'my-registry-secret'
-  flavor: openshift
-
 caSecretName: ''
 caPath: '/usr/local/share/ca-certificates'
 caKey: 'ca.crt'
 
 image:
-  repository: overseer
-  tag: 'latest'
-  pullPolicy: Always
-
-serviceUrls:
-  jobManager: "http://localhost:8081"
-  heartbeatManager: "http://localhost:8082"
-
-tracing:
-  enabled: false
-  url: http://localhost:55681/v1/trace
-metrics:
-  enabled: false
-  url: http://localhost:55681/v1/metrics
-  buckets:
-  - 0.005
-  - 0.01
-  - 0.025
-  - 0.05
-  - 0.1
-  - 0.25
-  - 0.5
-  - 1
-  - 2.5
-  - 5
-  - 10
-  - 15
-  - 50
-  - 250
-  - 500
-
+  registry: ""
+  repository: ts-server-boilerplate
+  tag: 'v4.2.0'
+  digest: ""
+  pullSecrets: []
 env:
   port: 8080
   targetPort: 8080
@@ -100,37 +64,12 @@ env:
   logPrettyPrintEnabled: false
   responseCompressionEnabled: true
   requestPayloadLimit: 1mb
-
-  httpRetry:
-    attempts: 5
-    delay: exponential
-    resetTimeout: 30000
-  disableHttpClientLogs: true     
-
-  mapServerCacheType: "FS"
-  jobManagement:
-    config:
-      dequeueIntervalMs: 3000
-      heartBeat:
-        intervalMs: 3000
-    ingestion:
-      pollingTasks:
-        init: init
-        finalize: finalize
-      jobs:
-        new:
-          type: 'Ingestion_New'
-        update:
-          type: 'Ingestion_Update'
-        swapUpdate:
-          type: 'Ingestion_Swap_Update'
-      tasks:
-        tilesMerging:
-          type: 'Tiles_Merging'
-          tileBatchSize: 10000
-          taskBatchSize: 5
-          useNewTargetFlagInUpdate: true
-
+  tracing:
+    enabled: false
+    url: http://localhost:55681/v1/trace
+  metrics:
+    enabled: false
+    url: http://localhost:55681/v1/metrics
 
 resources:
   enabled: true
@@ -141,3 +80,28 @@ resources:
     requests:
       cpu: 100m
       memory: 128Mi
+
+route:
+  enabled: true
+  path: /
+  host: 
+  timeout:
+    enabled: false # defaults to 30s by openshift
+    duration: 60s # supported units (us, ms, s, m, h, d)
+  rewriteTarget: ''
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+    useCerts: false
+    certificate: ''
+    key: ''
+    caCertificate: ''
+
+ingress:
+  enabled: false
+  path: /
+  host: 'localhost'
+  cors:
+    enabled: true
+    origin: '*'

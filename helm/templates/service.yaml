@@ -1,21 +1,19 @@
 {{- $releaseName := .Release.Name -}}
-{{- $chartName := include "overseer.name" . -}}
-{{- $cloudProviderFlavor := include "overseer.cloudProviderFlavor" . -}}
-{{- $serviceName := include "service.fullname" . -}}
-
+{{- $chartName := include "ts-server-boilerplate.name" . -}}
+{{- $deploymentFlavor := include "ts-server-boilerplate.deploymentFlavor" . -}}
 {{- if .Values.enabled -}}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ $serviceName }}
+  name: {{ printf "%s-service" (include "ts-server-boilerplate.fullname" .) }}
   labels:
     app: {{ $chartName }}
     component: {{ $chartName }}
-    environment: {{ include "overseer.environment" . }}
+    environment: {{ include "ts-server-boilerplate.environment" . }}
     release: {{ $releaseName }}
-    {{- include "overseer.labels" . | nindent 4 }}
+    {{- include "ts-server-boilerplate.labels" . | nindent 4 }}
 spec:
-  {{- if eq $cloudProviderFlavor "minikube" }}
+  {{- if eq $deploymentFlavor "minikube" }}
   type: NodePort
   {{- end }}
   ports:
@@ -23,12 +21,12 @@ spec:
       targetPort: {{ .Values.env.targetPort }}
       protocol: {{ .Values.env.protocol }}
       name: http
-      {{- if eq $cloudProviderFlavor "minikube" }}
+      {{- if eq $deploymentFlavor "minikube" }}
       nodePort: {{ .Values.nodePort }}
       {{- end }}
   selector:
     app: {{ $chartName }}
     release: {{ $releaseName }}
     run: {{ $releaseName }}-{{ $chartName }}
-    {{- include "overseer.selectorLabels" . | nindent 4 }}
+    {{- include "ts-server-boilerplate.selectorLabels" . | nindent 4 }}
 {{- end }}

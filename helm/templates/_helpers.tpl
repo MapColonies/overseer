@@ -1,16 +1,9 @@
 {{/*
-Expand the name of the chart.
-*/}}
-{{- define "overseer.name" -}}
-{{- default .Chart.Name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
 Common labels
 */}}
-{{- define "overseer.labels" -}}
-helm.sh/chart: {{ include "overseer.chart" . }}
-{{ include "overseer.selectorLabels" . }}
+{{- define "ts-server-boilerplate.labels" -}}
+helm.sh/chart: {{ include "ts-server-boilerplate.chart" . }}
+{{ include "ts-server-boilerplate.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -20,22 +13,22 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Returns the tag of the chart.
 */}}
-{{- define "overseer.tag" -}}
+{{- define "ts-server-boilerplate.tag" -}}
 {{- default (printf "v%s" .Chart.AppVersion) .Values.image.tag }}
 {{- end }}
 
 {{/*
 Selector labels
 */}}
-{{- define "overseer.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "overseer.name" . }}
+{{- define "ts-server-boilerplate.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "ts-server-boilerplate.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Returns the environment from global if exists or from the chart's values, defaults to development
 */}}
-{{- define "overseer.environment" -}}
+{{- define "ts-server-boilerplate.environment" -}}
 {{- if .Values.global.environment }}
     {{- .Values.global.environment -}}
 {{- else -}}
@@ -46,52 +39,29 @@ Returns the environment from global if exists or from the chart's values, defaul
 {{/*
 Returns the tracing url from global if exists or from the chart's values
 */}}
-{{- define "overseer.tracingUrl" -}}
+{{- define "ts-server-boilerplate.tracingUrl" -}}
 {{- if .Values.global.tracing.url }}
     {{- .Values.global.tracing.url -}}
-{{- else if .Values.tracing.url -}}
-    {{- .Values.tracing.url -}}
+{{- else if .Values.env.tracing.url -}}
+    {{- .Values.env.tracing.url -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
 Returns the tracing url from global if exists or from the chart's values
 */}}
-{{- define "overseer.metricsUrl" -}}
+{{- define "ts-server-boilerplate.metricsUrl" -}}
 {{- if .Values.global.metrics.url }}
     {{- .Values.global.metrics.url -}}
 {{- else -}}
-    {{- .Values.metrics.url -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Returns the cloud provider image pull secret name from global if exists or from the chart's values
-*/}}
-{{- define "overseer.cloudProviderImagePullSecretName" -}}
-{{- if .Values.global.cloudProvider.imagePullSecretName }}
-    {{- .Values.global.cloudProvider.imagePullSecretName -}}
-{{- else if .Values.cloudProvider.imagePullSecretName -}}
-    {{- .Values.cloudProvider.imagePullSecretName -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Returns the cloud provider docker registry url from global if exists or from the chart's values
-*/}}
-{{- define "overseer.cloudProviderDockerRegistryUrl" -}}
-{{- if .Values.global.cloudProvider.dockerRegistryUrl }}
-    {{- printf "%s/" .Values.global.cloudProvider.dockerRegistryUrl -}}
-{{- else if .Values.cloudProvider.dockerRegistryUrl -}}
-    {{- printf "%s/" .Values.cloudProvider.dockerRegistryUrl -}}
-{{- else -}}
+    {{- .Values.env.metrics.url -}}
 {{- end -}}
 {{- end -}}
 
 {{/*
 Return the proper image name
 */}}
-{{- define "overseer.image" -}}
+{{- define "ts-server-boilerplate.image" -}}
 {{ include "common.images.image" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
@@ -99,40 +69,42 @@ Return the proper image name
 {{/*
 Return the proper Docker Image Registry Secret Names
 */}}
-{{- define "overseer.imagePullSecrets" -}}
+{{- define "ts-server-boilerplate.imagePullSecrets" -}}
 {{ include "common.images.renderPullSecrets" (dict "images" (list .Values.image) "context" $) }}
 {{- end -}}
 
 {{/*
 Return the proper image pullPolicy
 */}}
-{{- define "overseer.pullPolicy" -}}
+{{- define "ts-server-boilerplate.pullPolicy" -}}
 {{ include "common.images.pullPolicy" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
 
 {{/*
-Returns the cloud provider name from global if exists or from the chart's values, defaults to minikube
+Return the proper image deploymentFlavor
 */}}
-{{- define "overseer.cloudProviderFlavor" -}}
-{{- if .Values.global.cloudProvider.flavor }}
-    {{- .Values.global.cloudProvider.flavor -}}
-{{- else if .Values.cloudProvider -}}
-    {{- .Values.cloudProvider.flavor | default "minikube" -}}
-{{- else -}}
-    {{ "minikube" }}
+{{- define "ts-server-boilerplate.deploymentFlavor" -}}
+{{ include "common.images.deploymentFlavor" (dict "imageRoot" .Values.image "global" .Values.global) }}
 {{- end -}}
-{{- end -}} 
+
 
 {{/*
 Return the proper fully qualified app name
 */}}
-{{- define "overseer.fullname" -}}
+{{- define "ts-server-boilerplate.fullname" -}}
 {{ include "common.names.fullname" . }}
 {{- end -}}
 
 {{/*
 Return the proper chart name
 */}}
-{{- define "overseer.chart" -}}
+{{- define "ts-server-boilerplate.name" -}}
+{{ include "common.names.name" . }}
+{{- end -}}
+
+{{/*
+Return the proper chart name
+*/}}
+{{- define "ts-server-boilerplate.chart" -}}
 {{ include "common.names.chart" . }}
 {{- end -}}
