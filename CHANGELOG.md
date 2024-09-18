@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.1](https://github.com/MapColonies/overseer/compare/v1.1.0...v1.1.1) (2024-09-18)
+
+
+### Bug Fixes
+
+* remove empty lines ([2c6ffb7](https://github.com/MapColonies/overseer/commit/2c6ffb774e0a73b5d9dc0cfcf25a9738a0af117e))
+* remove empty spaces ([0f60133](https://github.com/MapColonies/overseer/commit/0f6013313a3775da0e1c0f489a9087a3db9ca522))
+
 ## 1.1.0 (2024-09-18)
 
 
