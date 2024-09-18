@@ -11,6 +11,4 @@ jobs:
     secrets: inherit
     with:
       enableOpenApiToPostman: false
-    
-
-
+         
