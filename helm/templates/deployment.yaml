@@ -1,16 +1,23 @@
 {{- $releaseName := .Release.Name -}}
-{{- $chartName := include "ts-server-boilerplate.name" . -}}
+{{- $deploymentName := include "deployment.fullname" . }}
+{{- $configmapName := include "configmap.fullname" . }}
+{{- $chartName := include "overseer.name" . -}}
+{{- $metrics := (include "common.metrics.merged" .) | fromYaml }}
+{{- $cloudProviderImagePullSecretName := include "overseer.cloudProviderImagePullSecretName" . -}}
+{{- $cloudProviderDockerRegistryUrl := include "overseer.cloudProviderDockerRegistryUrl" . -}}
+{{- $imageTag := include "overseer.tag" . -}}
+
 {{- if .Values.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ printf "%s-deployment" (include "ts-server-boilerplate.fullname" .) }}
+  name: {{ $deploymentName }}
   labels:
     app: {{ $chartName }}
     component: {{ $chartName }}
-    environment: {{ include "ts-server-boilerplate.environment" . }}
+    environment: {{ include "overseer.environment" . }}
     release: {{ $releaseName }}
-    {{- include "ts-server-boilerplate.labels" . | nindent 4 }}
+    {{- include "overseer.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   revisionHistoryLimit: {{ .Values.revisionHistoryLimit }}
@@ -19,58 +26,68 @@ spec:
       app: {{ $chartName }}
       release: {{ $releaseName }}
       run: {{ $releaseName }}-{{ $chartName }}
-      {{- include "ts-server-boilerplate.selectorLabels" . | nindent 6 }}
+      {{- include "overseer.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
         app: {{ $chartName }}
         release: {{ $releaseName }}
         run: {{ $releaseName }}-{{ $chartName }}
-        {{- include "ts-server-boilerplate.selectorLabels" . | nindent 8 }}
+        {{- include "overseer.selectorLabels" . | nindent 8 }}
       annotations:
-      {{- if .Values.resetOnConfigChange }}
+        {{- if .Values.resetOnConfigChange }}
         checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-      {{- end }}
-      {{- if .Values.podAnnotations }}
-      {{- toYaml .Values.podAnnotations | nindent 8 }}
-      {{- end }}
+        {{- end }}
+        {{- if $metrics.enabled }}
+        prometheus.io/port: {{ $metrics.prometheus.port | quote }}
+        prometheus.io/scrape: {{ $metrics.prometheus.scrape | quote }}
+        {{- end }}
+        {{- if .Values.podAnnotations }}
+        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- end }}
     spec:
-      {{- include "ts-server-boilerplate.imagePullSecrets" . | nindent 6 }}
+      {{- if $cloudProviderImagePullSecretName }}
+      imagePullSecrets:
+        - name: {{ $cloudProviderImagePullSecretName | quote }}
+      {{- end }}      
       containers:
         - name: {{ $releaseName }}-{{ $chartName }}-deployment
-          image: {{ include "ts-server-boilerplate.image" . }}
+          {{- with .Values.image }}
+          image: {{ $cloudProviderDockerRegistryUrl }}{{ .repository }}:{{ $imageTag }}
+          imagePullPolicy: {{ .pullPolicy | default "IfNotPresent" }}
+          {{- end }}
           {{- if .Values.command }}
           command: 
-          {{- toYaml .Values.command | nindent 12 }}
+            {{- toYaml .Values.command | nindent 12 }}
+          {{- end }}
           {{- if .Values.args }}
           args: 
-          {{- toYaml .Values.args | nindent 12 }}
-          {{- end }}
+            {{- toYaml .Values.args | nindent 12 }}
           {{- end }}
           volumeMounts:
-            {{- if .Values.caSecretName }}
-            - mountPath: {{ printf "%s/%s" .Values.caPath .Values.caKey | quote }}
+            {{- if .Values.global.ca.secretName }}
+            - mountPath: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
               name: root-ca
-              subPath: {{ quote .Values.caKey }}
+              subPath: {{ quote .Values.global.ca.key }}
             {{- end }}
-            {{- if .Values.extraVolumeMounts -}}
-              {{ toYaml .Values.extraVolumeMounts | nindent 12 }}
+            {{- if .Values.extraVolumeMounts }}
+              {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
             {{- end }}
           env:
             - name: SERVER_PORT
               value: {{ .Values.env.targetPort | quote }}
-            {{- if .Values.caSecretName }}
+            {{- if .Values.global.ca.secretName }}
             - name: REQUESTS_CA_BUNDLE
-              value: {{ printf "%s/%s" .Values.caPath .Values.caKey | quote }}
+              value: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
             - name: NODE_EXTRA_CA_CERTS
-              value: {{ printf "[%s/%s]" .Values.caPath .Values.caKey | quote }}
+              value: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
             {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
             {{- end }}            
           envFrom:
             - configMapRef:
-                name: {{ printf "%s-configmap" (include "ts-server-boilerplate.fullname" .) }}
+                name: {{ $configmapName }}
           ports:
             - name: http
               containerPort: {{ .Values.env.targetPort }}
@@ -98,18 +115,18 @@ spec:
             {{- toYaml .Values.resources.value | nindent 12 }}
           {{- end }}
         {{- if .Values.sidecars }}
-        {{ tpl (toYaml .Values.sidecars) . | nindent 8 }}
+        {{- tpl (toYaml .Values.sidecars) . | nindent 8 }}
         {{- end }}
       volumes:
         - name: nginx-config
           configMap:
             name: 'nginx-extra-configmap'      
-        {{- if .Values.caSecretName }}
+        {{- if .Values.global.ca.secretName }}
         - name: root-ca
           secret:
-            secretName: {{ .Values.caSecretName }}
+            secretName: {{ .Values.global.ca.secretName }}
         {{- end }}
-        {{- if .Values.extraVolumes -}}
-          {{ tpl (toYaml .Values.extraVolumes) . | nindent 8 }}
+        {{- if .Values.extraVolumes }}
+          {{- tpl (toYaml .Values.extraVolumes) . | nindent 8 }}
         {{- end }}   
-{{- end -}}
+{{- end }}

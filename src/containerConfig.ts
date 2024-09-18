@@ -22,14 +22,20 @@ export const queueClientFactory = (container: DependencyContainer): QueueClient 
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
   const config = container.resolve<IConfig>(SERVICES.CONFIG);
   const queueConfig = config.get<IJobManagerConfig>('jobManagement.config');
-  const httpRetryConfig = config.get<IHttpRetryConfig>('server.httpRetry');
+  const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
+  const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
+  const jobManagerServiceName = 'JobManager';
+  const heartbeatServiceName = 'Heartbeat';
   return new QueueClient(
     logger,
     queueConfig.jobManagerBaseUrl,
     queueConfig.heartbeat.baseUrl,
     queueConfig.dequeueIntervalMs,
     queueConfig.heartbeat.intervalMs,
-    httpRetryConfig
+    httpRetryConfig,
+    jobManagerServiceName,
+    heartbeatServiceName,
+    disableHttpClientLogs
   );
 };
 export interface RegisterOptions {
@@ -39,7 +45,7 @@ export interface RegisterOptions {
 
 export const registerExternalValues = (options?: RegisterOptions): DependencyContainer => {
   const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
-  const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin() });
+  const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin(), pinoCaller: loggerConfig.pinoCaller });
 
   const metrics = new Metrics();
   metrics.start();

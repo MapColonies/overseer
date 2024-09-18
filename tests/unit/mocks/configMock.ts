@@ -47,6 +47,7 @@ const registerDefaultConfig = (): void => {
       logger: {
         level: 'info',
         prettyPrint: false,
+        pinoCaller: false,
       },
       tracing: {
         enabled: true, // Changed from string "true" to boolean true
@@ -76,8 +77,8 @@ const registerDefaultConfig = (): void => {
         attempts: 5,
         delay: 'exponential',
         shouldResetTimeout: true,
-        disableHttpClientLogs: true,
       },
+      disableHttpClientLogs: true,
     },
     jobManagement: {
       config: {

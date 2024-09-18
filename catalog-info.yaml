@@ -13,5 +13,5 @@ metadata:
 spec:
   type: service
   lifecycle: production
-  owner: DevInfra
+  owner: Raster
   system: boilerplate
