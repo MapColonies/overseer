@@ -20,7 +20,8 @@ data:
   {{ if $metrics.enabled }}
   TELEMETRY_METRICS_ENABLED: 'true'
   TELEMETRY_METRICS_URL: {{ $metrics.url }}
-  
+  TELEMETRY_METRICS_INTERVAL: {{ $metrics.interval | quote }}
+  TELEMETRY_METRICS_BUCKETS: {{ $metrics.buckets | toJson | quote }}
   {{ end }}
   npm_config_cache: /tmp/
 
@@ -35,11 +36,11 @@ data:
   MAP_SERVER_CACHE_TYPE: {{ .Values.env.mapServerCacheType | quote }}
   INGESTION_POLLING_INIT_TASK: {{ .Values.env.jobManagement.ingestion.pollingTasks.init | quote }}
   INGESTION_POLLING_FINALIZE_TASK: {{ .Values.env.jobManagement.ingestion.pollingTasks.finalize | quote }}
-  INGESTION_JOB_NEW_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.new.type | quote }}
-  INGESTION_JOB_UPDATE_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.update.type | quote }}
-  INGESTION_JOB_SWAP_UPDATE_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.swapUpdate.type | quote }}
+  INGESTION_NEW_JOB_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.new.type | quote }}
+  INGESTION_UPDATE_JOB_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.update.type | quote }}
+  INGESTION_SWAP_UPDATE_JOB_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.swapUpdate.type | quote }}
   TILES_MERGING_TASK_TYPE: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.taskBatchSize | quote }}
-  TILES_MERGING_USE_NEW_TARGET_FLAG_IN_UPDATE: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.useNewTargetFlagInUpdate | quote }}
+  TILES_MERGING_USE_NEW_TARGET_FLAG: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.useNewTargetFlagInUpdate | quote }}
 {{- end }}

@@ -76,8 +76,8 @@ const registerDefaultConfig = (): void => {
         attempts: 5,
         delay: 'exponential',
         shouldResetTimeout: true,
-        disableHttpClientLogs: true,
       },
+      disableHttpClientLogs: true,
     },
     jobManagement: {
       config: {

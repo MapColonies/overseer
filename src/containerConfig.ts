@@ -23,13 +23,19 @@ export const queueClientFactory = (container: DependencyContainer): QueueClient 
   const config = container.resolve<IConfig>(SERVICES.CONFIG);
   const queueConfig = config.get<IJobManagerConfig>('jobManagement.config');
   const httpRetryConfig = config.get<IHttpRetryConfig>('server.httpRetry');
+  const disableHttpClientLogs = config.get<boolean>('server.disableHttpClientLogs');
+  const jobManagerServiceName = 'JobManager';
+  const heartbeatServiceName = 'Heartbeat';
   return new QueueClient(
     logger,
     queueConfig.jobManagerBaseUrl,
     queueConfig.heartbeat.baseUrl,
     queueConfig.dequeueIntervalMs,
     queueConfig.heartbeat.intervalMs,
-    httpRetryConfig
+    httpRetryConfig,
+    jobManagerServiceName,
+    heartbeatServiceName,
+    disableHttpClientLogs
   );
 };
 export interface RegisterOptions {

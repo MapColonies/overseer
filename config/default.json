@@ -27,14 +27,14 @@
         "enabled": true,
         "options": null
       }
-    },
-    "httpRetry": {
-      "attempts": 5,
-      "delay": "exponential",
-      "shouldResetTimeout": true,
-      "disableHttpClientLogs": true
     }
   },
+  "httpRetry": {
+    "attempts": 5,
+    "delay": "exponential",
+    "shouldResetTimeout": true
+  },
+  "disableHttpClientLogs": true,
   "mapServerCacheType": "FS",
   "jobManagement": {
     "config": {

@@ -44,28 +44,6 @@ Returns the environment from global if exists or from the chart's values, defaul
 {{- end -}}
 
 {{/*
-Returns the tracing url from global if exists or from the chart's values
-*/}}
-{{- define "overseer.tracingUrl" -}}
-{{- if .Values.global.tracing.url }}
-    {{- .Values.global.tracing.url -}}
-{{- else if .Values.tracing.url -}}
-    {{- .Values.tracing.url -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
-Returns the tracing url from global if exists or from the chart's values
-*/}}
-{{- define "overseer.metricsUrl" -}}
-{{- if .Values.global.metrics.url }}
-    {{- .Values.global.metrics.url -}}
-{{- else -}}
-    {{- .Values.metrics.url -}}
-{{- end -}}
-{{- end -}}
-
-{{/*
 Returns the cloud provider image pull secret name from global if exists or from the chart's values
 */}}
 {{- define "overseer.cloudProviderImagePullSecretName" -}}

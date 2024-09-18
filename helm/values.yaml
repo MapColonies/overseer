@@ -7,9 +7,9 @@ global:
     jobManager: ""
     heartbeatManager: ""
   ca:    
-    caSecretName: ''
-    caPath: '/usr/local/share/ca-certificates'
-    caKey: 'ca.crt'
+    secretName: ''
+    path: '/usr/local/share/ca-certificates'
+    key: 'ca.crt'
   gracefulReloadMaxSeconds: 300    
 
 enabled: true
@@ -55,10 +55,6 @@ cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'
   imagePullSecretName: 'my-registry-secret'
   flavor: openshift
-
-caSecretName: ''
-caPath: '/usr/local/share/ca-certificates'
-caKey: 'ca.crt'
 
 image:
   repository: overseer

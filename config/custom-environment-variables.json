@@ -38,19 +38,19 @@
           "__format": "boolean"
         }
       }
-    },
-    "httpRetry": {
-      "attempts": "HTTP_RETRY_ATTEMPTS",
-      "delay": "HTTP_RETRY_DELAY",
-      "shouldResetTimeout": {
-        "__name": "HTTP_RETRY_RESET_TIMEOUT",
-        "__format": "boolean"
-      },
-      "disableHttpClientLogs": {
-        "__name": "HTTP_RETRY_DISABLE_LOGS",
-        "__format": "boolean"
-      }
     }
+  },
+  "httpRetry": {
+    "attempts": "HTTP_RETRY_ATTEMPTS",
+    "delay": "HTTP_RETRY_DELAY",
+    "shouldResetTimeout": {
+      "__name": "HTTP_RETRY_RESET_TIMEOUT",
+      "__format": "boolean"
+    }
+  },
+  "disableHttpClientLogs": {
+    "__name": "DISABLE_HTTP_CLIENT_LOGS",
+    "__format": "boolean"
   },
   "mapServerCacheType": "MAP_SERVER_CACHE_TYPE",
   "jobManagement": {
