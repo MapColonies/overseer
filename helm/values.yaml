@@ -94,6 +94,7 @@ env:
   protocol: TCP
   logLevel: info
   logPrettyPrintEnabled: false
+  logPinoCallerEnabled: false
   responseCompressionEnabled: true
   requestPayloadLimit: 1mb
 

@@ -2,7 +2,8 @@
   "telemetry": {
     "logger": {
       "level": "info",
-      "prettyPrint": false
+      "prettyPrint": false,
+      "pinoCaller": false
     },
     "tracing": {
       "enabled": "true",
