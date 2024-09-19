@@ -2,6 +2,7 @@
 {{- $tracing := (include "common.tracing.merged" .) | fromYaml }}
 {{- $metrics := (include "common.metrics.merged" .) | fromYaml }}
 {{- $serviceUrls := (include "common.serviceUrls.merged" .) | fromYaml }}
+{{- $storage := (include "common.storage.merged" .) | fromYaml }}
 
 {{- if .Values.enabled -}}
 apiVersion: v1
@@ -34,7 +35,7 @@ data:
   HEARTBEAT_BASE_URL: {{ $serviceUrls.heartbeatManager | quote}}
   HEARTBEAT_INTERVAL_MS: {{ .Values.env.jobManagement.config.heartBeat.intervalMs | quote }}
   DEQUEUE_INTERVAL_MS: {{ .Values.env.jobManagement.config.dequeueIntervalMs | quote }}
-  MAP_SERVER_CACHE_TYPE: {{ .Values.env.mapServerCacheType | quote }}
+  TILES_STORAGE_PROVIDER: {{ $storage.tilesStorageProvider | quote }}
   INGESTION_POLLING_INIT_TASK: {{ .Values.env.jobManagement.ingestion.pollingTasks.init | quote }}
   INGESTION_POLLING_FINALIZE_TASK: {{ .Values.env.jobManagement.ingestion.pollingTasks.finalize | quote }}
   INGESTION_NEW_JOB_TYPE: {{ .Values.env.jobManagement.ingestion.jobs.new.type | quote }}
