@@ -24,7 +24,7 @@ import { fileExtensionExtractor } from '../../utils/fileutils';
 
 @injectable()
 export class TileMergeTaskManager {
-  private readonly mapServerCacheType: string;
+  private readonly tilesStorageProvider: string;
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
@@ -34,7 +34,7 @@ export class TileMergeTaskManager {
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
   ) {
-    this.mapServerCacheType = this.config.get<string>('mapServerCacheType');
+    this.tilesStorageProvider = this.config.get<string>('tilesStorageProvider');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
@@ -208,7 +208,7 @@ export class TileMergeTaskManager {
     const logger = this.logger.child({ partsLength: parts.length });
     logger.debug({ msg: 'Creating source layers', parts });
 
-    const sourceEntry: IMergeSources = { type: this.mapServerCacheType, path: destPath };
+    const sourceEntry: IMergeSources = { type: this.tilesStorageProvider, path: destPath };
     const sources = parts.map((part) => {
       const fileExtension = fileExtensionExtractor(part.fileName);
       return {

@@ -10,7 +10,9 @@ global:
     secretName: ''
     path: '/usr/local/share/ca-certificates'
     key: 'ca.crt'
-  gracefulReloadMaxSeconds: 300    
+  gracefulReloadMaxSeconds: 300
+  storage:
+    tilesStorageProvider: "FS"     
 
 enabled: true
 environment: development
@@ -50,6 +52,9 @@ args: []
 # args: [ "while true; do sleep infinity; done;" ]
 
 sidecars: []
+
+storage:
+  tilesStorageProvider: "FS"
 
 cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'
@@ -104,7 +109,7 @@ env:
     resetTimeout: 30000
   disableHttpClientLogs: true     
 
-  mapServerCacheType: "FS"
+
   jobManagement:
     config:
       dequeueIntervalMs: 3000

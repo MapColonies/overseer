@@ -73,13 +73,13 @@ const registerDefaultConfig = (): void => {
           options: null,
         },
       },
-      httpRetry: {
-        attempts: 5,
-        delay: 'exponential',
-        shouldResetTimeout: true,
-      },
-      disableHttpClientLogs: true,
     },
+    httpRetry: {
+      attempts: 5,
+      delay: 'exponential',
+      shouldResetTimeout: true,
+    },
+    disableHttpClientLogs: true,
     jobManagement: {
       config: {
         jobManagerBaseUrl: 'http://job-manager',

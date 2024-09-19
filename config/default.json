@@ -36,7 +36,7 @@
     "shouldResetTimeout": true
   },
   "disableHttpClientLogs": true,
-  "mapServerCacheType": "FS",
+  "tilesStorageProvider": "FS",
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "http://localhost:8081",
