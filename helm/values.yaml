@@ -54,7 +54,7 @@ args: []
 sidecars: []
 
 storage:
-  tilesStorageProvider: "FS"
+  tilesStorageProvider: ""
 
 cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'
