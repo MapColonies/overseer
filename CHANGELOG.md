@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.3](https://github.com/MapColonies/overseer/compare/v1.1.2...v1.1.3) (2024-09-19)
+
+
+### Bug Fixes
+
+* remove serviceUrls values ([a6a52d3](https://github.com/MapColonies/overseer/commit/a6a52d35f66ff2be91ef661c2479b2a42173abef))
+* remove tilesStorageProvider default value ([b3e286d](https://github.com/MapColonies/overseer/commit/b3e286dcaa9fa0d43d21fa84367a727cc8c57136))
+
 ### [1.1.2](https://github.com/MapColonies/overseer/compare/v1.1.1...v1.1.2) (2024-09-19)
 
 
