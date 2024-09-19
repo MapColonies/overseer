@@ -56,7 +56,7 @@
     "__name": "DISABLE_HTTP_CLIENT_LOGS",
     "__format": "boolean"
   },
-  "mapServerCacheType": "MAP_SERVER_CACHE_TYPE",
+  "tilesStorageProvider": "TILES_STORAGE_PROVIDER",
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "JOB_MANAGER_BASE_URL",
