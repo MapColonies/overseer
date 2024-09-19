@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.1.2](https://github.com/MapColonies/overseer/compare/v1.1.1...v1.1.2) (2024-09-19)
+
+
+### Bug Fixes
+
+* change mapServerCacheType to tilesStorageProvider ([5e9e3f9](https://github.com/MapColonies/overseer/commit/5e9e3f92e983478ae8a2149a21613aae361b290c))
+* chnage tilesStorageProvider Hierarchy ([6691544](https://github.com/MapColonies/overseer/commit/6691544913b61684b92cc7498ffbdb742e2df442))
+
 ### [1.1.1](https://github.com/MapColonies/overseer/compare/v1.1.0...v1.1.1) (2024-09-18)
 
 

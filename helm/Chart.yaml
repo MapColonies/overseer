@@ -2,8 +2,8 @@ apiVersion: v2
 name: overseer
 description: Helm chart for overseer service
 type: application
-version: 1.1.1
-appVersion: 1.1.1
+version: 1.1.2
+appVersion: 1.1.2
 dependencies:
   - name: common
     repository: oci://acrarolibotnonprod.azurecr.io/helm
