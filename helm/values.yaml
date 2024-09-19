@@ -67,8 +67,8 @@ image:
   pullPolicy: Always
 
 serviceUrls:
-  jobManager: "http://localhost:8081"
-  heartbeatManager: "http://localhost:8082"
+  jobManager: ""
+  heartbeatManager: ""
 
 tracing:
   enabled: false
