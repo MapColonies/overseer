@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../common/interfaces';
+import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, FinalizeTaskParams } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
@@ -58,9 +58,30 @@ export class NewJobHandler implements IJobHandler {
     }
   }
 
-  public async handleJobFinalize(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId });
-    logger.info({ msg: `handling ${job.type} job with "finalize"` });
+  public async handleJobFinalize(job: IJobResponse<NewRasterLayer, unknown>, task: ITaskResponse<FinalizeTaskParams>): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, taskId: task.id });
+
+    try {
+      logger.info({ msg: `handling ${job.type} job with "finalize"` });
+      let updateTaskParams: FinalizeTaskParams = task.parameters;
+      const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = updateTaskParams;
+
+      if (!insertedToMapproxy) {
+        updateTaskParams = { ...updateTaskParams, insertedToMapproxy: true };
+        await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: updateTaskParams });
+      }
+
+      if (!insertedToGeoServer) {
+        updateTaskParams = { ...updateTaskParams, insertedToGeoServer: true };
+        await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: updateTaskParams });
+      }
+
+      if (!insertedToCatalog) {
+        updateTaskParams = { ...updateTaskParams, insertedToCatalog: true };
+        await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: { ...task.parameters, insertedToCatalog: true } });
+      }
+    } catch (err) {}
+
     await Promise.reject('not implemented');
   }
 

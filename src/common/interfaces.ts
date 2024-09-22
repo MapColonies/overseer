@@ -49,11 +49,12 @@ export interface IngestionConfig {
 }
 //#endregion config
 
+//#region job/task interfaces
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleJobInit: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobFinalize: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
+  handleJobFinalize: (job: IJobResponse<any, any>, taskId: ITaskResponse<any>) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {
@@ -72,23 +73,15 @@ export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
   grid: Grid;
 }
 
-export interface MergeTilesTaskParams {
-  inputFiles: InputFiles;
-  taskMetadata: MergeTilesMetadata;
-  partsData: PolygonPart[];
+export interface FinalizeTaskParams {
+  insertedToMapproxy: boolean;
+  insertedToGeoServer: boolean;
+  insertedToCatalog: boolean;
 }
 
-export interface MergeTilesMetadata {
-  layerRelativePath: string;
-  tileOutputFormat: TileOutputFormat;
-  isNewTarget: boolean;
-  grid: Grid;
-}
+//#endregion job/task
 
-export enum Grid {
-  TWO_ON_ONE = '2x1',
-}
-//#region task
+//#region merge task
 export interface IPartSourceContext {
   fileName: string;
   tilesPath: string;
@@ -129,7 +122,24 @@ export interface IntersectionState {
   accumulatedIntersection: Footprint | null;
   currentIntersection: Footprint | null;
 }
+
+export interface MergeTilesTaskParams {
+  inputFiles: InputFiles;
+  taskMetadata: MergeTilesMetadata;
+  partsData: PolygonPart[];
+}
+
+export interface MergeTilesMetadata {
+  layerRelativePath: string;
+  tileOutputFormat: TileOutputFormat;
+  isNewTarget: boolean;
+  grid: Grid;
+}
 //#endregion task
+
+export enum Grid {
+  TWO_ON_ONE = '2x1',
+}
 
 export interface IBBox {
   minX: number;

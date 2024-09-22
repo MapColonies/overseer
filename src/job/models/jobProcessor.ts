@@ -72,7 +72,7 @@ export class JobProcessor {
           await jobHandler.handleJobInit(job, task.id);
           break;
         case taskTypes.finalize:
-          await jobHandler.handleJobFinalize(job, task.id);
+          await jobHandler.handleJobFinalize(job, task);
           break;
       }
     } catch (error) {
