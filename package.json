@@ -43,7 +43,7 @@
     "@map-colonies/error-express-handler": "^2.1.0",
     "@map-colonies/express-access-log-middleware": "^2.0.1",
     "@map-colonies/js-logger": "^1.1.0",
-    "@map-colonies/mc-model-types": "^17.1.6",
+    "@map-colonies/mc-model-types": "^17.6.0",
     "@map-colonies/mc-priority-queue": "^8.1.1",
     "@map-colonies/mc-utils": "^3.1.0",
     "@map-colonies/read-pkg": "0.0.1",

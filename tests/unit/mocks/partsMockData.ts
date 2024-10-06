@@ -7,7 +7,7 @@ export const partsData: PolygonPart[] = [
     sourceName: 'string',
     cities: ['string'],
     sensors: ['string'],
-    geometry: {
+    footprint: {
       type: 'Polygon',
       coordinates: [
         [
@@ -37,7 +37,7 @@ export const multiPartData: PolygonPart[] = [
     sourceName: 'string',
     cities: ['string'],
     sensors: ['string'],
-    geometry: {
+    footprint: {
       type: 'Polygon',
       coordinates: [
         [
@@ -74,7 +74,7 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
     countries: ['israel'],
     cities: ['string'],
     description: 'string',
-    geometry: {
+    footprint: {
       type: 'Polygon',
       coordinates: [
         [
@@ -100,7 +100,7 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
     countries: ['israel'],
     cities: ['string'],
     description: 'string',
-    geometry: {
+    footprint: {
       type: 'Polygon',
       coordinates: [
         [
