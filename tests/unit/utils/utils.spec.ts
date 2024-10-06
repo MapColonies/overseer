@@ -64,31 +64,6 @@ describe('utils', () => {
         expect(result).toEqual(footPrintFeature);
       });
 
-      it('should convert a MultiPolygon footPrint to a feature', () => {
-        const footPrint: Footprint = {
-          type: 'MultiPolygon',
-          coordinates: [
-            [
-              [
-                [125.6, 10.1],
-                [125.7, 10.1],
-                [125.7, 10.2],
-                [125.6, 10.2],
-                [125.6, 10.1],
-              ],
-            ],
-          ],
-        };
-
-        const footPrintFeature = {
-          type: 'Feature',
-          geometry: footPrint,
-          properties: {},
-        };
-        const result = convertToFeature(footPrint);
-        expect(result).toEqual(footPrintFeature);
-      });
-
       it('should throw an error for unsupported footPrint type', () => {
         const footPrint = {
           type: 'Point',

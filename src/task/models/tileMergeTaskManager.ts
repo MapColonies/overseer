@@ -142,7 +142,7 @@ export class TileMergeTaskManager {
 
     logger.info({ msg: 'Linking part to input file' });
     const tilesPath = join(originDirectory, fileName);
-    const footprint = part.geometry;
+    const footprint = part.footprint;
     const extent: BBox = bbox(footprint);
     const maxZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
 
