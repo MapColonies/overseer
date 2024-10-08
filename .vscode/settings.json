@@ -1,5 +1,5 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "files.eol": "\n",
-  "cSpell.words": ["Mapproxy"]
+  "cSpell.words": ["geoserver", "Mapproxy"]
 }

@@ -3,19 +3,25 @@ import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
-import { NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
+import { IngestionNewFinalizeTaskParams, NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, FinalizeTaskParams } from '../../common/interfaces';
-import { SERVICES } from '../../common/constants';
+import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, ExtendedNewRasterLayer } from '../../common/interfaces';
+import { FinalizeSteps, SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
+import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
+import { GeoserverClient } from '../../httpClients/geoserverClient';
+import { CatalogClient } from '../../httpClients/catalogClient';
 
 @injectable()
 export class NewJobHandler implements IJobHandler {
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
-    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
+    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
+    @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
+    @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
+    @inject(CatalogClient) private readonly catalogClient: CatalogClient
   ) {}
 
   public async handleJobInit(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
@@ -58,31 +64,40 @@ export class NewJobHandler implements IJobHandler {
     }
   }
 
-  public async handleJobFinalize(job: IJobResponse<NewRasterLayer, unknown>, task: ITaskResponse<FinalizeTaskParams>): Promise<void> {
+  public async handleJobFinalize(
+    job: IJobResponse<ExtendedNewRasterLayer, unknown>,
+    task: ITaskResponse<IngestionNewFinalizeTaskParams>
+  ): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, taskId: task.id });
 
     try {
       logger.info({ msg: `handling ${job.type} job with "finalize"` });
-      let updateTaskParams: FinalizeTaskParams = task.parameters;
-      const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = updateTaskParams;
+
+      let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
+      const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
+      const { productName, productType, layerRelativePath, tileOutputFormat } = job.parameters.metadata;
+      const layerName = this.generateLayerName(productName, productType);
 
       if (!insertedToMapproxy) {
-        updateTaskParams = { ...updateTaskParams, insertedToMapproxy: true };
-        await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: updateTaskParams });
+        await this.mapproxyClient.publishLayer(layerName, layerRelativePath, tileOutputFormat);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToMapproxy', finalizeTaskParams);
       }
 
       if (!insertedToGeoServer) {
-        updateTaskParams = { ...updateTaskParams, insertedToGeoServer: true };
-        await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: updateTaskParams });
+        await this.geoserverClient.publishLayer(layerName);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToGeoServer', finalizeTaskParams);
       }
 
       if (!insertedToCatalog) {
-        updateTaskParams = { ...updateTaskParams, insertedToCatalog: true };
-        await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: { ...task.parameters, insertedToCatalog: true } });
+        finalizeTaskParams = { ...finalizeTaskParams, insertedToCatalog: true };
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToCatalog', finalizeTaskParams);
       }
-    } catch (err) {}
-
-    await Promise.reject('not implemented');
+    } catch (err) {
+      if (err instanceof Error) {
+        logger.error({ msg: 'Failed to handle job finalize', error: err });
+        await this.queueClient.reject(job.id, task.id, true, err.message);
+      }
+    }
   }
 
   private readonly mapToExtendedNewLayerMetadata = (metadata: NewRasterLayerMetadata): ExtendedRasterLayerMetadata => {
@@ -102,5 +117,20 @@ export class NewJobHandler implements IJobHandler {
       tileMimeType,
       grid,
     };
+  };
+
+  private generateLayerName(productId: string, productType: string): string {
+    return `${productId}_${productType}`;
+  }
+
+  private readonly markFinalizeStepAsCompleted = async (
+    jobId: string,
+    taskId: string,
+    step: FinalizeSteps,
+    finalizeTaskParams: IngestionNewFinalizeTaskParams
+  ): Promise<IngestionNewFinalizeTaskParams> => {
+    const updatedParams: IngestionNewFinalizeTaskParams = { ...finalizeTaskParams, [step]: true };
+    await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
+    return updatedParams;
   };
 }

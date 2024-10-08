@@ -66,6 +66,12 @@
       },
       "dequeueIntervalMs": "DEQUEUE_INTERVAL_MS"
     },
+    "servicesUrl": {
+      "mapproxyApi": "MAPPROXY_API_URL",
+      "geoserverApi": "GEOSERVER_API_URL",
+      "catalogManager": "CATALOG_MANAGER_URL",
+      "mapproxyDns": "MAPPROXY_DNS"
+    },
     "ingestion": {
       "pollingTasks": {
         "init": "INGESTION_POLLING_INIT_TASK",

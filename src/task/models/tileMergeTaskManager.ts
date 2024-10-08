@@ -7,7 +7,7 @@ import { degreesPerPixelToZoomLevel, Footprint, multiIntersect, subGroupsGen, ti
 import { bbox, featureCollection, union } from '@turf/turf';
 import { difference } from '@turf/difference';
 import { inject, injectable } from 'tsyringe';
-import { SERVICES } from '../../common/constants';
+import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import {
   Grid,
   IConfig,
@@ -34,7 +34,7 @@ export class TileMergeTaskManager {
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
   ) {
-    this.tilesStorageProvider = this.config.get<string>('tilesStorageProvider');
+    this.tilesStorageProvider = this.config.get<TilesStorageProvider>('tilesStorageProvider');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
@@ -142,7 +142,7 @@ export class TileMergeTaskManager {
 
     logger.info({ msg: 'Linking part to input file' });
     const tilesPath = join(originDirectory, fileName);
-    const footprint = part.geometry;
+    const footprint = part.footprint;
     const extent: BBox = bbox(footprint);
     const maxZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
 

@@ -69,6 +69,10 @@ image:
 serviceUrls:
   jobManager: ""
   heartbeatManager: ""
+  catalogManager: ""
+  mapServerPublicDNS: ""
+  mapproxyApi: ""
+  geoserverApi: ""
 
 tracing:
   enabled: false

@@ -37,6 +37,13 @@
   },
   "disableHttpClientLogs": true,
   "tilesStorageProvider": "FS",
+  "linkTemplatesPath": "config/linkTemplates.template",
+  "servicesUrl": {
+    "mapproxyApi": "http://localhost:8083",
+    "geoserverApi": "http://localhost:8084",
+    "catalogManager": "http://localhost:8085",
+    "mapproxyDns": "http://localhost:8085"
+  },
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "http://localhost:8081",
