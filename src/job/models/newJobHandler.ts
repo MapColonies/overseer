@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { IngestionNewFinalizeTaskParams, NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -79,22 +79,28 @@ export class NewJobHandler implements IJobHandler {
       const layerName = this.generateLayerName(productName, productType);
 
       if (!insertedToMapproxy) {
-        await this.mapproxyClient.publishLayer(layerName, layerRelativePath, tileOutputFormat);
+        await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToMapproxy', finalizeTaskParams);
       }
 
       if (!insertedToGeoServer) {
-        await this.geoserverClient.publishLayer(layerName);
+        await this.geoserverClient.publish(layerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToGeoServer', finalizeTaskParams);
       }
 
       if (!insertedToCatalog) {
-        finalizeTaskParams = { ...finalizeTaskParams, insertedToCatalog: true };
+        await this.catalogClient.publish(job, layerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToCatalog', finalizeTaskParams);
+      }
+
+      if (this.isAllStepsCompleted(finalizeTaskParams)) {
+        await this.queueClient.ack(job.id, task.id);
+        await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.COMPLETED, reason: 'Job completed successfully' });
       }
     } catch (err) {
       if (err instanceof Error) {
-        logger.error({ msg: 'Failed to handle job finalize', error: err });
+        const errorMsg = `Failed to handle job finalize: ${err.message}`;
+        logger.error({ msg: errorMsg, error: err });
         await this.queueClient.reject(job.id, task.id, true, err.message);
       }
     }
@@ -123,14 +129,18 @@ export class NewJobHandler implements IJobHandler {
     return `${productId}_${productType}`;
   }
 
-  private readonly markFinalizeStepAsCompleted = async (
+  private isAllStepsCompleted(finalizeTaskParams: IngestionNewFinalizeTaskParams): boolean {
+    return Object.values(finalizeTaskParams).every((value) => value);
+  }
+
+  private async markFinalizeStepAsCompleted(
     jobId: string,
     taskId: string,
     step: FinalizeSteps,
     finalizeTaskParams: IngestionNewFinalizeTaskParams
-  ): Promise<IngestionNewFinalizeTaskParams> => {
+  ): Promise<IngestionNewFinalizeTaskParams> {
     const updatedParams: IngestionNewFinalizeTaskParams = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
     return updatedParams;
-  };
+  }
 }

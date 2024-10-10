@@ -18,3 +18,18 @@ export class UnsupportedTransparencyError extends Error {
     this.name = UnsupportedTransparencyError.name;
   }
 }
+
+export class UnsupportedStorageProviderError extends Error {
+  public constructor(storageProvider: string) {
+    super(`Unsupported storage provider: ${storageProvider}`);
+    this.name = UnsupportedStorageProviderError.name;
+  }
+}
+
+export class PublishLayerError extends Error {
+  public constructor(publishingClient: string, layerName: string, err: Error) {
+    super(`Failed to publish ${layerName} layer to ${publishingClient} client: ${err.message}`);
+    this.name = PublishLayerError.name;
+    this.stack = err.stack;
+  }
+}

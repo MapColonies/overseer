@@ -100,7 +100,7 @@ describe('JobProcessor', () => {
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
-      expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job, task.id);
+      expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job, task);
     });
 
     it('should reject task if an error occurred during processing', async () => {

@@ -49,4 +49,7 @@ data:
   GEOSERVER_API_URL: {{ $serviceUrls.mapServerPublicDNS | quote }}
   CATALOG_MANAGER_URL: {{ $serviceUrls.mapproxyApi | quote }}
   MAPPROXY_DNS: {{ $serviceUrls.geoserverApi | quote }}
+  POLYGON_PART_MANAGER_URL: {{ $serviceUrls.polygonPartManager | quote }}
+  GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
+  GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
 {{- end }}

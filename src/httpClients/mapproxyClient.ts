@@ -5,6 +5,7 @@ import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES, storageProviderToCacheTypeMap, TilesStorageProvider } from '../common/constants';
 import { IPublishMapLayerRequest } from '../common/interfaces';
+import { PublishLayerError, UnsupportedStorageProviderError } from '../common/errors';
 
 @injectable()
 export class MapproxyApiClient extends HttpClient {
@@ -18,20 +19,24 @@ export class MapproxyApiClient extends HttpClient {
     this.tilesStorageProvider = config.get<TilesStorageProvider>('tilesStorageProvider');
   }
 
-  public async publishLayer(layerName: string, tilesPath: string, format: TileOutputFormat): Promise<void> {
+  public async publish(layerName: string, tilesPath: string, format: TileOutputFormat): Promise<void> {
     const cacheType = storageProviderToCacheTypeMap.get(this.tilesStorageProvider);
-
     if (!cacheType) {
-      throw new Error(`Unsupported storage provider: ${this.tilesStorageProvider}`);
+      throw new UnsupportedStorageProviderError(this.tilesStorageProvider);
     }
-
-    const publishReq: IPublishMapLayerRequest = {
-      name: layerName,
-      tilesPath,
-      format,
-      cacheType,
-    };
-    const url = '/layer';
-    await this.post(url, publishReq);
+    try {
+      const publishReq: IPublishMapLayerRequest = {
+        name: layerName,
+        tilesPath,
+        format,
+        cacheType,
+      };
+      const url = '/layer';
+      await this.post(url, publishReq);
+    } catch (err) {
+      if (err instanceof Error) {
+        throw new PublishLayerError(this.targetService, layerName, err);
+      }
+    }
   }
 }

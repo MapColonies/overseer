@@ -164,12 +164,11 @@ export interface IInsertGeoserverRequest {
 //#region catalogClient
 
 export interface PartAggregatedData {
-  ingestionDate?: Date; // Optional, can be undefined if not passed
-  imagingTimeBeginUTC: Date; // Assuming these are ISO date strings, adjust as needed
-  imagingTimeEndUTC: Date; // Assuming these are ISO date strings, adjust as needed
+  imagingTimeBeginUTC: Date;
+  imagingTimeEndUTC: Date;
   minHorizontalAccuracyCE90: number;
   maxHorizontalAccuracyCE90: number;
-  sensors: string[]; // Assuming this is an array of sensor names or IDs
+  sensors: string[];
   maxResolutionDeg: number;
   minResolutionDeg: number;
   maxResolutionMeter: number;

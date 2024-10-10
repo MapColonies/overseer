@@ -70,7 +70,12 @@
       "mapproxyApi": "MAPPROXY_API_URL",
       "geoserverApi": "GEOSERVER_API_URL",
       "catalogManager": "CATALOG_MANAGER_URL",
-      "mapproxyDns": "MAPPROXY_DNS"
+      "mapproxyDns": "MAPPROXY_DNS",
+      "polygonPartManager": "POLYGON_PART_MANAGER_URL"
+    },
+    "geoserver": {
+      "workspace": "GEOSERVER_WORKSPACE",
+      "datastore": "GEOSERVER_DATASTORE"
     },
     "ingestion": {
       "pollingTasks": {
