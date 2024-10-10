@@ -1,3 +1,4 @@
+import { IngestionNewFinalizeTaskParams } from '@map-colonies/mc-model-types';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
@@ -15,5 +16,27 @@ export const SERVICES = {
   QUEUE_CLIENT: Symbol('QueueClient'),
   TILE_RANGER: Symbol('TileRanger'),
 } satisfies Record<string, symbol>;
+
+export const TilesStorageProvider = {
+  FS: 'FS',
+  S3: 'S3',
+} as const;
+
+export type TilesStorageProvider = (typeof TilesStorageProvider)[keyof typeof TilesStorageProvider];
+
+export const PublishedLayerCacheType = {
+  FS: 'file',
+  S3: 's3',
+  REDIS: 'redis',
+} as const;
+
+export type PublishedLayerCacheType = (typeof PublishedLayerCacheType)[keyof typeof PublishedLayerCacheType];
+
+export const storageProviderToCacheTypeMap = new Map([
+  [TilesStorageProvider.FS, PublishedLayerCacheType.FS],
+  [TilesStorageProvider.S3, PublishedLayerCacheType.S3],
+]);
+
+export type FinalizeSteps = keyof IngestionNewFinalizeTaskParams;
 
 /* eslint-enable @typescript-eslint/naming-convention */

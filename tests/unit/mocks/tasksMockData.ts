@@ -1,3 +1,4 @@
+import { IngestionNewFinalizeTaskParams } from '@map-colonies/mc-model-types';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 
 //copied from Ingestion-Trigger, should be moved to a shared library (Mc-Models)
@@ -59,12 +60,14 @@ export const initTaskForIngestionSwapUpdate: ITaskResponse<IPollingTaskParameter
   updated: '2024-07-24T07:43:10.528Z',
 };
 
-export const finalizeTaskForIngestionNew: ITaskResponse<IPollingTaskParameters> = {
+export const finalizeTaskForIngestionNew: ITaskResponse<IngestionNewFinalizeTaskParams> = {
   id: '4a5486bd-6269-4898-b9b1-647fe56d6ae2',
   type: 'finalize',
   description: '',
   parameters: {
-    blockDuplication: true,
+    insertedToCatalog: false,
+    insertedToGeoServer: false,
+    insertedToMapproxy: false,
   },
   status: OperationStatus.IN_PROGRESS,
   percentage: 0,

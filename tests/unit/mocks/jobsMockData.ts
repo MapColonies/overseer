@@ -1,5 +1,6 @@
-import { NewRasterLayer, ProductType, Transparency, UpdateRasterLayer } from '@map-colonies/mc-model-types';
+import { NewRasterLayer, ProductType, TileOutputFormat, Transparency, UpdateRasterLayer } from '@map-colonies/mc-model-types';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { ExtendedNewRasterLayer, Grid } from '../../../src/common/interfaces';
 import { partsData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
@@ -52,6 +53,22 @@ export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
   abortedTasks: 0,
   created: '2024-07-21T10:59:23.510Z',
   updated: '2024-07-21T10:59:23.510Z',
+};
+
+export const ingestionNewJobExtended: IJobResponse<ExtendedNewRasterLayer, unknown> = {
+  ...ingestionNewJob,
+  parameters: {
+    ...ingestionNewJob.parameters,
+    metadata: {
+      catalogId: 'some-catalog-id',
+      displayPath: 'some-display-path',
+      layerRelativePath: 'some-layer-relative-path',
+      tileOutputFormat: TileOutputFormat.PNG,
+      tileMimeType: 'image/png',
+      grid: Grid.TWO_ON_ONE,
+      ...ingestionNewJob.parameters.metadata,
+    },
+  },
 };
 
 export const ingestionUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {

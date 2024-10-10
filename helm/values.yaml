@@ -6,6 +6,14 @@ global:
   serviceUrls:
     jobManager: ""
     heartbeatManager: ""
+    catalogManager: ""
+    mapServerPublicDNS: ""
+    mapproxyApi: ""
+    geoserverApi: ""
+    polygonPartManager: ""
+  geoserver:
+    workspace: ''
+    dataStore: ''  
   ca:    
     secretName: ''
     path: '/usr/local/share/ca-certificates'
@@ -69,6 +77,11 @@ image:
 serviceUrls:
   jobManager: ""
   heartbeatManager: ""
+  catalogManager: ""
+  mapServerPublicDNS: ""
+  mapproxyApi: ""
+  geoserverApi: ""
+  polygonPartManager: ""
 
 tracing:
   enabled: false
@@ -92,6 +105,8 @@ metrics:
   - 50
   - 250
   - 500
+  prometheus:
+    scrape: false
 
 env:
   port: 8080
