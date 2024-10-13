@@ -85,8 +85,9 @@ export class NewJobHandler implements IJobHandler {
       }
 
       if (!insertedToGeoServer) {
-        logger.info({ msg: 'publishing to geoserver', layerName });
-        await this.geoserverClient.publish(layerName);
+        const geoserverLayerName = layerName.toLowerCase();
+        logger.info({ msg: 'publishing to geoserver', geoserverLayerName });
+        await this.geoserverClient.publish(geoserverLayerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToGeoServer', finalizeTaskParams);
       }
 
