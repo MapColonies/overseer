@@ -79,21 +79,25 @@ export class NewJobHandler implements IJobHandler {
       const layerName = this.generateLayerName(productName, productType);
 
       if (!insertedToMapproxy) {
+        logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
         await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToMapproxy', finalizeTaskParams);
       }
 
       if (!insertedToGeoServer) {
+        logger.info({ msg: 'publishing to geoserver', layerName });
         await this.geoserverClient.publish(layerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToGeoServer', finalizeTaskParams);
       }
 
       if (!insertedToCatalog) {
+        logger.info({ msg: 'publishing to catalog', layerName });
         await this.catalogClient.publish(job, layerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToCatalog', finalizeTaskParams);
       }
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
+        logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
         await this.queueClient.ack(job.id, task.id);
         await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.COMPLETED, reason: 'Job completed successfully' });
       }

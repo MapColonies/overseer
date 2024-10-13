@@ -24,7 +24,7 @@ export class GeoserverClient extends HttpClient {
     try {
       const url = `/featureTypes/${this.workspace}/${this.dataStore}`;
       const publishReq: IInsertGeoserverRequest = {
-        name: layerName,
+        nativeName: layerName.toLowerCase(),
       };
 
       await this.post(url, publishReq);

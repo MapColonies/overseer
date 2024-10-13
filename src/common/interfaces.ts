@@ -56,7 +56,7 @@ export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleJobInit: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobFinalize: (job: IJobResponse<any, any>, taskId: ITaskResponse<any>) => Promise<void>;
+  handleJobFinalize: (job: IJobResponse<any, any>, task: ITaskResponse<any>) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {
@@ -157,7 +157,7 @@ export interface IPublishMapLayerRequest {
 
 //#region geoserverApi
 export interface IInsertGeoserverRequest {
-  name: string;
+  nativeName: string;
 }
 //#endregion geoserverApi
 
