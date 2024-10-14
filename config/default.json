@@ -37,11 +37,23 @@
   },
   "disableHttpClientLogs": true,
   "tilesStorageProvider": "FS",
+  "linkTemplatesPath": "config/linkTemplates.template",
+  "servicesUrl": {
+    "mapproxyApi": "http://localhost:8083",
+    "geoserverApi": "http://localhost:8084",
+    "catalogManager": "http://localhost:8085",
+    "mapproxyDns": "http://localhost:8086",
+    "polygonPartManager": "http://localhost:8087"
+  },
+  "geoserver": {
+    "workspace": "polygonParts",
+    "dataStore": "polygonParts"
+  },
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "http://localhost:8081",
       "heartbeat": {
-        "baseUrl": "http://localhost:8083",
+        "baseUrl": "http://localhost:8082",
         "intervalMs": 3000
       },
       "dequeueIntervalMs": 3000

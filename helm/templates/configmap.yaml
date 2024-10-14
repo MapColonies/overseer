@@ -45,4 +45,11 @@ data:
   TILES_MERGING_TILE_BATCH_SIZE: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.taskBatchSize | quote }}
   TILES_MERGING_USE_NEW_TARGET_FLAG: {{ .Values.env.jobManagement.ingestion.tasks.tilesMerging.useNewTargetFlagInUpdate | quote }}
+  MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
+  GEOSERVER_API_URL: {{ $serviceUrls.geoserverApi | quote }}
+  CATALOG_MANAGER_URL: {{ $serviceUrls.catalogManager | quote }}
+  MAPPROXY_DNS: {{ $serviceUrls.mapServerPublicDNS | quote }}
+  POLYGON_PART_MANAGER_URL: {{ $serviceUrls.polygonPartManager | quote }}
+  GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
+  GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
 {{- end }}

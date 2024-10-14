@@ -79,7 +79,20 @@ const registerDefaultConfig = (): void => {
       delay: 'exponential',
       shouldResetTimeout: true,
     },
+    tilesStorageProvider: 'FS',
     disableHttpClientLogs: true,
+    linkTemplatesPath: 'config/linkTemplates.template',
+    servicesUrl: {
+      mapproxyApi: 'http://mapproxy-api',
+      geoserverApi: 'http://geoserver-api',
+      catalogManager: 'http://catalog-manager',
+      mapproxyDns: 'http://mapproxy',
+      polygonPartsManager: 'http://polygon-parts-manager',
+    },
+    geoserver: {
+      workspace: 'testWorkspace',
+      dataStore: 'testDataStore',
+    },
     jobManagement: {
       config: {
         jobManagerBaseUrl: 'http://job-manager',

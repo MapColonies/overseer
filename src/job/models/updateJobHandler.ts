@@ -1,6 +1,6 @@
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { UpdateRasterLayer } from '@map-colonies/mc-model-types';
 import { IJobHandler } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
@@ -15,8 +15,8 @@ export class UpdateJobHandler implements IJobHandler {
     await Promise.reject('not implemented');
   }
 
-  public async handleJobFinalize(job: IJobResponse<UpdateRasterLayer, unknown>, taskId: string): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId });
+  public async handleJobFinalize(job: IJobResponse<UpdateRasterLayer, unknown>, task: ITaskResponse<unknown>): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, taskId: task.id });
     logger.info({ msg: `handling ${job.type} job with "finalize" task` });
     await Promise.reject('not implemented');
   }

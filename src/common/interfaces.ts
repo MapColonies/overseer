@@ -1,8 +1,10 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
+import { GeoJSON } from 'geojson';
+import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat, LayerData } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
+import { PublishedLayerCacheType } from './constants';
 
 //#region config interfaces
 export interface IConfig {
@@ -49,11 +51,12 @@ export interface IngestionConfig {
 }
 //#endregion config
 
+//#region job/task interfaces
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleJobInit: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobFinalize: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
+  handleJobFinalize: (job: IJobResponse<any, any>, task: ITaskResponse<any>) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {
@@ -72,23 +75,22 @@ export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
   grid: Grid;
 }
 
-export interface MergeTilesTaskParams {
-  inputFiles: InputFiles;
-  taskMetadata: MergeTilesMetadata;
-  partsData: PolygonPart[];
-}
+export type ExtendedNewRasterLayer = { metadata: ExtendedRasterLayerMetadata } & LayerData;
 
-export interface MergeTilesMetadata {
-  layerRelativePath: string;
-  tileOutputFormat: TileOutputFormat;
-  isNewTarget: boolean;
-  grid: Grid;
-}
+//#endregion job/task
+
+//#region merge task
 
 export enum Grid {
   TWO_ON_ONE = '2x1',
 }
-//#region task
+
+export interface IBBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
 export interface IPartSourceContext {
   fileName: string;
   tilesPath: string;
@@ -129,11 +131,50 @@ export interface IntersectionState {
   accumulatedIntersection: Footprint | null;
   currentIntersection: Footprint | null;
 }
+
+export interface MergeTilesTaskParams {
+  inputFiles: InputFiles;
+  taskMetadata: MergeTilesMetadata;
+  partsData: PolygonPart[];
+}
+
+export interface MergeTilesMetadata {
+  layerRelativePath: string;
+  tileOutputFormat: TileOutputFormat;
+  isNewTarget: boolean;
+  grid: Grid;
+}
 //#endregion task
 
-export interface IBBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
+//#region mapproxyApi
+export interface IPublishMapLayerRequest {
+  name: string;
+  tilesPath: string;
+  cacheType: PublishedLayerCacheType;
+  format: TileOutputFormat;
 }
+//#endregion mapproxyApi
+
+//#region geoserverApi
+export interface IInsertGeoserverRequest {
+  nativeName: string;
+}
+//#endregion geoserverApi
+
+//#region catalogClient
+
+export interface PartAggregatedData {
+  imagingTimeBeginUTC: Date;
+  imagingTimeEndUTC: Date;
+  minHorizontalAccuracyCE90: number;
+  maxHorizontalAccuracyCE90: number;
+  sensors: string[];
+  maxResolutionDeg: number;
+  minResolutionDeg: number;
+  maxResolutionMeter: number;
+  minResolutionMeter: number;
+  footprint: GeoJSON;
+  productBoundingBox: string;
+}
+
+//#endregion catalogClient
