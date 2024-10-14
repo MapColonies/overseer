@@ -11,6 +11,22 @@ global:
     mapproxyApi: ""
     geoserverApi: ""
     polygonPartManager: ""
+  jobDefinitions:
+     jobs:
+       new:
+         type: ""
+       update:
+         type:  
+       swapUpdate:
+         type: ""
+     tasks:
+      init:
+        type: ""
+      merge:
+        type: ""
+      finalize:
+        type: ""
+
   geoserver:
     workspace: ''
     dataStore: ''  
@@ -122,32 +138,30 @@ env:
     attempts: 5
     delay: exponential
     resetTimeout: 30000
-  disableHttpClientLogs: true     
+  disableHttpClientLogs: true
 
-
-  jobManagement:
+  jobDefinitions:
+    jobs:
+     new:
+       type: ""
+     update:
+       type: ""
+     swapUpdate:
+       type: ""
+    tasks:
+      init:
+        type: ""
+      merge:
+        type: ""
+        tileBatchSize: 10000
+        taskBatchSize: 5
+        useNewTargetFlagInUpdate: true
+      finalize:
+        type: ""
     config:
       dequeueIntervalMs: 3000
       heartBeat:
-        intervalMs: 3000
-    ingestion:
-      pollingTasks:
-        init: init
-        finalize: finalize
-      jobs:
-        new:
-          type: 'Ingestion_New'
-        update:
-          type: 'Ingestion_Update'
-        swapUpdate:
-          type: 'Ingestion_Swap_Update'
-      tasks:
-        tilesMerging:
-          type: 'Tiles_Merging'
-          tileBatchSize: 10000
-          taskBatchSize: 5
-          useNewTargetFlagInUpdate: true
-
+      intervalMs: 3000  
 
 resources:
   enabled: true

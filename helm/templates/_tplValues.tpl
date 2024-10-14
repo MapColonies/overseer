@@ -61,3 +61,7 @@ Custom definitions
 {{- define "common.storage.merged" -}}
 {{- include "common.tplvalues.merge" ( dict "values" ( list .Values.storage .Values.global.storage ) "context" . ) }}
 {{- end -}}
+
+{{- define "common.jobDefinitions.merged" -}}
+{{- include "common.tplvalues.merge" ( dict "values" ( list .Values.env.jobDefinitions .Values.global.jobDefinitions ) "context" . ) }}
+{{- end -}}
