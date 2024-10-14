@@ -3,29 +3,8 @@ global:
   tracing: {}
   metrics: {}
   environment: ''
-  serviceUrls:
-    jobManager: ""
-    heartbeatManager: ""
-    catalogManager: ""
-    mapServerPublicDNS: ""
-    mapproxyApi: ""
-    geoserverApi: ""
-    polygonPartManager: ""
-  jobDefinitions:
-     jobs:
-       new:
-         type: ""
-       update:
-         type:  
-       swapUpdate:
-         type: ""
-     tasks:
-      init:
-        type: ""
-      merge:
-        type: ""
-      finalize:
-        type: ""
+  serviceUrls: {}
+  jobDefinitions: {}
 
   geoserver:
     workspace: ''
