@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.2.0](https://github.com/MapColonies/overseer/compare/v1.1.3...v1.2.0) (2024-10-14)
+
+
+### Features
+
+* Ingestion new finalize (MAPCO-4785) ([#15](https://github.com/MapColonies/overseer/issues/15)) ([1296b9b](https://github.com/MapColonies/overseer/commit/1296b9bce5dcca279c4976886fb3df80780d7265))
+
+
+### Bug Fixes
+
+* change geometry to footprint (supporitng only polygon) ([#14](https://github.com/MapColonies/overseer/issues/14)) ([8cadff8](https://github.com/MapColonies/overseer/commit/8cadff80fa8093801fc521cc98fc3c570df570cf))
+
 ### [1.1.3](https://github.com/MapColonies/overseer/compare/v1.1.2...v1.1.3) (2024-09-19)
 
 
