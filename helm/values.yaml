@@ -140,7 +140,7 @@ env:
     config:
       dequeueIntervalMs: 3000
       heartBeat:
-      intervalMs: 3000  
+        intervalMs: 3000  
 
 resources:
   enabled: true
