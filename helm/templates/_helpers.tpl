@@ -82,11 +82,6 @@ Return the proper Docker Image Registry Secret Names
 {{- end -}}
 
 {{/*
-Return the proper image pullPolicy
-*/}}
-{{- define "overseer.pullPolicy" -}}
-{{ include "common.images.pullPolicy" (dict "imageRoot" .Values.image "global" .Values.global) }}
-{{- end -}}
 
 {{/*
 Returns the cloud provider name from global if exists or from the chart's values, defaults to minikube
@@ -101,16 +96,10 @@ Returns the cloud provider name from global if exists or from the chart's values
 {{- end -}}
 {{- end -}} 
 
-{{/*
-Return the proper fully qualified app name
-*/}}
-{{- define "overseer.fullname" -}}
-{{ include "common.names.fullname" . }}
-{{- end -}}
 
 {{/*
-Return the proper chart name
+Create chart name and version as used by the chart label.
 */}}
 {{- define "overseer.chart" -}}
-{{ include "common.names.chart" . }}
-{{- end -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
