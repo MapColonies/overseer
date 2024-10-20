@@ -1,6 +1,5 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "files.eol": "\n",
-  "cSpell.words": ["geoserver", "Mapproxy"],
-  "liveServer.settings.port": 5501
+  "cSpell.words": ["geoserver", "Mapproxy"]
 }
