@@ -61,7 +61,8 @@
     "lodash.has": "^4.5.2",
     "prom-client": "^15.1.2",
     "reflect-metadata": "^0.1.13",
-    "tsyringe": "^4.8.0"
+    "tsyringe": "^4.8.0",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.6.6",
