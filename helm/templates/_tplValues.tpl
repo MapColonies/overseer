@@ -63,5 +63,5 @@ Custom definitions
 {{- end -}}
 
 {{- define "common.jobDefinitions.merged" -}}
-{{- include "common.tplvalues.merge" ( dict "values" ( list .Values.env.jobDefinitions .Values.global.jobDefinitions ) "context" . ) }}
+{{- include "common.tplvalues.merge" ( dict "values" ( list .Values.jobDefinitions .Values.global.jobDefinitions ) "context" . ) }}
 {{- end -}}
