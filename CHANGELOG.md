@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.2.4](https://github.com/MapColonies/overseer/compare/v1.2.3...v1.2.4) (2024-10-21)
+
+
+### Bug Fixes
+
+* move jobDefinitions outside from env ([#21](https://github.com/MapColonies/overseer/issues/21)) ([ca27efb](https://github.com/MapColonies/overseer/commit/ca27efbf80daa15cbe9d7f42c01cf1876b25160f))
+
 ### [1.2.3](https://github.com/MapColonies/overseer/compare/v1.2.2...v1.2.3) (2024-10-14)
 
 
