@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { finalizeTaskForIngestionNew } from '../../mocks/tasksMockData';
@@ -25,7 +26,10 @@ describe('NewJobHandler', () => {
 
       expect(taskBuilderMock.buildTasks).toHaveBeenCalled();
       expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, tasks);
-      expect(queueClientMock.jobManagerClient.updateJob).toHaveBeenCalled();
+      expect(queueClientMock.jobManagerClient.updateJob).toHaveBeenCalledWith(job.id, {
+        internalId: expect.any(String),
+        parameters: expect.any(Object),
+      });
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, taskId);
     });
 

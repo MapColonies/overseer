@@ -50,7 +50,10 @@ export class NewJobHandler implements IJobHandler {
       await this.taskBuilder.pushTasks(job.id, mergeTasks);
 
       logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
-      await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { metadata: extendedLayerMetadata, partData, inputFiles } });
+      await this.queueClient.jobManagerClient.updateJob(job.id, {
+        internalId: extendedLayerMetadata.catalogId,
+        parameters: { metadata: extendedLayerMetadata, partData, inputFiles },
+      });
 
       logger.info({ msg: 'Acking task' });
       await this.queueClient.ack(job.id, taskId);
