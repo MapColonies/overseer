@@ -103,23 +103,7 @@ metrics:
   prometheus:
     scrape: false
 
-env:
-  port: 8080
-  targetPort: 8080
-  protocol: TCP
-  logLevel: info
-  logPrettyPrintEnabled: false
-  logPinoCallerEnabled: false
-  responseCompressionEnabled: true
-  requestPayloadLimit: 1mb
-
-  httpRetry:
-    attempts: 5
-    delay: exponential
-    resetTimeout: 30000
-  disableHttpClientLogs: true
-
-  jobDefinitions:
+jobDefinitions:
     jobs:
      new:
        type: ""
@@ -141,6 +125,22 @@ env:
       dequeueIntervalMs: 3000
       heartBeat:
         intervalMs: 3000  
+
+env:
+  port: 8080
+  targetPort: 8080
+  protocol: TCP
+  logLevel: info
+  logPrettyPrintEnabled: false
+  logPinoCallerEnabled: false
+  responseCompressionEnabled: true
+  requestPayloadLimit: 1mb
+
+  httpRetry:
+    attempts: 5
+    delay: exponential
+    resetTimeout: 30000
+  disableHttpClientLogs: true
 
 resources:
   enabled: true
