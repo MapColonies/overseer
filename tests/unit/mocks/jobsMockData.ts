@@ -33,7 +33,7 @@ export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
       classification: '6',
       productSubType: 'string',
     },
-    partData: partsData,
+    partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
@@ -88,7 +88,7 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
     metadata: {
       classification: '6',
     },
-    partData: partsData,
+    partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
@@ -131,7 +131,7 @@ export const ingestionSwapUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = 
     metadata: {
       classification: '6',
     },
-    partData: partsData,
+    partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
