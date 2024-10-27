@@ -50,8 +50,7 @@ describe('updateJobHandler', () => {
     it('should handle job init failure and reject the task', async () => {
       const { updateJobHandler, taskBuilderMock, queueClientMock } = setupUpdateJobHandlerTest();
 
-      const job = ingestionUpdateJob;
-      job.parameters.additionalParams = { displayPath: 'df2fce09-a97c-462f-a537-9a8edca643e9', tileOutputFormat: TileOutputFormat.PNG };
+      const job = { ...ingestionUpdateJob };
 
       const taskId = '7e630dea-ea29-4b30-a88e-5407bf67d1bc';
       const tasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
