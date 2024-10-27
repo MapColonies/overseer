@@ -31,7 +31,7 @@ describe('updateJobHandler', () => {
           isNewTarget: true,
           grid: Grid.TWO_ON_ONE,
         },
-        partsData: job.parameters.partData,
+        partsData: job.parameters.partsData,
       };
 
       const mergeTasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();

@@ -29,7 +29,7 @@ export class NewJobHandler implements IJobHandler {
     try {
       logger.info({ msg: `handling ${job.type} job with "init" task` });
 
-      const { inputFiles, metadata, partData } = job.parameters;
+      const { inputFiles, metadata, partsData } = job.parameters;
       const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
 
       const taskBuildParams: MergeTilesTaskParams = {
@@ -40,7 +40,7 @@ export class NewJobHandler implements IJobHandler {
           isNewTarget: true,
           grid: extendedLayerMetadata.grid,
         },
-        partsData: partData,
+        partsData,
       };
 
       logger.info({ msg: 'building tasks' });
@@ -52,7 +52,7 @@ export class NewJobHandler implements IJobHandler {
       logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
       await this.queueClient.jobManagerClient.updateJob(job.id, {
         internalId: extendedLayerMetadata.catalogId,
-        parameters: { metadata: extendedLayerMetadata, partData, inputFiles },
+        parameters: { metadata: extendedLayerMetadata, partsData, inputFiles },
       });
 
       logger.info({ msg: 'Acking task' });

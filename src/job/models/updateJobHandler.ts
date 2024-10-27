@@ -24,7 +24,7 @@ export class UpdateJobHandler implements IJobHandler {
     const logger = this.logger.child({ jobId: job.id, taskId });
     try {
       logger.info({ msg: `handling ${job.type} job with "init" task` });
-      const { inputFiles, partData, additionalParams } = job.parameters;
+      const { inputFiles, partsData, additionalParams } = job.parameters;
 
       const validAdditionalParams = this.validateAdditionalParams(additionalParams);
 
@@ -36,7 +36,7 @@ export class UpdateJobHandler implements IJobHandler {
           isNewTarget: this.isNewTarget,
           grid: Grid.TWO_ON_ONE,
         },
-        partsData: partData,
+        partsData,
       };
 
       logger.info({ msg: 'building tasks' });
