@@ -21,7 +21,7 @@ export class UpdateJobHandler implements IJobHandler {
   }
 
   public async handleJobInit(job: IJobResponse<IngestionUpdateJobParams, unknown>, taskId: string): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId });
+    const logger = this.logger.child({ jobId: job.id, taskId, jobType: job.type });
     try {
       logger.info({ msg: `handling ${job.type} job with "init" task` });
       const { inputFiles, partsData, additionalParams } = job.parameters;
