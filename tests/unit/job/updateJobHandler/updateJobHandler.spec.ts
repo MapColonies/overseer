@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { ZodError } from 'zod';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { Grid, IMergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { updateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
