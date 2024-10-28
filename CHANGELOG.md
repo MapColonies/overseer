@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.2.5](https://github.com/MapColonies/overseer/compare/v1.2.4...v1.2.5) (2024-10-22)
+
+
+### Bug Fixes
+
+* serviceUrl hierarchy in custom-environment-variables.json fixed ([#23](https://github.com/MapColonies/overseer/issues/23)) ([92f0f41](https://github.com/MapColonies/overseer/commit/92f0f418cad5c11d31811afc12184eab1b5d42d0))
+* update job internalId with catalogId(MAPCO-5057) ([#22](https://github.com/MapColonies/overseer/issues/22)) ([ac23baf](https://github.com/MapColonies/overseer/commit/ac23baf11927853c8d573f25aebe7442dd9e9910))
+
 ### [1.2.4](https://github.com/MapColonies/overseer/compare/v1.2.3...v1.2.4) (2024-10-21)
 
 

@@ -57,6 +57,13 @@
     "__format": "boolean"
   },
   "tilesStorageProvider": "TILES_STORAGE_PROVIDER",
+  "servicesUrl": {
+    "mapproxyApi": "MAPPROXY_API_URL",
+    "geoserverApi": "GEOSERVER_API_URL",
+    "catalogManager": "CATALOG_MANAGER_URL",
+    "mapproxyDns": "MAPPROXY_DNS",
+    "polygonPartManager": "POLYGON_PART_MANAGER_URL"
+  },
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "JOB_MANAGER_BASE_URL",
@@ -65,13 +72,6 @@
         "intervalMs": "HEARTBEAT_INTERVAL_MS"
       },
       "dequeueIntervalMs": "DEQUEUE_INTERVAL_MS"
-    },
-    "servicesUrl": {
-      "mapproxyApi": "MAPPROXY_API_URL",
-      "geoserverApi": "GEOSERVER_API_URL",
-      "catalogManager": "CATALOG_MANAGER_URL",
-      "mapproxyDns": "MAPPROXY_DNS",
-      "polygonPartManager": "POLYGON_PART_MANAGER_URL"
     },
     "geoserver": {
       "workspace": "GEOSERVER_WORKSPACE",
