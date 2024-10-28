@@ -1,6 +1,6 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { GeoJSON } from 'geojson';
-import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat, LayerData } from '@map-colonies/mc-model-types';
+import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat, LayerData, LayerMetadata } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
@@ -177,4 +177,9 @@ export interface PartAggregatedData {
   productBoundingBox: string;
 }
 
+export interface ICatalogUpdateRequestBody {
+  metadata: CatalogUpdateMetadata;
+}
+
+export type CatalogUpdateMetadata = Partial<LayerMetadata>;
 //#endregion catalogClient

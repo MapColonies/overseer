@@ -1,4 +1,3 @@
-import { IngestionNewFinalizeTaskParams } from '@map-colonies/mc-model-types';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
@@ -36,7 +35,5 @@ export const storageProviderToCacheTypeMap = new Map([
   [TilesStorageProvider.FS, PublishedLayerCacheType.FS],
   [TilesStorageProvider.S3, PublishedLayerCacheType.S3],
 ]);
-
-export type FinalizeSteps = keyof IngestionNewFinalizeTaskParams;
 
 /* eslint-enable @typescript-eslint/naming-convention */

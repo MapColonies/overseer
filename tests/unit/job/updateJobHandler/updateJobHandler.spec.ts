@@ -27,7 +27,7 @@ describe('updateJobHandler', () => {
         taskMetadata: {
           layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
           tileOutputFormat: additionalParams.tileOutputFormat,
-          isNewTarget: true,
+          isNewTarget: false,
           grid: Grid.TWO_ON_ONE,
         },
         partsData: job.parameters.partsData,
@@ -67,7 +67,7 @@ describe('updateJobHandler', () => {
 
     it('should handle job init failure with ZodError and Failed the job', async () => {
       const { updateJobHandler, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = ingestionUpdateJob;
+      const job = { ...ingestionUpdateJob };
       job.parameters.additionalParams = { wrongField: 'wrongValue' };
       const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
       const validAdditionalParamsSpy = jest.spyOn(updateAdditionalParamsSchema, 'parse');
@@ -81,10 +81,39 @@ describe('updateJobHandler', () => {
     });
   });
   describe('handleJobFinalize', () => {
-    it('should throw not implemented Error', async () => {
-      const { updateJobHandler } = setupUpdateJobHandlerTest();
+    it('should handle job finalize successfully', async () => {
+      const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
+      const job = ingestionUpdateJob;
+      const task = finalizeTaskForIngestionUpdate;
 
-      await expect(updateJobHandler.handleJobFinalize(ingestionUpdateJob, finalizeTaskForIngestionUpdate)).rejects.toBe('not implemented');
+      catalogClientMock.update.mockResolvedValue(undefined);
+      jobManagerClientMock.updateTask.mockResolvedValue(undefined);
+
+      await updateJobHandler.handleJobFinalize(job, task);
+
+      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
+        status: OperationStatus.COMPLETED,
+        reason: 'Job completed successfully',
+      });
+      expect(catalogClientMock.update).toHaveBeenCalledWith(job);
+      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, { parameters: { updatedInCatalog: true } });
+      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
+    });
+
+    it('should handle job finalize failure and reject the task', async () => {
+      const { updateJobHandler, queueClientMock, catalogClientMock } = setupUpdateJobHandlerTest();
+      const job = ingestionUpdateJob;
+      const task = finalizeTaskForIngestionUpdate;
+
+      const error = new Error('Test error');
+
+      queueClientMock.reject.mockResolvedValue(undefined);
+
+      catalogClientMock.update.mockRejectedValue(error);
+
+      await updateJobHandler.handleJobFinalize(job, task);
+
+      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
   });
 });

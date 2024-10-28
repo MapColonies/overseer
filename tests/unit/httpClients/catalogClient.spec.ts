@@ -1,7 +1,7 @@
 import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
-import { PublishLayerError } from '../../../src/common/errors';
-import { ingestionNewJobExtended } from '../mocks/jobsMockData';
+import { PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
+import { ingestionNewJobExtended, ingestionUpdateJob } from '../mocks/jobsMockData';
 import { setupCatalogClientTest } from './catalogCLientSetup';
 
 describe('CatalogClient', () => {
@@ -42,6 +42,30 @@ describe('CatalogClient', () => {
       const action = catalogClient.publish(ingestionNewJobExtended, layerName);
 
       await expect(action).rejects.toThrow(PublishLayerError);
+    });
+  });
+  describe('update', () => {
+    it('should update a layer in catalog', async () => {
+      const { catalogClient } = setupCatalogClientTest();
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const recordId = ingestionUpdateJob.internalId;
+      nock(baseUrl).put(`/records/${recordId}`).reply(200);
+
+      const action = catalogClient.update(ingestionUpdateJob);
+
+      await expect(action).resolves.not.toThrow();
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it('should throw an PublishLayerError when the catalog returns an error', async () => {
+      const { catalogClient } = setupCatalogClientTest();
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const recordId = ingestionUpdateJob.internalId;
+      nock(baseUrl).put(`/records/${recordId}`).reply(500);
+
+      const action = catalogClient.update(ingestionUpdateJob);
+
+      await expect(action).rejects.toThrow(UpdateLayerError);
     });
   });
 });

@@ -2,11 +2,12 @@ import { IConfig } from 'config';
 import { Logger } from '@map-colonies/js-logger';
 import { IJobResponse } from '@map-colonies/mc-priority-queue';
 import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { IRasterCatalogUpsertRequestBody, LayerMetadata, Link, RecordType } from '@map-colonies/mc-model-types';
+import { IngestionUpdateJobParams, IRasterCatalogUpsertRequestBody, LayerMetadata, Link, RecordType } from '@map-colonies/mc-model-types';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
-import { ExtendedNewRasterLayer } from '../common/interfaces';
-import { PublishLayerError } from '../common/errors';
+import { ExtendedNewRasterLayer, ICatalogUpdateRequestBody } from '../common/interfaces';
+import { internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
+import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
 import { PolygonPartMangerClient } from './polygonPartMangerClient';
 
@@ -39,8 +40,22 @@ export class CatalogClient extends HttpClient {
     }
   }
 
+  public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
+    try {
+      const internalId = internalIdSchema.parse(job).internalId;
+      const url = `/records/${internalId}`;
+      const updateReq: ICatalogUpdateRequestBody = this.createUpdateReqBody(job);
+      await this.put(url, updateReq);
+    } catch (err) {
+      if (err instanceof Error) {
+        throw new UpdateLayerError(this.targetService, err);
+      }
+    }
+  }
+
   private createPublishReqBody(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: string): IRasterCatalogUpsertRequestBody {
-    const metadata = this.mapToCatalogRecordMetadata(job);
+    const metadata = this.mapToPublishCatalogRecordMetadata(job);
+
     const links = this.buildLinks(layerName);
 
     return {
@@ -49,7 +64,7 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private mapToCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): LayerMetadata {
+  private mapToPublishCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): LayerMetadata {
     const { parameters, version } = job;
     const { partsData, metadata } = parameters;
 
@@ -89,5 +104,18 @@ export class CatalogClient extends HttpClient {
     };
 
     return this.linkBuilder.createLinks(linkBuildData);
+  }
+
+  private createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): ICatalogUpdateRequestBody {
+    const { parameters, version } = job;
+    const { partsData, metadata } = parameters;
+    const aggregatedPartData = this.polygonPartMangerClient.getAggregatedPartData(partsData);
+    return {
+      metadata: {
+        productVersion: version,
+        classification: metadata.classification,
+        ...aggregatedPartData,
+      },
+    };
   }
 }
