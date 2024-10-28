@@ -51,9 +51,9 @@ export class CatalogClient extends HttpClient {
 
   private mapToCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): LayerMetadata {
     const { parameters, version } = job;
-    const { partData, metadata } = parameters;
+    const { partsData, metadata } = parameters;
 
-    const aggregatedPartData = this.polygonPartMangerClient.getAggregatedPartData(partData);
+    const aggregatedPartData = this.polygonPartMangerClient.getAggregatedPartData(partsData);
 
     return {
       id: metadata.catalogId,

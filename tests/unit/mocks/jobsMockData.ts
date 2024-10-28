@@ -1,4 +1,11 @@
-import { NewRasterLayer, ProductType, TileOutputFormat, Transparency, UpdateRasterLayer } from '@map-colonies/mc-model-types';
+import {
+  IngestionUpdateJobParams,
+  NewRasterLayer,
+  ProductType,
+  TileOutputFormat,
+  Transparency,
+  UpdateRasterLayer,
+} from '@map-colonies/mc-model-types';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 import { ExtendedNewRasterLayer, Grid } from '../../../src/common/interfaces';
 import { partsData } from './partsMockData';
@@ -26,7 +33,7 @@ export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
       classification: '6',
       productSubType: 'string',
     },
-    partData: partsData,
+    partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
@@ -71,7 +78,7 @@ export const ingestionNewJobExtended: IJobResponse<ExtendedNewRasterLayer, unkno
   },
 };
 
-export const ingestionUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {
+export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown> = {
   id: 'd027b3aa-272b-4dc9-91d7-ba8343af5ed1',
   resourceId: 'another-product-id',
   version: '1.0',
@@ -81,10 +88,15 @@ export const ingestionUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {
     metadata: {
       classification: '6',
     },
-    partData: partsData,
+    partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
+    },
+    additionalParams: {
+      jobTrackerServiceUrl: 'http://job-tracker-service',
+      displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
+      tileOutputFormat: TileOutputFormat.PNG,
     },
   },
   status: OperationStatus.PENDING,
@@ -120,7 +132,7 @@ export const ingestionSwapUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = 
     metadata: {
       classification: '6',
     },
-    partData: partsData,
+    partsData,
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
