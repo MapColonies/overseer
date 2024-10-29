@@ -2,8 +2,9 @@
 import { IJobResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { Logger } from '@map-colonies/js-logger';
 import { layerNameSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { FinalizeTaskParams } from '../../common/interfaces';
 
-export abstract class JobHandler {
+export class JobHandler {
   public constructor(protected readonly logger: Logger, protected readonly queueClient: QueueClient) {}
 
   protected validateAndGenerateLayerName(job: IJobResponse<unknown, unknown>): string {
@@ -13,9 +14,15 @@ export abstract class JobHandler {
     return `${resourceId}_${productType}`;
   }
 
-  protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, step: keyof T, finalizeTaskParams: T): Promise<T> {
+  protected async markFinalizeStepAsCompleted<T extends FinalizeTaskParams>(
+    jobId: string,
+    taskId: string,
+    step: keyof T,
+    finalizeTaskParams: T
+  ): Promise<T> {
     const updatedParams: T = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
+    this.logger.debug({ msg: `finalization  step completed`, step });
     return updatedParams;
   }
 

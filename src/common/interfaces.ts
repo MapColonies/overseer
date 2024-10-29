@@ -1,6 +1,16 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { GeoJSON } from 'geojson';
-import { InputFiles, NewRasterLayerMetadata, PolygonPart, TileOutputFormat, LayerData, LayerMetadata } from '@map-colonies/mc-model-types';
+import {
+  InputFiles,
+  NewRasterLayerMetadata,
+  PolygonPart,
+  TileOutputFormat,
+  LayerData,
+  LayerMetadata,
+  IngestionNewFinalizeTaskParams,
+  IngestionUpdateFinalizeTaskParams,
+  IngestionSwapUpdateFinalizeTaskParams,
+} from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
@@ -76,6 +86,8 @@ export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
 }
 
 export type ExtendedNewRasterLayer = { metadata: ExtendedRasterLayerMetadata } & LayerData;
+
+export type FinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
 
 //#endregion job/task
 

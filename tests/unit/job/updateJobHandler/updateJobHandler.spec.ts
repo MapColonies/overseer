@@ -91,13 +91,13 @@ describe('updateJobHandler', () => {
 
       await updateJobHandler.handleJobFinalize(job, task);
 
+      expect(catalogClientMock.update).toHaveBeenCalledWith(job);
+      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, { parameters: { updatedInCatalog: true } });
+      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
       expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
         status: OperationStatus.COMPLETED,
         reason: 'Job completed successfully',
       });
-      expect(catalogClientMock.update).toHaveBeenCalledWith(job);
-      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, { parameters: { updatedInCatalog: true } });
-      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
     it('should handle job finalize failure and reject the task', async () => {

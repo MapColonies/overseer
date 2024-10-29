@@ -8,7 +8,7 @@ import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/i
 import { SERVICES } from '../../common/constants';
 import { UpdateAdditionalParams, updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
-import { JobHandler } from './jobHnadler';
+import { JobHandler } from './jobHandler';
 
 @injectable()
 export class UpdateJobHandler extends JobHandler implements IJobHandler {

@@ -12,7 +12,7 @@ import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { GeoserverClient } from '../../httpClients/geoserverClient';
 import { CatalogClient } from '../../httpClients/catalogClient';
-import { JobHandler } from './jobHnadler';
+import { JobHandler } from './jobHandler';
 
 @injectable()
 export class NewJobHandler extends JobHandler implements IJobHandler {
