@@ -17,8 +17,8 @@ export class JobHandler {
   protected async markFinalizeStepAsCompleted<T extends FinalizeTaskParams>(
     jobId: string,
     taskId: string,
-    step: keyof T,
-    finalizeTaskParams: T
+    finalizeTaskParams: T,
+    step: keyof T
   ): Promise<T> {
     const updatedParams: T = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });

@@ -87,20 +87,20 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       if (!insertedToMapproxy) {
         logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
         await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToMapproxy', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');
       }
 
       if (!insertedToGeoServer) {
         const geoserverLayerName = layerName.toLowerCase();
         logger.info({ msg: 'publishing to geoserver', geoserverLayerName });
         await this.geoserverClient.publish(geoserverLayerName);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToGeoServer', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToGeoServer');
       }
 
       if (!insertedToCatalog) {
         logger.info({ msg: 'publishing to catalog', layerName });
         await this.catalogClient.publish(job, layerName);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToCatalog', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');
       }
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
