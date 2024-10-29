@@ -22,7 +22,7 @@ export class JobHandler {
   ): Promise<T> {
     const updatedParams: T = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
-    this.logger.debug({ msg: `finalization  step completed`, step });
+    this.logger.debug({ msg: `finalization step completed`, step });
     return updatedParams;
   }
 
