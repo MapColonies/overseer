@@ -76,7 +76,7 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       if (!updatedInCatalog) {
         logger.info({ msg: 'Updating layer in catalog', catalogId: job.internalId });
         await this.catalogClient.update(job);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'updatedInCatalog', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInCatalog');
       }
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
