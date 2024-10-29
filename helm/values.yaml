@@ -118,7 +118,6 @@ jobDefinitions:
         type: ""
         tileBatchSize: 10000
         taskBatchSize: 5
-        useNewTargetFlagInUpdate: true
       finalize:
         type: ""
     config:

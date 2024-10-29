@@ -3,7 +3,6 @@ import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-p
 import { configMock } from '../../mocks/configMock';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
-import { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { UpdateJobHandler } from '../../../../src/job/models/updateJobHandler';
 
@@ -13,7 +12,6 @@ export interface UpdateJobHandlerTestContext {
   queueClientMock: jest.Mocked<QueueClient>;
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
-  geoserverClientMock: jest.Mocked<GeoserverClient>;
   catalogClientMock: jest.Mocked<CatalogClient>;
 }
 
@@ -35,10 +33,9 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
   } as unknown as jest.Mocked<QueueClient>;
 
   const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
-  const geoserverClientMock = { publish: jest.fn() } as unknown as jest.Mocked<GeoserverClient>;
-  const catalogClientMock = { publish: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const catalogClientMock = { publish: jest.fn(), update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
 
-  const updateJobHandler = new UpdateJobHandler(jsLogger({ enabled: false }), configMock, taskBuilderMock, queueClientMock);
+  const updateJobHandler = new UpdateJobHandler(jsLogger({ enabled: false }), configMock, taskBuilderMock, queueClientMock, catalogClientMock);
 
   return {
     updateJobHandler,
@@ -46,7 +43,6 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     queueClientMock,
     jobManagerClientMock,
     mapproxyClientMock,
-    geoserverClientMock,
     catalogClientMock,
   };
 };

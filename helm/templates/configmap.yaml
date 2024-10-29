@@ -45,7 +45,6 @@ data:
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}
-  TILES_MERGING_USE_NEW_TARGET_FLAG: {{ $jobDefinitions.tasks.merge.useNewTargetFlagInUpdate | quote }}
   MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
   GEOSERVER_API_URL: {{ $serviceUrls.geoserverApi | quote }}
   CATALOG_MANAGER_URL: {{ $serviceUrls.catalogManager | quote }}

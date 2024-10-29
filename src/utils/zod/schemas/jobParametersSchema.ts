@@ -8,3 +8,14 @@ export const updateAdditionalParamsSchema = z.object({
 });
 
 export type UpdateAdditionalParams = z.infer<typeof updateAdditionalParamsSchema>;
+
+export const layerNameSchema = z.object({
+  resourceId: z.string(),
+  productType: z.string(),
+});
+
+export type LayerName = z.infer<typeof layerNameSchema>;
+
+export const internalIdSchema = z.object({
+  internalId: z.string().uuid(),
+});

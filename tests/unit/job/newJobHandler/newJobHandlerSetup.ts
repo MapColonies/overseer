@@ -41,9 +41,9 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
     jsLogger({ enabled: false }),
     taskBuilderMock,
     queueClientMock,
+    catalogClientMock,
     mapproxyClientMock,
-    geoserverClientMock,
-    catalogClientMock
+    geoserverClientMock
   );
 
   return {

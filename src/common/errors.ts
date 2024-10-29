@@ -33,3 +33,11 @@ export class PublishLayerError extends Error {
     this.stack = err.stack;
   }
 }
+
+export class UpdateLayerError extends Error {
+  public constructor(updatingClient: string, err: Error) {
+    super(`Failed to update layer in ${updatingClient} client: ${err.message}`);
+    this.name = UpdateLayerError.name;
+    this.stack = err.stack;
+  }
+}

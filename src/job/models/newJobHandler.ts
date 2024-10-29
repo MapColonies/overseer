@@ -6,23 +6,26 @@ import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { IngestionNewFinalizeTaskParams, NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, ExtendedNewRasterLayer } from '../../common/interfaces';
-import { FinalizeSteps, SERVICES } from '../../common/constants';
+import { SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { GeoserverClient } from '../../httpClients/geoserverClient';
 import { CatalogClient } from '../../httpClients/catalogClient';
+import { JobHandler } from './jobHandler';
 
 @injectable()
-export class NewJobHandler implements IJobHandler {
+export class NewJobHandler extends JobHandler implements IJobHandler {
   public constructor(
-    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.LOGGER) logger: Logger,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
-    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
+    @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
+    @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
-    @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
-    @inject(CatalogClient) private readonly catalogClient: CatalogClient
-  ) {}
+    @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient
+  ) {
+    super(logger, queueClient);
+  }
 
   public async handleJobInit(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId });
@@ -78,26 +81,26 @@ export class NewJobHandler implements IJobHandler {
 
       let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
       const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
-      const { productName, productType, layerRelativePath, tileOutputFormat } = job.parameters.metadata;
-      const layerName = this.generateLayerName(productName, productType);
+      const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
+      const layerName = this.validateAndGenerateLayerName(job);
 
       if (!insertedToMapproxy) {
         logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
         await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToMapproxy', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');
       }
 
       if (!insertedToGeoServer) {
         const geoserverLayerName = layerName.toLowerCase();
         logger.info({ msg: 'publishing to geoserver', geoserverLayerName });
         await this.geoserverClient.publish(geoserverLayerName);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToGeoServer', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToGeoServer');
       }
 
       if (!insertedToCatalog) {
         logger.info({ msg: 'publishing to catalog', layerName });
         await this.catalogClient.publish(job, layerName);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, 'insertedToCatalog', finalizeTaskParams);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');
       }
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
@@ -132,23 +135,4 @@ export class NewJobHandler implements IJobHandler {
       grid,
     };
   };
-
-  private generateLayerName(productId: string, productType: string): string {
-    return `${productId}_${productType}`;
-  }
-
-  private isAllStepsCompleted(finalizeTaskParams: IngestionNewFinalizeTaskParams): boolean {
-    return Object.values(finalizeTaskParams).every((value) => value);
-  }
-
-  private async markFinalizeStepAsCompleted(
-    jobId: string,
-    taskId: string,
-    step: FinalizeSteps,
-    finalizeTaskParams: IngestionNewFinalizeTaskParams
-  ): Promise<IngestionNewFinalizeTaskParams> {
-    const updatedParams: IngestionNewFinalizeTaskParams = { ...finalizeTaskParams, [step]: true };
-    await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
-    return updatedParams;
-  }
 }

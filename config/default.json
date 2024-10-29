@@ -79,8 +79,7 @@
         "tilesMerging": {
           "type": "tilesMerging",
           "tileBatchSize": 10000,
-          "taskBatchSize": 5,
-          "useNewTargetFlagInUpdate": true
+          "taskBatchSize": 5
         }
       }
     }
