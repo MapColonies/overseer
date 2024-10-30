@@ -30,7 +30,7 @@ export class PolygonPartMangerClient extends HttpClient {
       maxResolutionMeter: partsData[0].resolutionMeter,
       minResolutionMeter: partsData[0].resolutionMeter,
       footprint: partsData[0].footprint,
-      productBoundingBox: '',
+      productBoundingBox: '-180,90,180,90',
     };
   }
 }

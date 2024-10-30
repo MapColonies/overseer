@@ -6,7 +6,7 @@ import { IngestionUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@ma
 import { CatalogClient } from '../../httpClients/catalogClient';
 import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
-import { UpdateAdditionalParams, updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { JobHandler } from './jobHandler';
 
@@ -28,7 +28,7 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       logger.info({ msg: `handling ${job.type} job with "init" task` });
       const { inputFiles, partsData, additionalParams } = job.parameters;
 
-      const validAdditionalParams = this.validateAdditionalParams(additionalParams);
+      const validAdditionalParams = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
 
       const taskBuildParams: MergeTilesTaskParams = {
         inputFiles,
@@ -91,10 +91,5 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
         await this.queueClient.reject(job.id, task.id, true, err.message);
       }
     }
-  }
-
-  private validateAdditionalParams(additionalParams: Record<string, unknown>): UpdateAdditionalParams {
-    const validatedParams = updateAdditionalParamsSchema.parse(additionalParams);
-    return validatedParams;
   }
 }
