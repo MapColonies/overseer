@@ -32,7 +32,7 @@ export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
       originDirectory: 'tests',
     },
     additionalParams: {
-      jobTrackerServiceUrl: 'http://job-tracker-service',
+      jobTrackerServiceURL: 'http://job-tracker-service',
     },
   },
   status: OperationStatus.PENDING,
@@ -90,7 +90,7 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
       originDirectory: 'tests',
     },
     additionalParams: {
-      jobTrackerServiceUrl: 'http://job-tracker-service',
+      jobTrackerServiceURL: 'http://job-tracker-service',
       displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
       tileOutputFormat: TileOutputFormat.PNG,
     },
@@ -134,7 +134,7 @@ export const ingestionSwapUpdateJob: IJobResponse<IngestionUpdateJobParams, unkn
       originDirectory: 'tests',
     },
     additionalParams: {
-      jobTrackerServiceUrl: 'http://job-tracker-service',
+      jobTrackerServiceURL: 'http://job-tracker-service',
       tileOutputFormat: TileOutputFormat.PNG,
     },
   },
