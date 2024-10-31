@@ -1,18 +1,11 @@
-import {
-  IngestionUpdateJobParams,
-  NewRasterLayer,
-  ProductType,
-  TileOutputFormat,
-  Transparency,
-  UpdateRasterLayer,
-} from '@map-colonies/mc-model-types';
+import { IngestionNewJobParams, IngestionUpdateJobParams, ProductType, TileOutputFormat, Transparency } from '@map-colonies/mc-model-types';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 import { ExtendedNewRasterLayer, Grid } from '../../../src/common/interfaces';
 import { partsData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
-export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
+export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
   id: 'de57d743-3155-4a28-86c8-9c181faabd94',
   resourceId: 'some-product-id',
   version: '1.0',
@@ -37,6 +30,9 @@ export const ingestionNewJob: IJobResponse<NewRasterLayer, unknown> = {
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
+    },
+    additionalParams: {
+      jobTrackerServiceURL: 'http://job-tracker-service',
     },
   },
   status: OperationStatus.PENDING,
@@ -94,7 +90,7 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
       originDirectory: 'tests',
     },
     additionalParams: {
-      jobTrackerServiceUrl: 'http://job-tracker-service',
+      jobTrackerServiceURL: 'http://job-tracker-service',
       displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
       tileOutputFormat: TileOutputFormat.PNG,
     },
@@ -122,7 +118,7 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionSwapUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = {
+export const ingestionSwapUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown> = {
   id: 'c023b3ba-272b-4dc9-92d7-ba8343af5ed9',
   resourceId: 'another-product-id',
   version: '1.0',
@@ -136,6 +132,10 @@ export const ingestionSwapUpdateJob: IJobResponse<UpdateRasterLayer, unknown> = 
     inputFiles: {
       fileNames: ['blueMarble.gpkg'],
       originDirectory: 'tests',
+    },
+    additionalParams: {
+      jobTrackerServiceURL: 'http://job-tracker-service',
+      tileOutputFormat: TileOutputFormat.PNG,
     },
   },
   status: OperationStatus.PENDING,

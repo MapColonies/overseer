@@ -3,8 +3,9 @@ import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
 import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
-import { IngestionNewFinalizeTaskParams, NewRasterLayer, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
+import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { newAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, ExtendedNewRasterLayer } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
@@ -27,12 +28,13 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
     super(logger, queueClient);
   }
 
-  public async handleJobInit(job: IJobResponse<NewRasterLayer, unknown>, taskId: string): Promise<void> {
+  public async handleJobInit(job: IJobResponse<IngestionNewJobParams, unknown>, taskId: string): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId });
     try {
       logger.info({ msg: `handling ${job.type} job with "init" task` });
 
-      const { inputFiles, metadata, partsData } = job.parameters;
+      const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
+      const validAdditionalParams = this.validateAdditionalParams(additionalParams, newAdditionalParamsSchema);
       const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
 
       const taskBuildParams: MergeTilesTaskParams = {
@@ -55,7 +57,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
       await this.queueClient.jobManagerClient.updateJob(job.id, {
         internalId: extendedLayerMetadata.catalogId,
-        parameters: { metadata: extendedLayerMetadata, partsData, inputFiles },
+        parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams: validAdditionalParams },
       });
 
       logger.info({ msg: 'Acking task' });
