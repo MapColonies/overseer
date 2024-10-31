@@ -2,7 +2,7 @@ import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { z } from 'zod';
 
 export const newAdditionalParamsSchema = z.object({
-  jobTrackerServiceUrl: z.string().url(),
+  jobTrackerServiceURL: z.string().url(),
 });
 
 export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend({
