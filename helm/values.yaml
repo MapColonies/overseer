@@ -111,6 +111,8 @@ jobDefinitions:
        type: ""
      swapUpdate:
        type: ""
+     seed: 
+        type: ""  
     tasks:
       init:
         type: ""
