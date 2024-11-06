@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -84,15 +84,17 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
       const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
       const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
-      const layerName = this.validateAndGenerateLayerName(job);
+      const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
 
       if (!insertedToMapproxy) {
+        const layerName = layerNameFormats.mapproxy;
         logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
         await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');
       }
 
       if (!insertedToGeoServer) {
+        const layerName = layerNameFormats.geoserver;
         const geoserverLayerName = layerName.toLowerCase();
         logger.info({ msg: 'publishing to geoserver', geoserverLayerName });
         await this.geoserverClient.publish(geoserverLayerName);
@@ -100,6 +102,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       }
 
       if (!insertedToCatalog) {
+        const layerName = layerNameFormats.mapproxy;
         logger.info({ msg: 'publishing to catalog', layerName });
         await this.catalogClient.publish(job, layerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');
@@ -107,8 +110,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-        await this.queueClient.ack(job.id, task.id);
-        await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.COMPLETED, reason: 'Job completed successfully' });
+        await this.completeTaskAndJob(job, task);
       }
     } catch (err) {
       if (err instanceof Error) {

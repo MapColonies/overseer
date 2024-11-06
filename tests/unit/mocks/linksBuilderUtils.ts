@@ -1,81 +1,83 @@
 import { Link } from '@map-colonies/mc-model-types';
+import { ILinkBuilderData } from '../../../src/utils/linkBuilder';
 
 export const linksTemplate = `[
   {
     "name": "{{layerName}}",
     "description": "",
     "protocol": "WMS",
-    "url": "{{serverUrl}}/service?REQUEST=GetCapabilities"
+    "url": "{{mapproxyUrl}}/service?REQUEST=GetCapabilities"
   },
   {
     "name": "{{layerName}}",
     "description": "",
     "protocol": "WMS_BASE",
-    "url": "{{serverUrl}}/wms"
+    "url": "{{mapproxyUrl}}/wms"
   },
   {
     "name": "{{layerName}}",
     "description": "",
     "protocol": "WMTS",
-    "url": "{{serverUrl}}/wmts/1.0.0/WMTSCapabilities.xml"
+    "url": "{{mapproxyUrl}}/wmts/1.0.0/WMTSCapabilities.xml"
   },
   {
     "name": "{{layerName}}",
     "description": "",
     "protocol": "WMTS_KVP",
-    "url": "{{serverUrl}}/service?REQUEST=GetCapabilities&SERVICE=WMTS"
+    "url": "{{mapproxyUrl}}/service?REQUEST=GetCapabilities&SERVICE=WMTS"
   },
   {
     "name": "{{layerName}}",
     "description": "",
     "protocol": "WMTS_BASE",
-    "url": "{{serverUrl}}/wmts"
+    "url": "{{mapproxyUrl}}/wmts"
   },
   {
     "name": "{{layerName}}",
     "description": "",
     "protocol": "WFS",
-    "url": "{{serverUrl}}/wfs?request=GetCapabilities"
+    "url": "{{geoserverUrl}}/wfs?request=GetCapabilities"
   }
 ]`;
 
-export const getExpectedLinks = (serverUrl: string, layerName: string): Link[] => {
+export const getExpectedLinks = (data: ILinkBuilderData): Link[] => {
+  const { layerName, geoserverUrl, mapproxyUrl } = data;
   return [
     {
       name: layerName,
       description: '',
       protocol: 'WMS',
-      url: `${serverUrl}/service?REQUEST=GetCapabilities`,
+      url: `${mapproxyUrl}/service?REQUEST=GetCapabilities`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMS_BASE',
-      url: `${serverUrl}/wms`,
+      url: `${mapproxyUrl}/wms`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMTS',
-      url: `${serverUrl}/wmts/1.0.0/WMTSCapabilities.xml`,
+      url: `${mapproxyUrl}/wmts/1.0.0/WMTSCapabilities.xml`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMTS_KVP',
-      url: `${serverUrl}/service?REQUEST=GetCapabilities&SERVICE=WMTS`,
+      url: `${mapproxyUrl}/service?REQUEST=GetCapabilities&SERVICE=WMTS`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMTS_BASE',
-      url: `${serverUrl}/wmts`,
+      url: `${mapproxyUrl}/wmts`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WFS',
-      url: `${serverUrl}/wfs?request=GetCapabilities`,
+      url: `${geoserverUrl}/wfs?request=GetCapabilities`,
     },
   ];
 };

@@ -3,19 +3,25 @@ import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
 import { IJobResponse, ITaskResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { ZodError } from 'zod';
-import { IngestionSwapUpdateFinalizeTaskParams, IngestionUpdateJobParams, UpdateRasterLayer } from '@map-colonies/mc-model-types';
+import { IngestionSwapUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
 import { Grid, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
-import { swapUpdateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
-import { SERVICES } from '../../common/constants';
+import { CatalogClient } from '../../httpClients/catalogClient';
+import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { SeedMode, SERVICES } from '../../common/constants';
 import { JobHandler } from './jobHandler';
+import { SeedingJobCreator } from './SeedingJobCreator';
 
 @injectable()
 export class SwapJobHandler extends JobHandler implements IJobHandler {
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
-    @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager
+    @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
+    @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
+    @inject(CatalogClient) private readonly catalogClient: CatalogClient,
+    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator
   ) {
     super(logger, queueClient);
   }
@@ -66,12 +72,50 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
   }
 
   public async handleJobFinalize(
-    job: IJobResponse<UpdateRasterLayer, unknown>,
+    job: IJobResponse<IngestionUpdateJobParams, unknown>,
     task: ITaskResponse<IngestionSwapUpdateFinalizeTaskParams>
   ): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId: task.id });
-    logger.info({ msg: `handling ${job.type} job with "finalize" task` });
-    await Promise.reject('not implemented');
+    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
+
+    try {
+      logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
+      let finalizeTaskParams: IngestionSwapUpdateFinalizeTaskParams = task.parameters;
+      const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
+      const { mapproxy: layerName } = this.validateAndGenerateLayerNameFormats(job);
+      const { additionalParams } = job.parameters;
+      const { tileOutputFormat, displayPath } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
+
+      if (!updatedInMapproxy) {
+        const layerRelativePath = `${job.internalId}/${displayPath}`;
+        logger.info({ msg: 'Updating layer in mapproxy', layerName, layerRelativePath, tileOutputFormat });
+        await this.mapproxyClient.update(layerName, layerRelativePath, tileOutputFormat);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInMapproxy');
+      }
+
+      if (!updatedInCatalog) {
+        logger.info({ msg: 'Updating layer in catalog', displayPath });
+        await this.catalogClient.update(job);
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInCatalog');
+      }
+
+      if (this.isAllStepsCompleted(finalizeTaskParams)) {
+        logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
+        await this.completeTaskAndJob(job, task);
+        await this.setupAndCreateSeedingJob(job);
+      }
+    } catch (err) {
+      if (err instanceof ZodError) {
+        const errorMsg = `Failed to validate additionalParams: ${err.message}`;
+        logger.error({ msg: errorMsg, err });
+        await this.queueClient.reject(job.id, task.id, false, err.message);
+        return await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: errorMsg });
+      }
+      if (err instanceof Error) {
+        const errorMsg = `Failed to handle job finalize: ${err.message}`;
+        logger.error({ msg: errorMsg, error: err });
+        await this.queueClient.reject(job.id, task.id, true, err.message);
+      }
+    }
   }
 
   private async updateJobAdditionalParams(
@@ -84,5 +128,29 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
     return this.queueClient.jobManagerClient.updateJob(job.id, {
       parameters: { ...job.parameters, additionalParams: newAdditionalParams },
     });
+  }
+
+  private async setupAndCreateSeedingJob(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
+    const logger = this.logger.child({ ingestionJobId: job.id });
+
+    try {
+      const layerName = this.validateAndGenerateLayerNameFormats(job).mapproxy;
+      logger.setBindings({ layerName });
+
+      logger.info({ msg: 'Starting seeding job creation' });
+      logger.debug({ msg: 'getting current footprint from additionalParams' });
+      const { footprint: currentFootprint } = this.validateAdditionalParams(job.parameters.additionalParams, updateAdditionalParamsSchema);
+
+      logger.info({ msg: 'Creating seeding job' });
+      const jobResponse = await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, geometry: currentFootprint, layerName, ingestionJob: job });
+      logger.info({ msg: 'Seeding job created successfully', seedJobId: jobResponse.id, seedTaskIds: jobResponse.taskIds });
+    } catch (err) {
+      let errorMsg = 'Failed to create seeding job, skipping seeding job creation';
+      if (err instanceof Error) {
+        const reason = err.message;
+        errorMsg = `${errorMsg}, reason:${reason}`;
+      }
+      logger.warn({ msg: errorMsg, error: err });
+    }
   }
 }

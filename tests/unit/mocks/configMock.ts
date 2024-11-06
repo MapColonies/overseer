@@ -118,6 +118,9 @@ const registerDefaultConfig = (): void => {
           swapUpdate: {
             type: 'Ingestion_Swap_Update',
           },
+          seed: {
+            type: 'Ingestion_Seed',
+          },
         },
         tasks: {
           tilesMerging: {
@@ -125,6 +128,12 @@ const registerDefaultConfig = (): void => {
             tileBatchSize: 10000,
             taskBatchSize: 2,
           },
+        },
+        tilesSeeding: {
+          type: 'tilesSeeding',
+          grid: 'WorldCRS84',
+          maxZoom: 21,
+          skipUncached: true,
         },
       },
     },

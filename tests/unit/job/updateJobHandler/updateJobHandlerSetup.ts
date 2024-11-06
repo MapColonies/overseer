@@ -5,6 +5,8 @@ import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskM
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { UpdateJobHandler } from '../../../../src/job/models/updateJobHandler';
+import { SeedingJobCreator } from '../../../../src/job/models/SeedingJobCreator';
+import { PolygonPartMangerClient } from '../../../../src/httpClients/polygonPartMangerClient';
 
 export interface UpdateJobHandlerTestContext {
   updateJobHandler: UpdateJobHandler;
@@ -13,6 +15,8 @@ export interface UpdateJobHandlerTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   catalogClientMock: jest.Mocked<CatalogClient>;
+  seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
+  polygonPartMangerClientMock: jest.Mocked<PolygonPartMangerClient>;
 }
 
 export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
@@ -35,7 +39,19 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
   const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
   const catalogClientMock = { publish: jest.fn(), update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
 
-  const updateJobHandler = new UpdateJobHandler(jsLogger({ enabled: false }), configMock, taskBuilderMock, queueClientMock, catalogClientMock);
+  const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
+
+  const polygonPartMangerClientMock = { getAggregatedPartData: jest.fn() } as unknown as jest.Mocked<PolygonPartMangerClient>;
+
+  const updateJobHandler = new UpdateJobHandler(
+    jsLogger({ enabled: false }),
+    configMock,
+    taskBuilderMock,
+    queueClientMock,
+    catalogClientMock,
+    seedingJobCreatorMock,
+    polygonPartMangerClientMock
+  );
 
   return {
     updateJobHandler,
@@ -44,5 +60,7 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     jobManagerClientMock,
     mapproxyClientMock,
     catalogClientMock,
+    seedingJobCreatorMock,
+    polygonPartMangerClientMock,
   };
 };

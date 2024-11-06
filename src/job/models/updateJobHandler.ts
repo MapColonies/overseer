@@ -3,12 +3,17 @@ import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
 import { OperationStatus, TaskHandler as QueueClient, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { IngestionUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
+import { feature, featureCollection, intersect } from '@turf/turf';
+import { Polygon } from 'geojson';
 import { CatalogClient } from '../../httpClients/catalogClient';
 import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
-import { SERVICES } from '../../common/constants';
+import { PolygonPartMangerClient } from '../../httpClients/polygonPartMangerClient';
+import { SeedJobCreationError } from '../../common/errors';
+import { SeedMode, SERVICES } from '../../common/constants';
 import { updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { JobHandler } from './jobHandler';
+import { SeedingJobCreator } from './SeedingJobCreator';
 
 @injectable()
 export class UpdateJobHandler extends JobHandler implements IJobHandler {
@@ -17,7 +22,9 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
-    @inject(CatalogClient) private readonly catalogClient: CatalogClient
+    @inject(CatalogClient) private readonly catalogClient: CatalogClient,
+    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
+    private readonly polygonPartMangerClient: PolygonPartMangerClient
   ) {
     super(logger, queueClient);
   }
@@ -81,14 +88,53 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-        await this.queueClient.ack(job.id, task.id);
-        await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.COMPLETED, reason: 'Job completed successfully' });
+        await this.completeTaskAndJob(job, task);
+        await this.setupAndCreateSeedingJob(job);
       }
     } catch (err) {
+      if (err instanceof SeedJobCreationError) {
+        logger.warn({ msg: err.message, error: err });
+        return;
+      }
       if (err instanceof Error) {
         const errorMsg = `Failed to handle job finalize: ${err.message}`;
         logger.error({ msg: errorMsg, error: err });
         await this.queueClient.reject(job.id, task.id, true, err.message);
+      }
+    }
+  }
+
+  private async setupAndCreateSeedingJob(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
+    const logger = this.logger.child({ ingestionJobId: job.id });
+
+    try {
+      const layerName = this.validateAndGenerateLayerNameFormats(job).mapproxy;
+      logger.setBindings({ layerName });
+
+      logger.info({ msg: 'Starting seeding job creation' });
+      logger.debug({ msg: 'getting current footprint from additionalParams' });
+      const { footprint: currentFootprint } = this.validateAdditionalParams(job.parameters.additionalParams, updateAdditionalParamsSchema);
+
+      logger.debug({ msg: 'Getting new footprint from layer aggregated data' });
+      const { footprint: newFootprint } = this.polygonPartMangerClient.getAggregatedPartData(job.parameters.partsData);
+
+      const footprintsFeatureCollection = featureCollection([feature(newFootprint), feature(currentFootprint)]);
+      const geometry = intersect<Polygon>(footprintsFeatureCollection)?.geometry;
+      logger.debug({ msg: 'Calculated intersection geometry', geometry });
+
+      if (!geometry) {
+        throw new Error('There is no intersection between current and new footprints');
+      }
+
+      logger.info({ msg: 'Creating seeding job' });
+      const jobResponse = await this.seedingJobCreator.create({ mode: SeedMode.SEED, geometry, layerName, ingestionJob: job });
+      logger.info({ msg: 'Seeding job created successfully', seedJobId: jobResponse.id, seedTaskIds: jobResponse.taskIds });
+    } catch (err) {
+      let errorMsg = 'Failed to create seeding job, skipping seeding job creation';
+      if (err instanceof Error) {
+        const reason = err.message;
+        errorMsg = `${errorMsg}, reason:${reason}`;
+        throw new SeedJobCreationError(errorMsg, err);
       }
     }
   }

@@ -2,6 +2,8 @@ import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const DEFAULT_SERVER_PORT = 80;
+export const COMPLETED_PERCENTAGE = 100;
+export const JOB_SUCCESS_MESSAGE = 'Job completed successfully';
 
 export const IGNORED_OUTGOING_TRACE_ROUTES = [/^.*\/v1\/metrics.*$/];
 export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];
@@ -35,5 +37,12 @@ export const storageProviderToCacheTypeMap = new Map([
   [TilesStorageProvider.FS, PublishedLayerCacheType.FS],
   [TilesStorageProvider.S3, PublishedLayerCacheType.S3],
 ]);
+
+export const SeedMode = {
+  SEED: 'seed',
+  CLEAN: 'clean',
+} as const;
+
+export type SeedMode = (typeof SeedMode)[keyof typeof SeedMode];
 
 /* eslint-enable @typescript-eslint/naming-convention */

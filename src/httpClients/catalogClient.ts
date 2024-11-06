@@ -6,7 +6,7 @@ import { IngestionUpdateJobParams, IRasterCatalogUpsertRequestBody, LayerMetadat
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
 import { ExtendedNewRasterLayer, ICatalogUpdateRequestBody } from '../common/interfaces';
-import { internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
+import { internalIdSchema, updateAdditionalParamsSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
 import { PolygonPartMangerClient } from './polygonPartMangerClient';
@@ -14,6 +14,7 @@ import { PolygonPartMangerClient } from './polygonPartMangerClient';
 @injectable()
 export class CatalogClient extends HttpClient {
   private readonly mapproxyDns: string;
+  private readonly geoserverDns: string;
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
@@ -26,6 +27,7 @@ export class CatalogClient extends HttpClient {
     const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
     this.mapproxyDns = config.get<string>('servicesUrl.mapproxyDns');
+    this.geoserverDns = config.get<string>('servicesUrl.geoserverApi');
   }
 
   public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: string): Promise<void> {
@@ -41,14 +43,14 @@ export class CatalogClient extends HttpClient {
   }
 
   public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
+    const internalId = internalIdSchema.parse(job).internalId;
+    const url = `/records/${internalId}`;
+    const updateReq: ICatalogUpdateRequestBody = this.createUpdateReqBody(job);
     try {
-      const internalId = internalIdSchema.parse(job).internalId;
-      const url = `/records/${internalId}`;
-      const updateReq: ICatalogUpdateRequestBody = this.createUpdateReqBody(job);
       await this.put(url, updateReq);
     } catch (err) {
       if (err instanceof Error) {
-        throw new UpdateLayerError(this.targetService, err);
+        throw new UpdateLayerError(this.targetService, internalId, err);
       }
     }
   }
@@ -100,7 +102,8 @@ export class CatalogClient extends HttpClient {
   private buildLinks(layerName: string): Link[] {
     const linkBuildData: ILinkBuilderData = {
       layerName,
-      serverUrl: this.mapproxyDns,
+      mapproxyUrl: this.mapproxyDns,
+      geoserverUrl: this.geoserverDns,
     };
 
     return this.linkBuilder.createLinks(linkBuildData);
@@ -108,12 +111,16 @@ export class CatalogClient extends HttpClient {
 
   private createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): ICatalogUpdateRequestBody {
     const { parameters, version } = job;
-    const { partsData, metadata } = parameters;
+    const { partsData, metadata, additionalParams } = parameters;
+    const validAdditionalParams = updateAdditionalParamsSchema.parse(additionalParams);
+    const { displayPath } = validAdditionalParams;
     const aggregatedPartData = this.polygonPartMangerClient.getAggregatedPartData(partsData);
+
     return {
       metadata: {
         productVersion: version,
         classification: metadata.classification,
+        displayPath,
         ...aggregatedPartData,
       },
     };

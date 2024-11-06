@@ -1,5 +1,4 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { GeoJSON } from 'geojson';
 import {
   InputFiles,
   NewRasterLayerMetadata,
@@ -14,7 +13,7 @@ import {
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
-import { PublishedLayerCacheType } from './constants';
+import { PublishedLayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces
 export interface IConfig {
@@ -58,6 +57,13 @@ export interface IngestionConfig {
   pollingTasks: IPollingTasks;
   jobs: IngestionJobsConfig;
   maxTaskAttempts: number;
+}
+
+export interface ITilesSeedingTaskConfig {
+  type: string;
+  grid: string;
+  maxZoom: number;
+  skipUncached: boolean;
 }
 //#endregion config
 
@@ -158,12 +164,32 @@ export interface MergeTilesMetadata {
 }
 //#endregion task
 
+//#region finalize task
+export type GeoserverLayerName = `${string}_${string}`;
+export type MapproxyLayerName = `${string}-${string}`;
+
+export interface LayerNameFormats {
+  geoserver: GeoserverLayerName;
+  mapproxy: MapproxyLayerName;
+}
+//#endregion finalize task
+
 //#region mapproxyApi
 export interface IPublishMapLayerRequest {
   name: string;
   tilesPath: string;
   cacheType: PublishedLayerCacheType;
   format: TileOutputFormat;
+}
+
+export interface IGetMapproxyCacheRequest {
+  layerName: MapproxyLayerName;
+  cacheType: PublishedLayerCacheType;
+}
+
+export interface IGetMapproxyCacheResponse {
+  cacheName: string;
+  cache: { type: PublishedLayerCacheType };
 }
 //#endregion mapproxyApi
 
@@ -185,7 +211,7 @@ export interface PartAggregatedData {
   minResolutionDeg: number;
   maxResolutionMeter: number;
   minResolutionMeter: number;
-  footprint: GeoJSON;
+  footprint: Polygon;
   productBoundingBox: string;
 }
 
@@ -195,3 +221,38 @@ export interface ICatalogUpdateRequestBody {
 
 export type CatalogUpdateMetadata = Partial<LayerMetadata>;
 //#endregion catalogClient
+
+//#region seedingJobCreator
+
+export interface ISeedJobParams {
+  mode: SeedMode;
+  geometry: Footprint;
+  layerName: MapproxyLayerName;
+  ingestionJob: IJobResponse<unknown, unknown>;
+}
+export interface ISeedTaskOptions {
+  mode: SeedMode;
+  grid: string;
+  fromZoomLevel: number;
+  toZoomLevel: number;
+  geometry: Footprint;
+  skipUncached: boolean;
+  layerId: string; // cache name as configured in mapproxy
+  refreshBefore: string;
+}
+
+export interface ISeedTaskParams {
+  seedTasks: ISeedTaskOptions[];
+  catalogId: string;
+  traceParentContext?: ITraceParentContext;
+  cacheType: PublishedLayerCacheType;
+}
+
+//#endregion seedingJobCreator
+
+//#region trace
+export interface ITraceParentContext {
+  traceparent?: string;
+  tracestate?: string;
+}
+//#endregion trace
