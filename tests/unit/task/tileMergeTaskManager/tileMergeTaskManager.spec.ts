@@ -5,7 +5,7 @@ import { Feature } from 'geojson';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
-import { Grid, IMergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
+import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { testData } from '../../mocks/tileMergeTaskManagerMockData';
 import { MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
@@ -30,13 +30,13 @@ describe('tileMergeTaskManager', () => {
       };
 
       const result = tileMergeTaskManager.buildTasks(buildTasksParams);
-      const tasks: IMergeTaskParameters[] = [];
+      const tasks: MergeTaskParameters[] = [];
 
       for await (const task of result) {
         tasks.push(task);
       }
 
-      const samplingTask: IMergeTaskParameters = tasks[0];
+      const samplingTask: MergeTaskParameters = tasks[0];
       expect(tasks.length).toBeGreaterThan(0);
       expect(samplingTask.isNewTarget).toBe(true);
       expect(samplingTask.targetFormat).toBe(TileOutputFormat.PNG);

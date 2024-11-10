@@ -27,16 +27,16 @@ export class UnsupportedStorageProviderError extends Error {
 }
 
 export class PublishLayerError extends Error {
-  public constructor(publishingClient: string, layerName: string, err: Error) {
-    super(`Failed to publish ${layerName} layer to ${publishingClient} client: ${err.message}`);
+  public constructor(targetClient: string, layerName: string, err: Error) {
+    super(`Failed to publish ${layerName} layer to ${targetClient} client: ${err.message}`);
     this.name = PublishLayerError.name;
     this.stack = err.stack;
   }
 }
 
 export class UpdateLayerError extends Error {
-  public constructor(updatingClient: string, updateId: string, err: Error) {
-    super(`Failed to update layer ${updateId} in ${updatingClient} client: ${err.message}`);
+  public constructor(targetClient: string, updateId: string, err: Error) {
+    super(`Failed to update layer ${updateId} in ${targetClient} client: ${err.message}`);
     this.name = UpdateLayerError.name;
     this.stack = err.stack;
   }
@@ -61,5 +61,12 @@ export class SeedJobCreationError extends Error {
     super(msg);
     this.name = SeedJobCreationError.name;
     this.stack = err.stack;
+  }
+}
+
+export class SkipSeedingJobError extends Error {
+  public constructor(msg: string) {
+    super(`Skip seeding job: ${msg}`);
+    this.name = SkipSeedingJobError.name;
   }
 }

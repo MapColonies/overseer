@@ -7,8 +7,8 @@ import { SERVICES } from '../common/constants';
 
 export interface ILinkBuilderData {
   layerName: string;
-  mapproxyUrl: string;
-  geoserverUrl: string;
+  mapproxyDns: string;
+  geoserverDns: string;
 }
 
 @injectable()

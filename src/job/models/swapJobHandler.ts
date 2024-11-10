@@ -81,9 +81,9 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
       logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
       let finalizeTaskParams: IngestionSwapUpdateFinalizeTaskParams = task.parameters;
       const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
-      const { mapproxy: layerName } = this.validateAndGenerateLayerNameFormats(job);
+      const { layerName } = this.validateAndGenerateLayerNameFormats(job);
       const { additionalParams } = job.parameters;
-      const { tileOutputFormat, displayPath } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
+      const { tileOutputFormat, displayPath, footprint } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
 
       if (!updatedInMapproxy) {
         const layerRelativePath = `${job.internalId}/${displayPath}`;
@@ -101,7 +101,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
         await this.completeTaskAndJob(job, task);
-        await this.setupAndCreateSeedingJob(job);
+        await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, currentFootprint: footprint, layerName, ingestionJob: job });
       }
     } catch (err) {
       if (err instanceof ZodError) {
@@ -128,29 +128,5 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
     return this.queueClient.jobManagerClient.updateJob(job.id, {
       parameters: { ...job.parameters, additionalParams: newAdditionalParams },
     });
-  }
-
-  private async setupAndCreateSeedingJob(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
-    const logger = this.logger.child({ ingestionJobId: job.id });
-
-    try {
-      const layerName = this.validateAndGenerateLayerNameFormats(job).mapproxy;
-      logger.setBindings({ layerName });
-
-      logger.info({ msg: 'Starting seeding job creation' });
-      logger.debug({ msg: 'getting current footprint from additionalParams' });
-      const { footprint: currentFootprint } = this.validateAdditionalParams(job.parameters.additionalParams, updateAdditionalParamsSchema);
-
-      logger.info({ msg: 'Creating seeding job' });
-      const jobResponse = await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, geometry: currentFootprint, layerName, ingestionJob: job });
-      logger.info({ msg: 'Seeding job created successfully', seedJobId: jobResponse.id, seedTaskIds: jobResponse.taskIds });
-    } catch (err) {
-      let errorMsg = 'Failed to create seeding job, skipping seeding job creation';
-      if (err instanceof Error) {
-        const reason = err.message;
-        errorMsg = `${errorMsg}, reason:${reason}`;
-      }
-      logger.warn({ msg: errorMsg, error: err });
-    }
   }
 }

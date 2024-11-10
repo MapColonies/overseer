@@ -3,7 +3,7 @@ import { Logger } from '@map-colonies/js-logger';
 import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
-import { IInsertGeoserverRequest } from '../common/interfaces';
+import { InsertGeoserverRequest, LayerNameFormats } from '../common/interfaces';
 import { PublishLayerError } from '../common/errors';
 
 @injectable()
@@ -20,11 +20,13 @@ export class GeoserverClient extends HttpClient {
     this.dataStore = config.get<string>('geoserver.dataStore');
   }
 
-  public async publish(layerName: string): Promise<void> {
+  public async publish(layerNames: LayerNameFormats): Promise<void> {
+    const { nativeName, layerName } = layerNames;
     try {
       const url = `/featureTypes/${this.workspace}/${this.dataStore}`;
-      const publishReq: IInsertGeoserverRequest = {
-        nativeName: layerName,
+      const publishReq: InsertGeoserverRequest = {
+        nativeName,
+        name: layerName,
       };
 
       await this.post(url, publishReq);

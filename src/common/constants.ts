@@ -25,17 +25,17 @@ export const TilesStorageProvider = {
 
 export type TilesStorageProvider = (typeof TilesStorageProvider)[keyof typeof TilesStorageProvider];
 
-export const PublishedLayerCacheType = {
+export const LayerCacheType = {
   FS: 'file',
   S3: 's3',
   REDIS: 'redis',
 } as const;
 
-export type PublishedLayerCacheType = (typeof PublishedLayerCacheType)[keyof typeof PublishedLayerCacheType];
+export type LayerCacheType = (typeof LayerCacheType)[keyof typeof LayerCacheType];
 
 export const storageProviderToCacheTypeMap = new Map([
-  [TilesStorageProvider.FS, PublishedLayerCacheType.FS],
-  [TilesStorageProvider.S3, PublishedLayerCacheType.S3],
+  [TilesStorageProvider.FS, LayerCacheType.FS],
+  [TilesStorageProvider.S3, LayerCacheType.S3],
 ]);
 
 export const SeedMode = {

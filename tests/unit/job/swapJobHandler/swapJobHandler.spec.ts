@@ -4,7 +4,7 @@ import { ZodError } from 'zod';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
 import { registerDefaultConfig } from '../../mocks/configMock';
-import { Grid, IMergeTaskParameters, ISeedJobParams, MapproxyLayerName } from '../../../../src/common/interfaces';
+import { Grid, MergeTaskParameters, SeedJobParams, LayerName } from '../../../../src/common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
 import { finalizeTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
@@ -39,7 +39,7 @@ describe('swapJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
+      const mergeTasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -61,7 +61,7 @@ describe('swapJobHandler', () => {
       const job = structuredClone(ingestionSwapUpdateJob);
 
       const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
-      const tasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 
@@ -99,11 +99,11 @@ describe('swapJobHandler', () => {
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
       const { footprint, displayPath, tileOutputFormat } = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
-      const layerName: MapproxyLayerName = `${job.resourceId}-${job.productType}`;
+      const layerName: LayerName = `${job.resourceId}-${job.productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
-      const createSeedingJobParams: ISeedJobParams = {
+      const createSeedingJobParams: SeedJobParams = {
         mode: 'clean',
-        geometry: footprint,
+        currentFootprint: footprint,
         ingestionJob: job,
         layerName,
       };

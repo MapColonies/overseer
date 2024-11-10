@@ -4,7 +4,7 @@ import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { JobProcessor } from '../../../../src/job/models/jobProcessor';
 import { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory';
 import { configMock } from '../../mocks/configMock';
-import { IJobManagerConfig } from '../../../../src/common/interfaces';
+import { JobManagerConfig } from '../../../../src/common/interfaces';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -41,7 +41,7 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
     },
   } as unknown as jest.Mocked<QueueClient>;
 
-  const jobManagerConfig = configMock.get<IJobManagerConfig>('jobManagement.config');
+  const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 
   const queueClientInstance = new QueueClient(
     mockLogger,

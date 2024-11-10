@@ -14,12 +14,12 @@ describe('LinkBuilder', () => {
     it('should return links for a given layer', () => {
       linkBuilder = new LinkBuilder(configMock);
       const mapproxyDns = configMock.get<string>('servicesUrl.mapproxyDns');
-      const geoserverDns = configMock.get<string>('servicesUrl.geoserverApi');
+      const geoserverDns = configMock.get<string>('servicesUrl.geoserverDns');
 
       const linkBuilderData: ILinkBuilderData = {
         layerName: 'testLayer',
-        geoserverUrl: geoserverDns,
-        mapproxyUrl: mapproxyDns,
+        geoserverDns,
+        mapproxyDns,
       };
 
       const expectedLinks = getExpectedLinks(linkBuilderData);

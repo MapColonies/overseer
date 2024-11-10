@@ -60,6 +60,7 @@
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",
     "geoserverApi": "GEOSERVER_API_URL",
+    "geoserverDns": "GEOSERVER_DNS",
     "catalogManager": "CATALOG_MANAGER_URL",
     "mapproxyDns": "MAPPROXY_DNS",
     "polygonPartManager": "POLYGON_PART_MANAGER_URL"

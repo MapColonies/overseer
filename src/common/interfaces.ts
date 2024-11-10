@@ -9,11 +9,12 @@ import {
   IngestionNewFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
+  IngestionUpdateJobParams,
 } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
-import { PublishedLayerCacheType, SeedMode } from './constants';
+import { LayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces
 export interface IConfig {
@@ -21,45 +22,45 @@ export interface IConfig {
   has: (setting: string) => boolean;
 }
 
-export interface IHeartbeatConfig {
+export interface HeartbeatConfig {
   baseUrl: string;
   intervalMs: number;
 }
 
-export interface IJobManagerConfig {
+export interface JobManagerConfig {
   jobManagerBaseUrl: string;
-  heartbeat: IHeartbeatConfig;
+  heartbeat: HeartbeatConfig;
   dequeueIntervalMs: number;
 }
 
-export interface ITaskConfig {
+export interface TaskConfig {
   [key: string]: string;
 }
 
-export interface IJobConfig {
+export interface JobConfig {
   type: string;
-  tasks: ITaskConfig;
+  tasks: TaskConfig;
 }
 
 export interface IngestionJobsConfig {
-  [key: string]: IJobConfig | undefined;
-  new: IJobConfig | undefined;
-  update: IJobConfig | undefined;
-  swapUpdate: IJobConfig | undefined;
+  [key: string]: JobConfig | undefined;
+  new: JobConfig | undefined;
+  update: JobConfig | undefined;
+  swapUpdate: JobConfig | undefined;
 }
 
-export interface IPollingTasks {
+export interface PollingTasks {
   init: string;
   finalize: string;
 }
 
 export interface IngestionConfig {
-  pollingTasks: IPollingTasks;
+  pollingTasks: PollingTasks;
   jobs: IngestionJobsConfig;
   maxTaskAttempts: number;
 }
 
-export interface ITilesSeedingTaskConfig {
+export interface TilesSeedingTaskConfig {
   type: string;
   grid: string;
   maxZoom: number;
@@ -109,7 +110,7 @@ export interface IBBox {
   maxX: number;
   maxY: number;
 }
-export interface IPartSourceContext {
+export interface PartSourceContext {
   fileName: string;
   tilesPath: string;
   footprint: Polygon;
@@ -117,8 +118,8 @@ export interface IPartSourceContext {
   maxZoom: number;
 }
 
-export interface IMergeParameters {
-  parts: IPartSourceContext[];
+export interface MergeParameters {
+  parts: PartSourceContext[];
   destPath: string;
   maxZoom: number;
   grid: Grid;
@@ -126,22 +127,22 @@ export interface IMergeParameters {
   isNewTarget: boolean;
 }
 
-export interface IMergeSources {
+export interface MergeSources {
   type: string;
   path: string;
   grid?: Grid;
   extent?: IBBox;
 }
 
-export interface IMergeTaskParameters {
+export interface MergeTaskParameters {
   targetFormat: TileOutputFormat;
   isNewTarget: boolean;
-  sources: IMergeSources[];
+  sources: MergeSources[];
   batches: ITileRange[];
 }
 
-export interface IPartsIntersection {
-  parts: IPartSourceContext[];
+export interface PartsIntersection {
+  parts: PartSourceContext[];
   intersection: Footprint;
 }
 
@@ -165,37 +166,38 @@ export interface MergeTilesMetadata {
 //#endregion task
 
 //#region finalize task
-export type GeoserverLayerName = `${string}_${string}`;
-export type MapproxyLayerName = `${string}-${string}`;
+export type NativeName = `${string}_${string}`;
+export type LayerName = `${string}-${string}`;
 
 export interface LayerNameFormats {
-  geoserver: GeoserverLayerName;
-  mapproxy: MapproxyLayerName;
+  nativeName: NativeName;
+  layerName: LayerName;
 }
 //#endregion finalize task
 
 //#region mapproxyApi
-export interface IPublishMapLayerRequest {
+export interface PublishMapLayerRequest {
   name: string;
   tilesPath: string;
-  cacheType: PublishedLayerCacheType;
+  cacheType: LayerCacheType;
   format: TileOutputFormat;
 }
 
-export interface IGetMapproxyCacheRequest {
-  layerName: MapproxyLayerName;
-  cacheType: PublishedLayerCacheType;
+export interface GetMapproxyCacheRequest {
+  layerName: LayerName;
+  cacheType: LayerCacheType;
 }
 
-export interface IGetMapproxyCacheResponse {
+export interface GetMapproxyCacheResponse {
   cacheName: string;
-  cache: { type: PublishedLayerCacheType };
+  cache: { type: LayerCacheType };
 }
 //#endregion mapproxyApi
 
 //#region geoserverApi
-export interface IInsertGeoserverRequest {
-  nativeName: string;
+export interface InsertGeoserverRequest {
+  name: LayerName;
+  nativeName: NativeName;
 }
 //#endregion geoserverApi
 
@@ -215,7 +217,7 @@ export interface PartAggregatedData {
   productBoundingBox: string;
 }
 
-export interface ICatalogUpdateRequestBody {
+export interface CatalogUpdateRequestBody {
   metadata: CatalogUpdateMetadata;
 }
 
@@ -224,13 +226,13 @@ export type CatalogUpdateMetadata = Partial<LayerMetadata>;
 
 //#region seedingJobCreator
 
-export interface ISeedJobParams {
+export interface SeedJobParams {
   mode: SeedMode;
-  geometry: Footprint;
-  layerName: MapproxyLayerName;
-  ingestionJob: IJobResponse<unknown, unknown>;
+  currentFootprint: Polygon;
+  layerName: LayerName;
+  ingestionJob: IJobResponse<IngestionUpdateJobParams, unknown>;
 }
-export interface ISeedTaskOptions {
+export interface SeedTaskOptions {
   mode: SeedMode;
   grid: string;
   fromZoomLevel: number;
@@ -241,17 +243,17 @@ export interface ISeedTaskOptions {
   refreshBefore: string;
 }
 
-export interface ISeedTaskParams {
-  seedTasks: ISeedTaskOptions[];
+export interface SeedTaskParams {
+  seedTasks: SeedTaskOptions[];
   catalogId: string;
-  traceParentContext?: ITraceParentContext;
-  cacheType: PublishedLayerCacheType;
+  traceParentContext?: TraceParentContext;
+  cacheType: LayerCacheType;
 }
 
 //#endregion seedingJobCreator
 
 //#region trace
-export interface ITraceParentContext {
+export interface TraceParentContext {
   traceparent?: string;
   tracestate?: string;
 }

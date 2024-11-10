@@ -75,7 +75,8 @@ serviceUrls:
   catalogManager: ""
   mapServerPublicDNS: ""
   mapproxyApi: ""
-  geoserverApi: ""
+  geoserverApiUrl: ""
+  geoserverUrl: ""
   polygonPartManager: ""
 
 tracing:

@@ -41,43 +41,43 @@ export const linksTemplate = `[
 ]`;
 
 export const getExpectedLinks = (data: ILinkBuilderData): Link[] => {
-  const { layerName, geoserverUrl, mapproxyUrl } = data;
+  const { layerName, geoserverDns, mapproxyDns } = data;
   return [
     {
       name: layerName,
       description: '',
       protocol: 'WMS',
-      url: `${mapproxyUrl}/service?REQUEST=GetCapabilities`,
+      url: `${mapproxyDns}/service?REQUEST=GetCapabilities`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMS_BASE',
-      url: `${mapproxyUrl}/wms`,
+      url: `${mapproxyDns}/wms`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMTS',
-      url: `${mapproxyUrl}/wmts/1.0.0/WMTSCapabilities.xml`,
+      url: `${mapproxyDns}/wmts/1.0.0/WMTSCapabilities.xml`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMTS_KVP',
-      url: `${mapproxyUrl}/service?REQUEST=GetCapabilities&SERVICE=WMTS`,
+      url: `${mapproxyDns}/service?REQUEST=GetCapabilities&SERVICE=WMTS`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WMTS_BASE',
-      url: `${mapproxyUrl}/wmts`,
+      url: `${mapproxyDns}/wmts`,
     },
     {
       name: layerName,
       description: '',
       protocol: 'WFS',
-      url: `${geoserverUrl}/wfs?request=GetCapabilities`,
+      url: `${geoserverDns}/wfs?request=GetCapabilities`,
     },
   ];
 };

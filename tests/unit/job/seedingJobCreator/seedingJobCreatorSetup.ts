@@ -3,6 +3,7 @@ import jsLogger from '@map-colonies/js-logger';
 import { SeedingJobCreator } from '../../../../src/job/models/SeedingJobCreator';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
+import { PolygonPartMangerClient } from '../../../../src/httpClients/polygonPartMangerClient';
 
 export interface SeedingJobCreatorTestContext {
   seedingJobCreator: SeedingJobCreator;
@@ -10,6 +11,7 @@ export interface SeedingJobCreatorTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   configMock: typeof configMock;
+  polygonPartsManagerClientMock: jest.Mocked<PolygonPartMangerClient>;
 }
 
 export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
@@ -23,7 +25,15 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
 
   const mapproxyClientMock = { getCacheName: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
 
-  const seedingJobCreator = new SeedingJobCreator(jsLogger({ enabled: false }), configMock, queueClientMock, mapproxyClientMock);
+  const polygonPartsManagerClientMock = { getAggregatedPartData: jest.fn() } as unknown as jest.Mocked<PolygonPartMangerClient>;
+
+  const seedingJobCreator = new SeedingJobCreator(
+    jsLogger({ enabled: false }),
+    configMock,
+    queueClientMock,
+    mapproxyClientMock,
+    polygonPartsManagerClientMock
+  );
 
   return {
     seedingJobCreator,
@@ -31,5 +41,6 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
     jobManagerClientMock,
     mapproxyClientMock,
     configMock,
+    polygonPartsManagerClientMock,
   };
 };

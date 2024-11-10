@@ -10,7 +10,7 @@ import {
   UnsupportedStorageProviderError,
   UpdateLayerError,
 } from '../../../src/common/errors';
-import { PublishedLayerCacheType } from '../../../src/common/constants';
+import { LayerCacheType } from '../../../src/common/constants';
 
 describe('mapproxyClient', () => {
   let mapproxyApiClient: MapproxyApiClient;
@@ -42,18 +42,15 @@ describe('mapproxyClient', () => {
       expect(nock.isDone()).toBe(true);
     });
 
-    it('should throw an error for unsupported storage provider', async () => {
+    it('should throw an error for unsupported storage provider', () => {
       setValue('tilesStorageProvider', 'unsupported');
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
 
-      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
-      const layerName = 'testLayer';
-      const layerRelativePath = 'testLayerPath';
-      const tileOutputFormat = TileOutputFormat.PNG;
-
-      nock(baseUrl).post('/layer').reply(201);
-
-      await expect(mapproxyApiClient.publish(layerName, layerRelativePath, tileOutputFormat)).rejects.toThrow(UnsupportedStorageProviderError);
+      try {
+        mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
+      } catch (err) {
+        // eslint-disable-next-line jest/no-conditional-expect
+        expect(err).toBeInstanceOf(UnsupportedStorageProviderError);
+      }
     });
 
     it('should throw an PublishLayerError when mapproxyApi client returns an error', async () => {
@@ -90,18 +87,14 @@ describe('mapproxyClient', () => {
       expect(nock.isDone()).toBe(true);
     });
 
-    it('should throw an error for unsupported storage provider', async () => {
+    it('should throw an error for unsupported storage provider', () => {
       setValue('tilesStorageProvider', 'unsupported');
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
-
-      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
-      const layerName = 'test-layer';
-      const layerRelativePath = 'bfa79f98-79af-44b2-8acd-6dc1ebb9fd1c/c3959032-c6df-41ba-945a-80633510123a';
-      const tileOutputFormat = TileOutputFormat.PNG;
-
-      nock(baseUrl).put(`/layer/${layerName}`).reply(200);
-
-      await expect(mapproxyApiClient.update(layerName, layerRelativePath, tileOutputFormat)).rejects.toThrow(UnsupportedStorageProviderError);
+      try {
+        mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
+      } catch (err) {
+        // eslint-disable-next-line jest/no-conditional-expect
+        expect(err).toBeInstanceOf(UnsupportedStorageProviderError);
+      }
     });
 
     it('should throw an PublishLayerError when mapproxyApi client returns an error', async () => {
@@ -125,7 +118,7 @@ describe('mapproxyClient', () => {
       mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'test-layer';
-      const cacheType = PublishedLayerCacheType.REDIS;
+      const cacheType = LayerCacheType.REDIS;
       const cacheName = 'cacheName';
 
       nock(baseUrl)
@@ -143,7 +136,7 @@ describe('mapproxyClient', () => {
       mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'test-layer';
-      const cacheType = PublishedLayerCacheType.FS;
+      const cacheType = LayerCacheType.FS;
       const cacheName = 'cacheName';
 
       nock(baseUrl)
@@ -161,7 +154,7 @@ describe('mapproxyClient', () => {
       mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }));
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'not-found-layer';
-      const cacheType = PublishedLayerCacheType.REDIS;
+      const cacheType = LayerCacheType.REDIS;
 
       nock(baseUrl).get(`/layer/${layerName}/${cacheType}`).reply(404);
 

@@ -13,10 +13,9 @@ export class JobHandler {
     const layerName = layerNameSchema.parse(job);
     const { resourceId, productType } = layerName;
     this.logger.debug({ msg: 'layer name validation passed', resourceId, productType });
-
     return {
-      geoserver: `${resourceId}_${productType}`,
-      mapproxy: `${resourceId}-${productType}`,
+      nativeName: `${resourceId.toLowerCase()}_${productType.toLowerCase()}`,
+      layerName: `${resourceId}-${productType}`,
     };
   }
 

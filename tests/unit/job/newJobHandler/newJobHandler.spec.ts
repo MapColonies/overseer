@@ -3,7 +3,7 @@
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { finalizeTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
-import { IMergeTaskParameters } from '../../../../src/common/interfaces';
+import { MergeTaskParameters } from '../../../../src/common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
 import { PublishLayerError } from '../../../../src/common/errors';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
@@ -17,7 +17,7 @@ describe('NewJobHandler', () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
       const taskId = '7e630dea-ea29-4b30-a88e-5407bf67d1bc';
-      const tasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
@@ -39,7 +39,7 @@ describe('NewJobHandler', () => {
 
       const job = ingestionNewJob;
       const taskId = '7e630dea-ea29-4b30-a88e-5407bf67d1bc';
-      const tasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 

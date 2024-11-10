@@ -3,7 +3,7 @@ import jsLogger from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
 import { configMock } from '../../mocks/configMock';
-import { IJobManagerConfig } from '../../../../src/common/interfaces';
+import { JobManagerConfig } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
@@ -29,7 +29,7 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
     },
   } as unknown as jest.Mocked<QueueClient>;
 
-  const jobManagerConfig = configMock.get<IJobManagerConfig>('jobManagement.config');
+  const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 
   const queueClientInstance = new QueueClient(
     mockLogger,

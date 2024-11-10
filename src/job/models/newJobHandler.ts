@@ -87,22 +87,20 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
 
       if (!insertedToMapproxy) {
-        const layerName = layerNameFormats.mapproxy;
+        const layerName = layerNameFormats.layerName;
         logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
         await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');
       }
 
       if (!insertedToGeoServer) {
-        const layerName = layerNameFormats.geoserver;
-        const geoserverLayerName = layerName.toLowerCase();
-        logger.info({ msg: 'publishing to geoserver', geoserverLayerName });
-        await this.geoserverClient.publish(geoserverLayerName);
+        logger.info({ msg: 'publishing to geoserver', layerNameFormats });
+        await this.geoserverClient.publish(layerNameFormats);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToGeoServer');
       }
 
       if (!insertedToCatalog) {
-        const layerName = layerNameFormats.mapproxy;
+        const layerName = layerNameFormats.layerName;
         logger.info({ msg: 'publishing to catalog', layerName });
         await this.catalogClient.publish(job, layerName);
         finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');

@@ -88,6 +88,7 @@ const registerDefaultConfig = (): void => {
       catalogManager: 'http://catalog-manager',
       mapproxyDns: 'http://mapproxy',
       polygonPartsManager: 'http://polygon-parts-manager',
+      geoserverDns: 'http://geoserver',
     },
     geoserver: {
       workspace: 'testWorkspace',
