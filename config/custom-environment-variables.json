@@ -100,16 +100,22 @@
       "tasks": {
         "tilesMerging": {
           "type": "TILES_MERGING_TASK_TYPE",
-          "tileBatchSize": "TILES_MERGING_TILE_BATCH_SIZE",
-          "taskBatchSize": "TILES_MERGING_TASK_BATCH_SIZE"
-        },
-        "tilesSeeding": {
-          "type": "TILES_SEEDING_TASK_TYPE",
-          "grid": "TILES_SEEDING_GRID",
-          "maxZoom": "TILES_SEEDING_MAX_ZOOM",
-          "skipUncached": {
-            "__name": "TILES_SEEDING_SKIP_UNCACHED",
-            "__format": "boolean"
+          "tileBatchSize": {
+            "__name": "TILES_MERGING_TILE_BATCH_SIZE",
+            "__format": "number"
+          },
+          "taskBatchSize": {
+            "__name": "TILES_MERGING_TASK_BATCH_SIZE",
+            "__format": "number"
+          },
+          "tilesSeeding": {
+            "type": "TILES_SEEDING_TASK_TYPE",
+            "grid": "TILES_SEEDING_GRID",
+            "maxZoom": "TILES_SEEDING_MAX_ZOOM",
+            "skipUncached": {
+              "__name": "TILES_SEEDING_SKIP_UNCACHED",
+              "__format": "boolean"
+            }
           }
         }
       }

@@ -42,6 +42,12 @@ export class SeedingJobCreator {
       logger.debug({ msg: 'got cache name', cacheName });
 
       const geometry = this.calculateGeometryByMode(mode, currentFootprint, ingestionJob);
+
+      if (!geometry) {
+        logger.warn({ msg: 'No intersection found between, skipping seeding job creation' });
+        return;
+      }
+
       const seedOptions = this.createSeedOptions(mode, geometry, cacheName);
       logger.debug({ msg: 'created seed options', seedOptions });
 
@@ -75,9 +81,6 @@ export class SeedingJobCreator {
       const res = await this.queueClient.jobManagerClient.createJob(createJobRequest);
       logger.info({ msg: 'Seeding job created successfully', seedJobId: res.id, seedTaskIds: res.taskIds });
     } catch (err) {
-      if (err instanceof SkipSeedingJobError) {
-        return this.logger.warn({ msg: `Skipping seeding job creation: ${err.message}`, error: err });
-      }
       if (err instanceof Error) {
         return this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, error: err });
       }
@@ -112,7 +115,7 @@ export class SeedingJobCreator {
     mode: SeedMode,
     currentFootprint: Polygon,
     ingestionJob: IJobResponse<IngestionUpdateJobParams, unknown>
-  ): Footprint {
+  ): Footprint | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN) {
@@ -125,10 +128,6 @@ export class SeedingJobCreator {
     const footprintsFeatureCollection = featureCollection([feature(newFootprint), feature(currentFootprint)]);
     const geometry = intersect<Polygon>(footprintsFeatureCollection)?.geometry;
     logger.debug({ msg: 'Calculated intersection geometry', geometry });
-
-    if (!geometry) {
-      throw new SkipSeedingJobError('There is no intersection between current and new footprints');
-    }
 
     return geometry;
   }

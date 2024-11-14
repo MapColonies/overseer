@@ -143,7 +143,7 @@ export interface MergeTaskParameters {
 
 export interface PartsIntersection {
   parts: PartSourceContext[];
-  intersection: Footprint;
+  intersection: Footprint | null;
 }
 
 export interface IntersectionState {
@@ -162,6 +162,11 @@ export interface MergeTilesMetadata {
   tileOutputFormat: TileOutputFormat;
   isNewTarget: boolean;
   grid: Grid;
+}
+
+export interface PartsSourceWithMaxZoom {
+  parts: PartSourceContext[];
+  maxZoom: number;
 }
 //#endregion task
 

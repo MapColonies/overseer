@@ -10,7 +10,7 @@ import { SeedMode, SERVICES } from '../../common/constants';
 import { updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { JobHandler } from './jobHandler';
-import { SeedingJobCreator } from './SeedingJobCreator';
+import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()
 export class UpdateJobHandler extends JobHandler implements IJobHandler {

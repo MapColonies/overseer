@@ -5,7 +5,7 @@ import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskM
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { UpdateJobHandler } from '../../../../src/job/models/updateJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/SeedingJobCreator';
+import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 import { PolygonPartMangerClient } from '../../../../src/httpClients/polygonPartMangerClient';
 
 export interface UpdateJobHandlerTestContext {

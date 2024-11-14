@@ -1,6 +1,6 @@
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
-import { SeedingJobCreator } from '../../../../src/job/models/SeedingJobCreator';
+import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
 import { PolygonPartMangerClient } from '../../../../src/httpClients/polygonPartMangerClient';

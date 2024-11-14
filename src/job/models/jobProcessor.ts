@@ -53,7 +53,7 @@ export class JobProcessor {
     } catch (error) {
       if (error instanceof Error && jobAndTask) {
         const { job, task } = jobAndTask;
-        this.logger.error({ msg: 'rejecting task', error, job, task });
+        this.logger.error({ msg: 'rejecting task', error, jobId: job.id, taskId: task.id });
         await this.queueClient.reject(job.id, task.id, true, error.message);
       }
       this.logger.debug({ msg: 'waiting for next dequeue', dequeueIntervalMs: this.dequeueIntervalMs });

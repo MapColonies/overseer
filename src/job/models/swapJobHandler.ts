@@ -11,7 +11,7 @@ import { CatalogClient } from '../../httpClients/catalogClient';
 import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { SeedMode, SERVICES } from '../../common/constants';
 import { JobHandler } from './jobHandler';
-import { SeedingJobCreator } from './SeedingJobCreator';
+import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()
 export class SwapJobHandler extends JobHandler implements IJobHandler {

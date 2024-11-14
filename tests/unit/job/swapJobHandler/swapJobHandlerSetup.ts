@@ -4,7 +4,7 @@ import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskM
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { SwapJobHandler } from '../../../../src/job/models/swapJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/SeedingJobCreator';
+import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
