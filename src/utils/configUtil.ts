@@ -11,7 +11,7 @@ export const getAvailableJobTypes = (ingestionConfig: IngestionJobsConfig): stri
   for (const jobKey in ingestionConfig) {
     if (Object.prototype.hasOwnProperty.call(ingestionConfig, jobKey)) {
       const job = ingestionConfig[jobKey];
-      if (job === undefined) {
+      if (job === undefined || !job.isUsedForPolling) {
         continue;
       }
       jobTypes.push(job.type);

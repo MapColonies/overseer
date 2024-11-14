@@ -40,9 +40,13 @@ data:
   INGESTION_POLLING_INIT_TASK: {{ $jobDefinitions.tasks.init.type | quote }}
   INGESTION_POLLING_FINALIZE_TASK: {{ $jobDefinitions.tasks.finalize.type | quote }}
   INGESTION_NEW_JOB_TYPE: {{ $jobDefinitions.jobs.new.type | quote }}
+  INGESTION_NEW_JOB_IS_USED_FOR_POLLING: {{ $jobDefinitions.jobs.new.isUsedForPolling | quote }}
   INGESTION_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.update.type | quote }}
+  INGESTION_UPDATE_JOB_IS_USED_FOR_POLLING: {{ $jobDefinitions.jobs.update.isUsedForPolling | quote }}
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}
+  INGESTION_SWAP_UPDATE_JOB_IS_USED_FOR_POLLING: {{ $jobDefinitions.jobs.swapUpdate.isUsedForPolling | quote }}
   INGESTION_SEED_JOB_TYPE : {{ $jobDefinitions.jobs.seed.type | quote }}
+  INGESTION_SEED_JOB_IS_USED_FOR_POLLING: {{ $jobDefinitions.jobs.seed.isUsedForPolling | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}

@@ -108,12 +108,16 @@ jobDefinitions:
     jobs:
      new:
        type: ""
+       isUsedForPolling: true
      update:
        type: ""
+       isUsedForPolling: true
      swapUpdate:
        type: ""
+       isUsedForPolling: true
      seed: 
-        type: ""  
+        type: ""
+        isUsedForPolling: false  
     tasks:
       init:
         type: ""

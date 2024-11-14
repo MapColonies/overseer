@@ -63,10 +63,3 @@ export class SeedJobCreationError extends Error {
     this.stack = err.stack;
   }
 }
-
-export class SkipSeedingJobError extends Error {
-  public constructor(msg: string) {
-    super(`Skip seeding job: ${msg}`);
-    this.name = SkipSeedingJobError.name;
-  }
-}

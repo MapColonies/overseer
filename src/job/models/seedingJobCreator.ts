@@ -10,7 +10,6 @@ import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { internalIdSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { PolygonPartMangerClient } from '../../httpClients/polygonPartMangerClient';
-import { SkipSeedingJobError } from '../../common/errors';
 
 @injectable()
 export class SeedingJobCreator {
@@ -44,7 +43,7 @@ export class SeedingJobCreator {
       const geometry = this.calculateGeometryByMode(mode, currentFootprint, ingestionJob);
 
       if (!geometry) {
-        logger.warn({ msg: 'No intersection found between, skipping seeding job creation' });
+        logger.warn({ msg: 'No intersection found, skipping seeding job creation' });
         return;
       }
 
