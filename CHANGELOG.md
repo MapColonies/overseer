@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.3.0](https://github.com/MapColonies/overseer/compare/v1.2.5...v1.3.0) (2024-11-17)
+
+
+### Features
+
+* Ingestion swap update init(MAPCO-5073) ([#25](https://github.com/MapColonies/overseer/issues/25)) ([71b0558](https://github.com/MapColonies/overseer/commit/71b0558b30f83b0de1e47a495a09fa81044d3fe6))
+* Ingestion update finalize(MAPCO-4442) ([#24](https://github.com/MapColonies/overseer/issues/24)) ([c7efd4e](https://github.com/MapColonies/overseer/commit/c7efd4ef73021865cc65eecc97de085e9645937c))
+* update job init task hanling ([#20](https://github.com/MapColonies/overseer/issues/20)) ([ff6b868](https://github.com/MapColonies/overseer/commit/ff6b868e256c71efb65f905ba6d4af7387e66cf9))
+
 ### [1.2.5](https://github.com/MapColonies/overseer/compare/v1.2.4...v1.2.5) (2024-10-22)
 
 
