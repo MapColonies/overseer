@@ -3,6 +3,7 @@ import jsLogger from '@map-colonies/js-logger';
 import { GeoserverClient } from '../../../src/httpClients/geoserverClient';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError } from '../../../src/common/errors';
+import { LayerNameFormats } from '../../../src/common/interfaces';
 
 describe('GeoserverClient', () => {
   let geoServerClient: GeoserverClient;
@@ -20,11 +21,14 @@ describe('GeoserverClient', () => {
       const baseUrl = configMock.get<string>('servicesUrl.geoserverApi');
       const workspace = configMock.get<string>('geoserver.workspace');
       const dataStore = configMock.get<string>('geoserver.dataStore');
-      const layerName = 'testLayer';
+      const layersName: LayerNameFormats = {
+        layerName: 'test-layer',
+        nativeName: 'test_layer',
+      };
 
       nock(baseUrl).post(`/featureTypes/${workspace}/${dataStore}`).reply(201);
 
-      const action = geoServerClient.publish(layerName);
+      const action = geoServerClient.publish(layersName);
 
       await expect(action).resolves.not.toThrow();
       expect(nock.isDone()).toBe(true);
@@ -35,11 +39,14 @@ describe('GeoserverClient', () => {
     const baseUrl = configMock.get<string>('servicesUrl.geoserverApi');
     const workspace = configMock.get<string>('geoserver.workspace');
     const dataStore = configMock.get<string>('geoserver.dataStore');
-    const layerName = 'errorTestLayer';
+    const layersName: LayerNameFormats = {
+      layerName: 'error-Test-Layer',
+      nativeName: 'error_test_layer',
+    };
 
     nock(baseUrl).post(`/featureTypes/${workspace}/${dataStore}`).reply(500);
 
-    const action = geoServerClient.publish(layerName);
+    const action = geoServerClient.publish(layersName);
 
     await expect(action).rejects.toThrow(PublishLayerError);
   });

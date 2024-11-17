@@ -88,6 +88,7 @@ const registerDefaultConfig = (): void => {
       catalogManager: 'http://catalog-manager',
       mapproxyDns: 'http://mapproxy',
       polygonPartsManager: 'http://polygon-parts-manager',
+      geoserverDns: 'http://geoserver',
     },
     geoserver: {
       workspace: 'testWorkspace',
@@ -108,7 +109,7 @@ const registerDefaultConfig = (): void => {
           init: 'init',
           finalize: 'finalize',
         },
-        jobs: {
+        pollingJobs: {
           new: {
             type: 'Ingestion_New',
           },
@@ -119,12 +120,23 @@ const registerDefaultConfig = (): void => {
             type: 'Ingestion_Swap_Update',
           },
         },
+        jobs: {
+          seed: {
+            type: 'Ingestion_Seed',
+          },
+        },
         tasks: {
           tilesMerging: {
             type: 'tilesMerging',
             tileBatchSize: 10000,
             taskBatchSize: 2,
           },
+        },
+        tilesSeeding: {
+          type: 'tilesSeeding',
+          grid: 'WorldCRS84',
+          maxZoom: 21,
+          skipUncached: true,
         },
       },
     },

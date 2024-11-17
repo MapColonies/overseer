@@ -60,6 +60,7 @@
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",
     "geoserverApi": "GEOSERVER_API_URL",
+    "geoserverDns": "GEOSERVER_DNS",
     "catalogManager": "CATALOG_MANAGER_URL",
     "mapproxyDns": "MAPPROXY_DNS",
     "polygonPartManager": "POLYGON_PART_MANAGER_URL"
@@ -82,7 +83,7 @@
         "init": "INGESTION_POLLING_INIT_TASK",
         "finalize": "INGESTION_POLLING_FINALIZE_TASK"
       },
-      "jobs": {
+      "pollingJobs": {
         "new": {
           "type": "INGESTION_NEW_JOB_TYPE"
         },
@@ -93,11 +94,31 @@
           "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
         }
       },
+      "jobs": {
+        "seed": {
+          "type": "INGESTION_SEED_JOB_TYPE"
+        }
+      },
       "tasks": {
         "tilesMerging": {
           "type": "TILES_MERGING_TASK_TYPE",
-          "tileBatchSize": "TILES_MERGING_TILE_BATCH_SIZE",
-          "taskBatchSize": "TILES_MERGING_TASK_BATCH_SIZE"
+          "tileBatchSize": {
+            "__name": "TILES_MERGING_TILE_BATCH_SIZE",
+            "__format": "number"
+          },
+          "taskBatchSize": {
+            "__name": "TILES_MERGING_TASK_BATCH_SIZE",
+            "__format": "number"
+          },
+          "tilesSeeding": {
+            "type": "TILES_SEEDING_TASK_TYPE",
+            "grid": "TILES_SEEDING_GRID",
+            "maxZoom": "TILES_SEEDING_MAX_ZOOM",
+            "skipUncached": {
+              "__name": "TILES_SEEDING_SKIP_UNCACHED",
+              "__format": "boolean"
+            }
+          }
         }
       }
     }

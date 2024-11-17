@@ -4,6 +4,7 @@ import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskM
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { SwapJobHandler } from '../../../../src/job/models/swapJobHandler';
+import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
@@ -12,6 +13,7 @@ export interface SwapJobHandlerTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   catalogClientMock: jest.Mocked<CatalogClient>;
+  seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
 }
 
 export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
@@ -31,10 +33,18 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
     reject: jest.fn(),
   } as unknown as jest.Mocked<QueueClient>;
 
-  const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
-  const catalogClientMock = { publish: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const mapproxyClientMock = { update: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
+  const catalogClientMock = { update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
 
-  const swapJobHandler = new SwapJobHandler(jsLogger({ enabled: false }), queueClientMock, taskBuilderMock);
+  const swapJobHandler = new SwapJobHandler(
+    jsLogger({ enabled: false }),
+    queueClientMock,
+    taskBuilderMock,
+    mapproxyClientMock,
+    catalogClientMock,
+    seedingJobCreatorMock
+  );
 
   return {
     swapJobHandler,
@@ -43,5 +53,6 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
     jobManagerClientMock,
     mapproxyClientMock,
     catalogClientMock,
+    seedingJobCreatorMock,
   };
 };

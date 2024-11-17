@@ -42,13 +42,19 @@ data:
   INGESTION_NEW_JOB_TYPE: {{ $jobDefinitions.jobs.new.type | quote }}
   INGESTION_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.update.type | quote }}
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}
+  INGESTION_SEED_JOB_TYPE : {{ $jobDefinitions.jobs.seed.type | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}
+  TILES_SEEDING_TASK_TYPE: {{ $jobDefinitions.tasks.seed.type | quote }}
+  TILES_SEEDING_GRID : {{ $jobDefinitions.tasks.seed.grid | quote }}
+  TILES_SEEDING_MAX_ZOOM : {{ $jobDefinitions.tasks.seed.maxZoom | quote }}
+  TILES_SEEDING_SKIP_UNCACHED : {{ $jobDefinitions.tasks.seed.skipUncached | quote }}
   MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
-  GEOSERVER_API_URL: {{ $serviceUrls.geoserverApi | quote }}
+  GEOSERVER_API_URL: {{ $serviceUrls.geoserverApiUrl | quote }}
+  GEOSERVER_DNS: {{ $serviceUrls.geoserverUrl | quote }}
+  MAPPROXY_DNS: {{ $serviceUrls.geoserverUrl | quote }}
   CATALOG_MANAGER_URL: {{ $serviceUrls.catalogManager | quote }}
-  MAPPROXY_DNS: {{ $serviceUrls.mapServerPublicDNS | quote }}
   POLYGON_PART_MANAGER_URL: {{ $serviceUrls.polygonPartManager | quote }}
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}

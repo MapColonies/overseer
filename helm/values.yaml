@@ -75,7 +75,8 @@ serviceUrls:
   catalogManager: ""
   mapServerPublicDNS: ""
   mapproxyApi: ""
-  geoserverApi: ""
+  geoserverApiUrl: ""
+  geoserverUrl: ""
   polygonPartManager: ""
 
 tracing:
@@ -111,15 +112,23 @@ jobDefinitions:
        type: ""
      swapUpdate:
        type: ""
+     seed: 
+        type: ""
     tasks:
       init:
+        type: ""
+      finalize:
         type: ""
       merge:
         type: ""
         tileBatchSize: 10000
         taskBatchSize: 5
-      finalize:
+      seed:
         type: ""
+        grid: "WorldCRS84"
+        maxZoom: 21
+        skipUncached: true 
+
     config:
       dequeueIntervalMs: 3000
       heartBeat:

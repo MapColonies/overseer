@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { MissingConfigError } from '../../../src/common/errors';
-import { IngestionJobsConfig } from '../../../src/common/interfaces';
+import { IngestionPollingJobs } from '../../../src/common/interfaces';
 import { validateAndGetHandlersTokens } from '../../../src/utils/configUtil';
 import { registerDefaultConfig } from '../mocks/configMock';
 
@@ -10,11 +10,11 @@ describe('configUtil', () => {
   });
 
   describe('validateAndGetHandlersTokens', () => {
-    it('should return the job types if they are found in the config', () => {
-      const ingestionConfig: IngestionJobsConfig = {
-        new: { type: 'Ingestion_New', tasks: {} },
-        update: { type: 'Ingestion_Update', tasks: {} },
-        swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
+    it('should return the polling job types if they are found in the config', () => {
+      const ingestionConfig: IngestionPollingJobs = {
+        new: { type: 'Ingestion_New' },
+        update: { type: 'Ingestion_Update' },
+        swapUpdate: { type: 'Ingestion_Swap_Update' },
       };
 
       const result = validateAndGetHandlersTokens(ingestionConfig);
@@ -30,9 +30,9 @@ describe('configUtil', () => {
       const ingestionConfig = {
         update: { type: 'Ingestion_Update', tasks: {} },
         swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
-      };
+      } as unknown as IngestionPollingJobs;
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig as IngestionJobsConfig);
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
 
       expect(action).toThrow(MissingConfigError);
     });
@@ -41,9 +41,9 @@ describe('configUtil', () => {
       const ingestionConfig = {
         new: { type: 'Ingestion_New', tasks: {} },
         swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
-      };
+      } as unknown as IngestionPollingJobs;
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig as IngestionJobsConfig);
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
 
       expect(action).toThrow(MissingConfigError);
     });
@@ -52,9 +52,9 @@ describe('configUtil', () => {
       const ingestionConfig = {
         new: { type: 'Ingestion_New', tasks: {} },
         update: { type: 'Ingestion_Update', tasks: {} },
-      };
+      } as unknown as IngestionPollingJobs;
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig as IngestionJobsConfig);
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
 
       expect(action).toThrow(MissingConfigError);
     });
@@ -64,7 +64,7 @@ describe('configUtil', () => {
         new: { type: '', tasks: {} },
         update: { type: 'Ingestion_Update', tasks: {} },
         swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
-      };
+      } as unknown as IngestionPollingJobs;
 
       const action = () => validateAndGetHandlersTokens(ingestionConfig);
 

@@ -11,13 +11,14 @@ import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import {
   Grid,
   IConfig,
-  IMergeParameters,
-  IMergeSources,
-  IMergeTaskParameters,
+  MergeParameters,
+  MergeSources,
+  MergeTaskParameters,
   MergeTilesTaskParams,
-  IPartsIntersection,
-  IPartSourceContext,
+  PartsIntersection,
+  PartSourceContext,
   IntersectionState,
+  PartsSourceWithMaxZoom,
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
@@ -40,8 +41,8 @@ export class TileMergeTaskManager {
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
   }
 
-  public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<IMergeTaskParameters, void, void> {
-    const logger = this.logger.child({ taskBuildParams });
+  public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
+    const logger = this.logger.child({ taskType: this.taskType });
 
     logger.debug({ msg: `Building tasks for ${this.taskType} task` });
 
@@ -57,14 +58,13 @@ export class TileMergeTaskManager {
     }
   }
 
-  public async pushTasks(jobId: string, tasks: AsyncGenerator<IMergeTaskParameters, void, void>): Promise<void> {
+  public async pushTasks(jobId: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
     const logger = this.logger.child({ jobId, taskType: this.taskType });
-    let taskBatch: ICreateTaskBody<IMergeTaskParameters>[] = [];
+    let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
 
-    logger.debug({ msg: `Pushing tasks to queue`, tasks });
     try {
       for await (const task of tasks) {
-        const taskBody: ICreateTaskBody<IMergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
+        const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
         taskBatch.push(taskBody);
 
         if (taskBatch.length === this.taskBatchSize) {
@@ -86,7 +86,7 @@ export class TileMergeTaskManager {
     logger.info({ msg: `Successfully pushed all tasks to queue` });
   }
 
-  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<IMergeTaskParameters>[]): Promise<void> {
+  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[]): Promise<void> {
     const logger = this.logger.child({ jobId });
     logger.debug({ msg: `Attempting to enqueue task batch` });
 
@@ -101,18 +101,13 @@ export class TileMergeTaskManager {
     }
   }
 
-  private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): IMergeParameters {
+  private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): MergeParameters {
     const logger = this.logger.child({ taskType: this.taskType });
     const { taskMetadata, inputFiles, partsData } = taskBuildParams;
 
     logger.info({ msg: 'creating task parameters' });
 
-    logger.info({ msg: 'creating polygon parts with source context' });
-    const parts: IPartSourceContext[] = this.createPartsWithSourceContext(partsData, inputFiles);
-
-    logger.info({ msg: 'calculating max zoom level' });
-    const maxZoom = this.calculatePartsMaxZoom(parts);
-    logger.info({ msg: 'max zoom level calculated', maxZoom });
+    const { parts, maxZoom } = this.generatePartsSourceWithMaxZoom(partsData, inputFiles);
 
     return {
       parts,
@@ -124,23 +119,36 @@ export class TileMergeTaskManager {
     };
   }
 
-  private createPartsWithSourceContext(parts: PolygonPart[], inputFiles: InputFiles): IPartSourceContext[] {
-    return parts.flatMap((part) => this.linkPartToInputFiles(part, inputFiles));
+  private generatePartsSourceWithMaxZoom(parts: PolygonPart[], inputFiles: InputFiles): PartsSourceWithMaxZoom {
+    this.logger.info({ msg: 'Generating parts with source context', inputFiles, numberOfParts: parts.length });
+
+    const partsContext: PartSourceContext[] = [];
+    let maxZoom = 0;
+
+    parts.forEach((part) => {
+      const currentZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
+      maxZoom = Math.max(maxZoom, currentZoom);
+      const parts = this.linkPartToInputFiles(part, inputFiles);
+      partsContext.push(...parts);
+    });
+
+    this.logger.info({ msg: 'Calculated parts max zoom', maxZoom });
+    return { parts: partsContext, maxZoom };
   }
 
-  private linkPartToInputFiles(part: PolygonPart, inputFiles: InputFiles): IPartSourceContext[] {
+  private linkPartToInputFiles(part: PolygonPart, inputFiles: InputFiles): PartSourceContext[] {
     this.logger.debug({ msg: 'linking parts to input files', part, inputFiles, numberOfFiles: inputFiles.fileNames.length });
-    return inputFiles.fileNames.map<IPartSourceContext>((fileName) => this.linkPartToFile(part, fileName, inputFiles.originDirectory));
+    return inputFiles.fileNames.map<PartSourceContext>((fileName) => this.linkPartToFile(part, fileName, inputFiles.originDirectory));
   }
 
-  private linkPartToFile(part: PolygonPart, fileName: string, originDirectory: string): IPartSourceContext {
+  private linkPartToFile(part: PolygonPart, fileName: string, originDirectory: string): PartSourceContext {
     const logger = this.logger.child({
       partName: part.sourceName,
       fileName,
       originDirectory,
     });
 
-    logger.info({ msg: 'Linking part to input file' });
+    logger.debug({ msg: 'Linking part to input file' });
     const tilesPath = join(originDirectory, fileName);
     const footprint = part.footprint;
     const extent: BBox = bbox(footprint);
@@ -155,101 +163,100 @@ export class TileMergeTaskManager {
     };
   }
 
-  private calculatePartsMaxZoom(parts: IPartSourceContext[]): number {
-    this.logger.debug({ msg: 'Calculating max zoom level', parts });
-    return Math.max(...parts.map((part) => part.maxZoom));
-  }
-
-  private async *createZoomLevelTasks(params: IMergeParameters): AsyncGenerator<IMergeTaskParameters, void, void> {
+  private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
     const { parts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
 
-    this.logger.debug({ msg: 'Creating batched tasks', parts, destPath, targetFormat });
+    this.logger.debug({ msg: 'Creating batched tasks', destPath, targetFormat });
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      const partsIntersections = this.findPartsIntersections(parts);
-      for (const partsIntersection of partsIntersections) {
-        yield* this.createTasksForParts(partsIntersection, zoom, { destPath, grid, isNewTarget, targetFormat });
+      // when we used the old implementation with the parts intersection calculation with large numbers of parts
+      //we encountered performance issues, as long as we are not performing ingestion from more then one file we can omit this.
+      // const partsIntersections = this.findPartsIntersections(parts);
+      for await (const part of parts) {
+        if (part.maxZoom < zoom) {
+          // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
+          continue;
+        }
+        yield* this.createTasksForPart(part, zoom, { destPath, grid, isNewTarget, targetFormat });
       }
     }
   }
 
-  private async *createTasksForParts(
-    partsIntersection: IPartsIntersection,
+  private async *createTasksForPart(
+    part: PartSourceContext,
     zoom: number,
     params: { destPath: string; targetFormat: TileOutputFormat; isNewTarget: boolean; grid: Grid }
-  ): AsyncGenerator<IMergeTaskParameters, void, void> {
+  ): AsyncGenerator<MergeTaskParameters, void, void> {
     const { destPath, grid, isNewTarget, targetFormat } = params;
     const logger = this.logger.child({ zoomLevel: zoom, isNewTarget, destPath, targetFormat, grid });
-    const { parts, intersection } = partsIntersection;
 
-    for (const part of parts) {
-      if (part.maxZoom < zoom) {
-        // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
-        continue;
-      }
+    const footprint = part.footprint;
+    const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
+    const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
+    const sources = this.createPartSources(part, grid, destPath);
 
-      const footprint = convertToFeature(intersection);
-      const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
-      const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
-      const sources = this.createPartSources(parts, grid, destPath);
-
-      for await (const batch of batches) {
-        logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
-        yield {
-          targetFormat,
-          isNewTarget: isNewTarget,
-          batches: batch,
-          sources,
-        };
-      }
+    for await (const batch of batches) {
+      logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
+      yield {
+        targetFormat,
+        isNewTarget: isNewTarget,
+        batches: batch,
+        sources,
+      };
     }
   }
 
-  private createPartSources(parts: IPartSourceContext[], grid: Grid, destPath: string): IMergeSources[] {
-    const logger = this.logger.child({ partsLength: parts.length });
-    logger.debug({ msg: 'Creating source layers', parts });
+  private createPartSources(part: PartSourceContext, grid: Grid, destPath: string): MergeSources[] {
+    this.logger.debug({ msg: 'Creating source layers' });
 
-    const sourceEntry: IMergeSources = { type: this.tilesStorageProvider, path: destPath };
-    const sources = parts.map((part) => {
-      const fileExtension = fileExtensionExtractor(part.fileName);
-      return {
-        type: fileExtension.toUpperCase(),
-        path: part.tilesPath,
-        grid,
-        extent: {
-          minX: part.extent[0],
-          minY: part.extent[1],
-          maxX: part.extent[2],
-          maxY: part.extent[3],
-        },
-      };
-    });
+    const sourceEntry: MergeSources = { type: this.tilesStorageProvider, path: destPath };
+    const fileExtension = fileExtensionExtractor(part.fileName);
 
-    return [sourceEntry, ...sources];
+    const source: MergeSources = {
+      type: fileExtension.toUpperCase(),
+      path: part.tilesPath,
+      grid,
+      extent: {
+        minX: part.extent[0],
+        minY: part.extent[1],
+        maxX: part.extent[2],
+        maxY: part.extent[3],
+      },
+    };
+
+    return [sourceEntry, source];
   }
 
-  private *findPartsIntersections(parts: IPartSourceContext[]): Generator<IPartsIntersection> {
-    this.logger.debug({ msg: 'Searching for parts intersection', parts });
+  /**
+   * @futureUse This function may be needed for upcoming features(two or more ingestion sources).
+   */
+  /* istanbul ignore next */
+  private *findPartsIntersections(parts: PartSourceContext[]): Generator<PartsIntersection, void, void> {
+    this.logger.debug({ msg: 'Searching for parts intersection' });
 
     //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not intersect and we can yield them as is
     let state: IntersectionState = { currentIntersection: null, accumulatedIntersection: null };
 
-    const subGroups = subGroupsGen(parts, parts.length);
+    const subGroups = subGroupsGen(parts, parts.length, false);
 
     for (const subGroup of subGroups) {
       const subGroupFootprints = subGroup.map((layer) => layer.footprint as Footprint);
-      this.logger.debug({ msg: 'Processing sub group', subGroup });
+      this.logger.debug({ msg: 'Processing sub group' });
       try {
         state = this.calculateIntersectionState(state, subGroupFootprints);
         if (state.currentIntersection) {
-          this.logger.debug({ msg: 'Yielding part intersection', subGroup, intersection: state.currentIntersection });
+          this.logger.debug({ msg: 'Yielding part intersection', intersection: state.currentIntersection });
           yield {
             parts: subGroup,
             intersection: state.currentIntersection,
           };
         }
+        yield {
+          parts: subGroup,
+          intersection: null,
+        };
       } catch (error) {
         const errorMsg = (error as Error).message;
-        this.logger.error({ msg: `Failed to calculate intersection, error: ${errorMsg}`, error, subGroup });
+        this.logger.error({ msg: `Failed to calculate intersection, error: ${errorMsg}`, error });
         throw error;
       }
     }
@@ -258,7 +265,7 @@ export class TileMergeTaskManager {
   }
 
   private calculateIntersectionState(state: IntersectionState, subGroupFootprints: Footprint[]): IntersectionState {
-    const logger = this.logger.child({ intersectionState: state, subGroupFootprints });
+    const logger = this.logger.child({ intersectionState: state });
     logger.debug({ msg: 'Calculating intersection for current subGroup' });
 
     // Calculate the intersection of all footprints in the subgroup

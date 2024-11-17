@@ -93,6 +93,18 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
       jobTrackerServiceURL: 'http://job-tracker-service',
       displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
       tileOutputFormat: TileOutputFormat.PNG,
+      footprint: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [34.85086081689403, 31.925115892558324],
+            [34.8508654452348, 31.925001973021452],
+            [34.85102743714913, 31.92500328244263],
+            [34.85102743714913, 31.925118511396533],
+            [34.85086081689403, 31.925115892558324],
+          ],
+        ],
+      } as GeoJSON.Polygon,
     },
   },
   status: OperationStatus.PENDING,
@@ -136,6 +148,18 @@ export const ingestionSwapUpdateJob: IJobResponse<IngestionUpdateJobParams, unkn
     additionalParams: {
       jobTrackerServiceURL: 'http://job-tracker-service',
       tileOutputFormat: TileOutputFormat.PNG,
+      footprint: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [34.9, 32.9],
+            [34.9, 32.8],
+            [35.0, 32.8],
+            [35.0, 32.9],
+            [34.9, 32.9],
+          ],
+        ],
+      } as GeoJSON.Polygon,
     },
   },
   status: OperationStatus.PENDING,

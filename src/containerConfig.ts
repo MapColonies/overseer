@@ -16,12 +16,12 @@ import { UpdateJobHandler } from './job/models/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { validateAndGetHandlersTokens } from './utils/configUtil';
 import { SwapJobHandler } from './job/models/swapJobHandler';
-import { IConfig, IJobManagerConfig, IngestionJobsConfig } from './common/interfaces';
+import { IConfig, JobManagerConfig, IngestionPollingJobs } from './common/interfaces';
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
   const config = container.resolve<IConfig>(SERVICES.CONFIG);
-  const queueConfig = config.get<IJobManagerConfig>('jobManagement.config');
+  const queueConfig = config.get<JobManagerConfig>('jobManagement.config');
   const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
   const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
   const jobManagerServiceName = 'JobManager';
@@ -52,7 +52,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
 
   const tracer = trace.getTracer(SERVICE_NAME);
 
-  const ingestionConfig = config.get<IngestionJobsConfig>('jobManagement.ingestion.jobs');
+  const ingestionConfig = config.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
 
   const handlersTokens = validateAndGetHandlersTokens(ingestionConfig);
 

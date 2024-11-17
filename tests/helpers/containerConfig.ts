@@ -5,7 +5,7 @@ import { InjectionObject } from '../../src/common/dependencyRegistration';
 import { configMock, getMock, hasMock, registerDefaultConfig } from '../unit/mocks/configMock';
 import { SERVICES } from '../../src/common/constants';
 import { queueClientFactory } from '../../src/containerConfig';
-import { IngestionJobsConfig } from '../../src/common/interfaces';
+import { IngestionPollingJobs } from '../../src/common/interfaces';
 import { validateAndGetHandlersTokens } from '../../src/utils/configUtil';
 import { NewJobHandler } from '../../src/job/models/newJobHandler';
 import { UpdateJobHandler } from '../../src/job/models/updateJobHandler';
@@ -15,7 +15,7 @@ import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from '../../src/job/mod
 function getTestContainerConfig(): InjectionObject<unknown>[] {
   registerDefaultConfig();
 
-  const ingestionConfig = configMock.get<IngestionJobsConfig>('jobManagement.ingestion.jobs');
+  const ingestionConfig = configMock.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
 
   const handlersTokens = validateAndGetHandlersTokens(ingestionConfig);
 

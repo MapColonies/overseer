@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { IngestionJobsConfig } from '../common/interfaces';
+import { IngestionPollingJobs } from '../common/interfaces';
 import { MissingConfigError } from '../common/errors';
 
 function isStringEmpty(str: string): boolean {
   return typeof str === 'string' && str.trim().length === 0;
 }
 
-export const getAvailableJobTypes = (ingestionConfig: IngestionJobsConfig): string[] => {
+export const getAvailableJobTypes = (ingestionConfig: IngestionPollingJobs): string[] => {
   const jobTypes: string[] = [];
   for (const jobKey in ingestionConfig) {
     if (Object.prototype.hasOwnProperty.call(ingestionConfig, jobKey)) {
@@ -21,7 +21,7 @@ export const getAvailableJobTypes = (ingestionConfig: IngestionJobsConfig): stri
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const validateAndGetHandlersTokens = (ingestionConfig: IngestionJobsConfig) => {
+export const validateAndGetHandlersTokens = (ingestionConfig: IngestionPollingJobs) => {
   const { new: newJob, update: updateJob, swapUpdate: swapUpdateJob } = ingestionConfig;
 
   if (newJob?.type === undefined || isStringEmpty(newJob.type)) {

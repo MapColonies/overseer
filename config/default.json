@@ -43,7 +43,8 @@
     "geoserverApi": "http://localhost:8084",
     "catalogManager": "http://localhost:8085",
     "mapproxyDns": "http://localhost:8086",
-    "polygonPartManager": "http://localhost:8087"
+    "polygonPartManager": "http://localhost:8087",
+    "geoserverDns": "http://localhost:8088"
   },
   "geoserver": {
     "workspace": "polygonParts",
@@ -64,7 +65,7 @@
         "init": "init",
         "finalize": "finalize"
       },
-      "jobs": {
+      "pollingJobs": {
         "new": {
           "type": "Ingestion_New"
         },
@@ -75,11 +76,22 @@
           "type": "Ingestion_Swap_Update"
         }
       },
+      "jobs": {
+        "seed": {
+          "type": "Ingestion_Seed"
+        }
+      },
       "tasks": {
         "tilesMerging": {
-          "type": "tilesMerging",
+          "type": "tiles-merging",
           "tileBatchSize": 10000,
           "taskBatchSize": 5
+        },
+        "tilesSeeding": {
+          "type": "tiles-seeding",
+          "grid": "WorldCRS84",
+          "maxZoom": 21,
+          "skipUncached": true
         }
       }
     }

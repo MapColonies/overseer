@@ -5,10 +5,12 @@ import { OperationStatus, TaskHandler as QueueClient, IJobResponse, ITaskRespons
 import { IngestionUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
 import { CatalogClient } from '../../httpClients/catalogClient';
 import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
-import { SERVICES } from '../../common/constants';
+import { PolygonPartMangerClient } from '../../httpClients/polygonPartMangerClient';
+import { SeedMode, SERVICES } from '../../common/constants';
 import { updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { JobHandler } from './jobHandler';
+import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()
 export class UpdateJobHandler extends JobHandler implements IJobHandler {
@@ -17,7 +19,9 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
-    @inject(CatalogClient) private readonly catalogClient: CatalogClient
+    @inject(CatalogClient) private readonly catalogClient: CatalogClient,
+    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
+    private readonly polygonPartMangerClient: PolygonPartMangerClient
   ) {
     super(logger, queueClient);
   }
@@ -72,6 +76,9 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
       let finalizeTaskParams: IngestionUpdateFinalizeTaskParams = task.parameters;
       const { updatedInCatalog } = finalizeTaskParams;
+      const { layerName } = this.validateAndGenerateLayerNameFormats(job);
+      const { additionalParams } = job.parameters;
+      const { footprint } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
 
       if (!updatedInCatalog) {
         logger.info({ msg: 'Updating layer in catalog', catalogId: job.internalId });
@@ -81,8 +88,8 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-        await this.queueClient.ack(job.id, task.id);
-        await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.COMPLETED, reason: 'Job completed successfully' });
+        await this.completeTaskAndJob(job, task);
+        await this.seedingJobCreator.create({ mode: SeedMode.SEED, currentFootprint: footprint, layerName, ingestionJob: job });
       }
     } catch (err) {
       if (err instanceof Error) {

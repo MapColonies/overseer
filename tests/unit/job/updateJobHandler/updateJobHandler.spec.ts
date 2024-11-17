@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { ZodError } from 'zod';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { Grid, IMergeTaskParameters } from '../../../../src/common/interfaces';
+import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { updateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
 import { registerDefaultConfig } from '../../mocks/configMock';
+import { COMPLETED_PERCENTAGE } from '../../../../src/common/constants';
 import { ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
@@ -17,7 +18,7 @@ describe('updateJobHandler', () => {
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
       const { updateJobHandler, queueClientMock, taskBuilderMock } = setupUpdateJobHandlerTest();
-      const job = ingestionUpdateJob;
+      const job = structuredClone(ingestionUpdateJob);
       const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
 
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
@@ -33,7 +34,7 @@ describe('updateJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
+      const mergeTasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -49,10 +50,10 @@ describe('updateJobHandler', () => {
     it('should handle job init failure and reject the task', async () => {
       const { updateJobHandler, taskBuilderMock, queueClientMock } = setupUpdateJobHandlerTest();
 
-      const job = { ...ingestionUpdateJob };
+      const job = structuredClone(ingestionUpdateJob);
 
       const taskId = '7e630dea-ea29-4b30-a88e-5407bf67d1bc';
-      const tasks: AsyncGenerator<IMergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 
@@ -67,7 +68,7 @@ describe('updateJobHandler', () => {
 
     it('should handle job init failure with ZodError and Failed the job', async () => {
       const { updateJobHandler, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = { ...ingestionUpdateJob };
+      const job = structuredClone(ingestionUpdateJob);
       job.parameters.additionalParams = { wrongField: 'wrongValue' };
       const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
       const validAdditionalParamsSpy = jest.spyOn(updateAdditionalParamsSchema, 'parse');
@@ -83,7 +84,7 @@ describe('updateJobHandler', () => {
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
       const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = ingestionUpdateJob;
+      const job = structuredClone(ingestionUpdateJob);
       const task = finalizeTaskForIngestionUpdate;
 
       catalogClientMock.update.mockResolvedValue(undefined);
@@ -96,13 +97,14 @@ describe('updateJobHandler', () => {
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
       expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
         status: OperationStatus.COMPLETED,
+        percentage: COMPLETED_PERCENTAGE,
         reason: 'Job completed successfully',
       });
     });
 
     it('should handle job finalize failure and reject the task', async () => {
       const { updateJobHandler, queueClientMock, catalogClientMock } = setupUpdateJobHandlerTest();
-      const job = ingestionUpdateJob;
+      const job = structuredClone(ingestionUpdateJob);
       const task = finalizeTaskForIngestionUpdate;
 
       const error = new Error('Test error');

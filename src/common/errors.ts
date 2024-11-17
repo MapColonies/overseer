@@ -27,17 +27,39 @@ export class UnsupportedStorageProviderError extends Error {
 }
 
 export class PublishLayerError extends Error {
-  public constructor(publishingClient: string, layerName: string, err: Error) {
-    super(`Failed to publish ${layerName} layer to ${publishingClient} client: ${err.message}`);
+  public constructor(targetClient: string, layerName: string, err: Error) {
+    super(`Failed to publish ${layerName} layer to ${targetClient} client: ${err.message}`);
     this.name = PublishLayerError.name;
     this.stack = err.stack;
   }
 }
 
 export class UpdateLayerError extends Error {
-  public constructor(updatingClient: string, err: Error) {
-    super(`Failed to update layer in ${updatingClient} client: ${err.message}`);
+  public constructor(targetClient: string, updateId: string, err: Error) {
+    super(`Failed to update layer ${updateId} in ${targetClient} client: ${err.message}`);
     this.name = UpdateLayerError.name;
+    this.stack = err.stack;
+  }
+}
+
+export class UnsupportedLayerCacheError extends Error {
+  public constructor(layerName: string, cacheType: string) {
+    super(`Unsupported cache type(${cacheType}) for layer ${layerName} (redis only)`);
+    this.name = UnsupportedLayerCacheError.name;
+  }
+}
+
+export class LayerCacheNotFoundError extends Error {
+  public constructor(layerName: string, cacheType: string) {
+    super(`Cache not found for layer ${layerName} with cache type ${cacheType}`);
+    this.name = LayerCacheNotFoundError.name;
+  }
+}
+
+export class SeedJobCreationError extends Error {
+  public constructor(msg: string, err: Error) {
+    super(msg);
+    this.name = SeedJobCreationError.name;
     this.stack = err.stack;
   }
 }

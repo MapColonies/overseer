@@ -6,8 +6,9 @@ import { compile } from 'handlebars';
 import { SERVICES } from '../common/constants';
 
 export interface ILinkBuilderData {
-  serverUrl: string;
   layerName: string;
+  mapproxyDns: string;
+  geoserverDns: string;
 }
 
 @injectable()

@@ -13,14 +13,16 @@ describe('LinkBuilder', () => {
   describe('createLinks', () => {
     it('should return links for a given layer', () => {
       linkBuilder = new LinkBuilder(configMock);
-      const serverUrl = configMock.get<string>('servicesUrl.mapproxyDns');
+      const mapproxyDns = configMock.get<string>('servicesUrl.mapproxyDns');
+      const geoserverDns = configMock.get<string>('servicesUrl.geoserverDns');
 
       const linkBuilderData: ILinkBuilderData = {
-        serverUrl,
         layerName: 'testLayer',
+        geoserverDns,
+        mapproxyDns,
       };
 
-      const expectedLinks = getExpectedLinks(serverUrl, linkBuilderData.layerName);
+      const expectedLinks = getExpectedLinks(linkBuilderData);
 
       jest.spyOn(FS, 'readFileSync').mockReturnValue(linksTemplate);
       const actualLinks = linkBuilder.createLinks(linkBuilderData);
