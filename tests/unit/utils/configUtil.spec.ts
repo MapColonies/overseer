@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { MissingConfigError } from '../../../src/common/errors';
-import { IngestionJobsConfig } from '../../../src/common/interfaces';
+import { IngestionPollingJobs } from '../../../src/common/interfaces';
 import { validateAndGetHandlersTokens } from '../../../src/utils/configUtil';
 import { registerDefaultConfig } from '../mocks/configMock';
 
@@ -10,12 +10,11 @@ describe('configUtil', () => {
   });
 
   describe('validateAndGetHandlersTokens', () => {
-    it('should return the job types if they are found in the config', () => {
-      const ingestionConfig: IngestionJobsConfig = {
-        new: { type: 'Ingestion_New', isUsedForPolling: true },
-        update: { type: 'Ingestion_Update', isUsedForPolling: true },
-        swapUpdate: { type: 'Ingestion_Swap_Update', isUsedForPolling: true },
-        seed: { type: 'Ingestion_Seed', isUsedForPolling: false },
+    it('should return the polling job types if they are found in the config', () => {
+      const ingestionConfig: IngestionPollingJobs = {
+        new: { type: 'Ingestion_New' },
+        update: { type: 'Ingestion_Update' },
+        swapUpdate: { type: 'Ingestion_Swap_Update' },
       };
 
       const result = validateAndGetHandlersTokens(ingestionConfig);
@@ -29,44 +28,43 @@ describe('configUtil', () => {
 
     it('should throw an error if one of the "new" job type is not found in the config', () => {
       const ingestionConfig = {
-        update: { type: 'Ingestion_Update', isUsedForPolling: true },
-        swapUpdate: { type: 'Ingestion_Swap_Update', isUsedForPolling: true },
-      };
+        update: { type: 'Ingestion_Update', tasks: {} },
+        swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
+      } as unknown as IngestionPollingJobs;
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig as IngestionJobsConfig);
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
 
       expect(action).toThrow(MissingConfigError);
     });
 
     it('should throw an error if one of the "update" job type is not found in the config', () => {
       const ingestionConfig = {
-        new: { type: 'Ingestion_New', isUsedForPolling: true },
-        swapUpdate: { type: 'Ingestion_Swap_Update', isUsedForPolling: true },
-      };
+        new: { type: 'Ingestion_New', tasks: {} },
+        swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
+      } as unknown as IngestionPollingJobs;
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig as IngestionJobsConfig);
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
 
       expect(action).toThrow(MissingConfigError);
     });
 
     it('should throw an error if one of the "swap update" job type is not found in the config', () => {
       const ingestionConfig = {
-        new: { type: 'Ingestion_New', isUsedForPolling: true },
-        update: { type: 'Ingestion_Update', isUsedForPolling: true },
-      };
+        new: { type: 'Ingestion_New', tasks: {} },
+        update: { type: 'Ingestion_Update', tasks: {} },
+      } as unknown as IngestionPollingJobs;
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig as IngestionJobsConfig);
+      const action = () => validateAndGetHandlersTokens(ingestionConfig);
 
       expect(action).toThrow(MissingConfigError);
     });
 
     it('should throw an error if one of the  job types is empty', () => {
       const ingestionConfig = {
-        new: { type: '', isUsedForPolling: true },
-        update: { type: 'Ingestion_Update', isUsedForPolling: true },
-        swapUpdate: { type: 'Ingestion_Swap_Update', isUsedForPolling: true },
-        seed: { type: 'Ingestion_Seed', isUsedForPolling: false },
-      };
+        new: { type: '', tasks: {} },
+        update: { type: 'Ingestion_Update', tasks: {} },
+        swapUpdate: { type: 'Ingestion_Swap_Update', tasks: {} },
+      } as unknown as IngestionPollingJobs;
 
       const action = () => validateAndGetHandlersTokens(ingestionConfig);
 

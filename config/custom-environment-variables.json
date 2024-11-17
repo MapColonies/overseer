@@ -83,34 +83,20 @@
         "init": "INGESTION_POLLING_INIT_TASK",
         "finalize": "INGESTION_POLLING_FINALIZE_TASK"
       },
-      "jobs": {
+      "pollingJobs": {
         "new": {
-          "type": "INGESTION_NEW_JOB_TYPE",
-          "isUsedForPolling": {
-            "__name": "INGESTION_NEW_JOB_IS_USED_FOR_POLLING",
-            "__format": "boolean"
-          }
+          "type": "INGESTION_NEW_JOB_TYPE"
         },
         "update": {
-          "type": "INGESTION_UPDATE_JOB_TYPE",
-          "isUsedForPolling": {
-            "__name": "INGESTION_UPDATE_JOB_IS_USED_FOR_POLLING",
-            "__format": "boolean"
-          }
+          "type": "INGESTION_UPDATE_JOB_TYPE"
         },
         "swapUpdate": {
-          "type": "INGESTION_SWAP_UPDATE_JOB_TYPE",
-          "isUsedForPolling": {
-            "__name": "INGESTION_SWAP_UPDATE_JOB_IS_USED_FOR_POLLING",
-            "__format": "boolean"
-          }
-        },
+          "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
+        }
+      },
+      "jobs": {
         "seed": {
-          "type": "INGESTION_SEED_JOB_TYPE",
-          "isUsedForPolling": {
-            "__name": "INGESTION_SEED_JOB_IS_USED_FOR_POLLING",
-            "__format": "boolean"
-          }
+          "type": "INGESTION_SEED_JOB_TYPE"
         }
       },
       "tasks": {

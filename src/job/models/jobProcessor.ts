@@ -22,8 +22,8 @@ export class JobProcessor {
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
     this.ingestionConfig = this.config.get<IngestionConfig>('jobManagement.ingestion');
-    const { jobs, pollingTasks } = this.ingestionConfig;
-    this.jobTypes = getAvailableJobTypes(jobs);
+    const { pollingJobs, pollingTasks } = this.ingestionConfig;
+    this.jobTypes = getAvailableJobTypes(pollingJobs);
     this.pollingTaskTypes = [pollingTasks.init, pollingTasks.finalize];
   }
 

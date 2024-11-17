@@ -109,22 +109,20 @@ const registerDefaultConfig = (): void => {
           init: 'init',
           finalize: 'finalize',
         },
-        jobs: {
+        pollingJobs: {
           new: {
             type: 'Ingestion_New',
-            isUsedForPolling: true,
           },
           update: {
             type: 'Ingestion_Update',
-            isUsedForPolling: true,
           },
           swapUpdate: {
             type: 'Ingestion_Swap_Update',
-            isUsedForPolling: true,
           },
+        },
+        jobs: {
           seed: {
             type: 'Ingestion_Seed',
-            isUsedForPolling: false,
           },
         },
         tasks: {

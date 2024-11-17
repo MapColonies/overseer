@@ -39,15 +39,17 @@ export interface TaskConfig {
 
 export interface JobConfig {
   type: string;
-  isUsedForPolling: boolean;
 }
 
-export interface IngestionJobsConfig {
+export interface IngestionJobs {
+  seed: JobConfig | undefined;
+}
+
+export interface IngestionPollingJobs {
   [key: string]: JobConfig | undefined;
   new: JobConfig | undefined;
   update: JobConfig | undefined;
   swapUpdate: JobConfig | undefined;
-  seed: JobConfig | undefined;
 }
 
 export interface PollingTasks {
@@ -57,7 +59,8 @@ export interface PollingTasks {
 
 export interface IngestionConfig {
   pollingTasks: PollingTasks;
-  jobs: IngestionJobsConfig;
+  pollingJobs: IngestionPollingJobs;
+  jobs: IngestionJobs;
   maxTaskAttempts: number;
 }
 

@@ -37,8 +37,8 @@ describe('JobProcessor', () => {
       const { jobProcessor, mockDequeue, configMock } = testContext;
       const ingestionConfig = configMock.get<IngestionConfig>('jobManagement.ingestion');
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
-      const { jobs, pollingTasks } = ingestionConfig;
-      const jobTypesAmount = Object.keys(jobs).reduce((acc, key) => acc + (jobs[key] !== undefined && jobs[key].isUsedForPolling ? 1 : 0), 0);
+      const { pollingJobs, pollingTasks } = ingestionConfig;
+      const jobTypesAmount = Object.keys(pollingJobs).length;
       const pollingTasksTypesAmount = Object.keys(pollingTasks).length;
       const totalDequeueCalls = jobTypesAmount * pollingTasksTypesAmount;
 

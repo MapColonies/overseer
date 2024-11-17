@@ -65,22 +65,20 @@
         "init": "init",
         "finalize": "finalize"
       },
-      "jobs": {
+      "pollingJobs": {
         "new": {
-          "type": "Ingestion_New",
-          "isUsedForPolling": true
+          "type": "Ingestion_New"
         },
         "update": {
-          "type": "Ingestion_Update",
-          "isUsedForPolling": true
+          "type": "Ingestion_Update"
         },
         "swapUpdate": {
-          "type": "Ingestion_Swap_Update",
-          "isUsedForPolling": true
-        },
+          "type": "Ingestion_Swap_Update"
+        }
+      },
+      "jobs": {
         "seed": {
-          "type": "Ingestion_Seed",
-          "isUsedForPolling": false
+          "type": "Ingestion_Seed"
         }
       },
       "tasks": {

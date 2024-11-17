@@ -16,7 +16,7 @@ import { UpdateJobHandler } from './job/models/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { validateAndGetHandlersTokens } from './utils/configUtil';
 import { SwapJobHandler } from './job/models/swapJobHandler';
-import { IConfig, JobManagerConfig, IngestionJobsConfig } from './common/interfaces';
+import { IConfig, JobManagerConfig, IngestionPollingJobs } from './common/interfaces';
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
@@ -52,7 +52,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
 
   const tracer = trace.getTracer(SERVICE_NAME);
 
-  const ingestionConfig = config.get<IngestionJobsConfig>('jobManagement.ingestion.jobs');
+  const ingestionConfig = config.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
 
   const handlersTokens = validateAndGetHandlersTokens(ingestionConfig);
 
