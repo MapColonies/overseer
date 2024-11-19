@@ -7,7 +7,7 @@ A geospatial data management worker service that handles initialization, merge, 
 
 ## Overview
 
-Overseer is a worker service that communicates with the Job-Manager service using a polling strategy to handle initial & finalize tasks created by the Ingestion-Trigger service. It manages various aspects of geospatial data ingestion, including layer management in MapProxy, GeoServer, and catalog systems.
+Overseer is a worker service that communicates with the Job-Manager service using a polling strategy to handle initial & finalize tasks created by the Ingestion-Trigger service. It manages various aspects of geospatial data ingestion, including layer management in MapProxy, GeoServer, and catalog system.
 
 ### Key Features
 
