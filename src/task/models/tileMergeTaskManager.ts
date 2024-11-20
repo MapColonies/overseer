@@ -1,10 +1,10 @@
 import { join } from 'path';
-import { BBox } from 'geojson';
+import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { Logger } from '@map-colonies/js-logger';
 import { InputFiles, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, Footprint, multiIntersect, subGroupsGen, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, featureCollection, union } from '@turf/turf';
+import { bbox, featureCollection, intersect, polygon, union } from '@turf/turf';
 import { difference } from '@turf/difference';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
@@ -19,6 +19,7 @@ import {
   PartSourceContext,
   IntersectionState,
   PartsSourceWithMaxZoom,
+  ProcessedPart,
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
@@ -164,25 +165,67 @@ export class TileMergeTaskManager {
   }
 
   private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
-    const { parts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
+    const { parts, destPath, targetFormat, isNewTarget, grid } = params;
 
     this.logger.debug({ msg: 'Creating batched tasks', destPath, targetFormat });
-    for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      // when we used the old implementation with the parts intersection calculation with large numbers of parts
-      //we encountered performance issues, as long as we are not performing ingestion from more then one file we can omit this.
-      // const partsIntersections = this.findPartsIntersections(parts);
-      for await (const part of parts) {
-        if (part.maxZoom < zoom) {
-          // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
-          continue;
-        }
+    const processedParts = this.preprocessParts(parts);
+    for (const part of processedParts) {
+      for (let zoom = part.maxZoom; zoom >= 0; zoom--) {
         yield* this.createTasksForPart(part, zoom, { destPath, grid, isNewTarget, targetFormat });
       }
     }
+
+    // for (let zoom = maxZoom; zoom >= 0; zoom--) {
+    //   // when we used the old implementation with the parts intersection calculation with large numbers of parts
+    //   //we encountered performance issues, as long as we are not performing ingestion from more then one file we can omit this.
+    //   // const partsIntersections = this.findPartsIntersections(parts);
+    //   for await (const part of parts) {
+    //     if (part.maxZoom < zoom) {
+    //       // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
+    //       continue;
+    //     }
+    //     yield* this.createTasksForPart(part, zoom, { destPath, grid, isNewTarget, targetFormat });
+    //   }
+    // }
+  }
+
+  private preprocessParts(parts: PartSourceContext[]): ProcessedPart[] {
+    const mergedParts: ProcessedPart[] = [];
+    // Merge parts by union and avoid duplicate overlaps.
+    for (const part of parts) {
+      let merged = false;
+      const geo1 = polygon(part.footprint.coordinates);
+      for (let i = 0; i < mergedParts.length; i++) {
+        const geo2 = mergedParts[i].footprint;
+        if (this.doIntersect(geo1, geo2)) {
+          const unionResult = union(featureCollection([geo1, geo2]));
+          if (unionResult === null) {
+            continue;
+          }
+          mergedParts[i].footprint = unionResult;
+          merged = true;
+          break;
+        }
+      }
+      if (!merged) {
+        const processedPart: ProcessedPart = { ...part, footprint: geo1 };
+        mergedParts.push(processedPart);
+      }
+    }
+    this.logger.info({ msg: 'Preprocessed parts', numberOfParts: mergedParts.length });
+    return mergedParts;
+  }
+
+  private doIntersect(footprint1: Feature<Polygon | MultiPolygon>, footprint2: Feature<Polygon | MultiPolygon> | null): boolean {
+    if (footprint2 === null) {
+      return false;
+    }
+    const intersection = intersect(featureCollection([footprint1, footprint2]));
+    return intersection !== null;
   }
 
   private async *createTasksForPart(
-    part: PartSourceContext,
+    part: ProcessedPart,
     zoom: number,
     params: { destPath: string; targetFormat: TileOutputFormat; isNewTarget: boolean; grid: Grid }
   ): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -205,7 +248,7 @@ export class TileMergeTaskManager {
     }
   }
 
-  private createPartSources(part: PartSourceContext, grid: Grid, destPath: string): MergeSources[] {
+  private createPartSources(part: ProcessedPart, grid: Grid, destPath: string): MergeSources[] {
     this.logger.debug({ msg: 'Creating source layers' });
 
     const sourceEntry: MergeSources = { type: this.tilesStorageProvider, path: destPath };
@@ -237,7 +280,6 @@ export class TileMergeTaskManager {
     let state: IntersectionState = { currentIntersection: null, accumulatedIntersection: null };
 
     const subGroups = subGroupsGen(parts, parts.length, false);
-
     for (const subGroup of subGroups) {
       const subGroupFootprints = subGroup.map((layer) => layer.footprint as Footprint);
       this.logger.debug({ msg: 'Processing sub group' });
