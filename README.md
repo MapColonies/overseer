@@ -55,9 +55,9 @@ npm run start
 
 The service can be configured using environment variables or a configuration file local.json(based on default.json)
 
-## Environment Variables
+# Environment Variables
 
-### Telemetry Configuration
+## Telemetry Configuration
 
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
@@ -74,7 +74,7 @@ The service can be configured using environment variables or a configuration fil
 | TELEMETRY_METRICS_INTERVAL | string | Metrics collection interval | `5` |
 | TELEMETRY_METRICS_BUCKETS | json | Metrics buckets configuration | `[0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500]` |
 
-### Server Configuration
+## Server Configuration
 
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
@@ -82,7 +82,7 @@ The service can be configured using environment variables or a configuration fil
 | REQUEST_PAYLOAD_LIMIT | string | Request payload size limit | `"1mb"` |
 | RESPONSE_COMPRESSION_ENABLED | boolean | Enable response compression | `true` |
 
-### HTTP Configuration
+## HTTP Configuration
 
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
@@ -91,13 +91,13 @@ The service can be configured using environment variables or a configuration fil
 | HTTP_RETRY_RESET_TIMEOUT | boolean | Reset timeout on retry | `true` |
 | DISABLE_HTTP_CLIENT_LOGS | boolean | Disable HTTP client logging | `true` |
 
-### Storage Configuration
+## Storage Configuration
 
-| Variable Name | Type | Description | Default |
-|--------------|------|-------------|---------|
-| TILES_STORAGE_PROVIDER | string | Storage provider for tiles | `"FS"` |
+| Variable Name | Type | Default | Description | Supported Values |
+|--------------|------|-----------------|-------------|---------|
+| TILES_STORAGE_PROVIDER | string | Storage provider for tiles | `"FS"` | "FS" (Filesystem), "S3" |
 
-### Service URLs
+## Service URLs
 
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
@@ -108,7 +108,7 @@ The service can be configured using environment variables or a configuration fil
 | MAPPROXY_DNS | string | MapProxy DNS | `"http://localhost:8086"` |
 | POLYGON_PART_MANAGER_URL | string | Polygon Part Manager URL | `"http://localhost:8087"` |
 
-### Job Management
+## Job Management
 
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
@@ -119,7 +119,7 @@ The service can be configured using environment variables or a configuration fil
 | GEOSERVER_WORKSPACE | string | GeoServer workspace name | `"polygonParts"` |
 | GEOSERVER_DATASTORE | string | GeoServer datastore name | `"polygonParts"` |
 
-### Ingestion Configuration
+## Ingestion Configuration
 
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
@@ -192,11 +192,11 @@ The service is part of a larger system that includes:
 ## Dependencies
 
 Key dependencies include:
-- @map-colonies/mc-priority-queue: ^8.1.1
-- @map-colonies/mc-utils: ^3.1.0
-- @map-colonies/telemetry: ^6.0.0
-- express: ^4.19.2
-- typescript: ^5.1.3
+- @map-colonies/mc-priority-queue
+- @map-colonies/mc-utils
+- @map-colonies/telemetry
+- express
+- typescript
 
 ## Contributing
 
