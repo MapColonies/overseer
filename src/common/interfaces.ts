@@ -122,7 +122,7 @@ export interface PartSourceContext {
   maxZoom: number;
 }
 
-export interface ProcessedPart {
+export interface UnifiedPart {
   fileName: string;
   tilesPath: string;
   footprint: Feature<Polygon | MultiPolygon>;

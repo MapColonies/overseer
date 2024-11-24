@@ -19,7 +19,7 @@ import {
   PartSourceContext,
   IntersectionState,
   PartsSourceWithMaxZoom,
-  ProcessedPart,
+  UnifiedPart,
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
@@ -165,32 +165,19 @@ export class TileMergeTaskManager {
   }
 
   private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
-    const { parts, destPath, targetFormat, isNewTarget, grid } = params;
+    const { parts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
 
-    this.logger.debug({ msg: 'Creating batched tasks', destPath, targetFormat });
-    const processedParts = this.preprocessParts(parts);
-    for (const part of processedParts) {
-      for (let zoom = part.maxZoom; zoom >= 0; zoom--) {
+    for (let zoom = maxZoom; zoom >= 0; zoom--) {
+      const filteredParts = parts.filter((part) => part.maxZoom >= zoom);
+      const processedParts = this.unifyParts(filteredParts);
+      for await (const part of processedParts) {
         yield* this.createTasksForPart(part, zoom, { destPath, grid, isNewTarget, targetFormat });
       }
     }
-
-    // for (let zoom = maxZoom; zoom >= 0; zoom--) {
-    //   // when we used the old implementation with the parts intersection calculation with large numbers of parts
-    //   //we encountered performance issues, as long as we are not performing ingestion from more then one file we can omit this.
-    //   // const partsIntersections = this.findPartsIntersections(parts);
-    //   for await (const part of parts) {
-    //     if (part.maxZoom < zoom) {
-    //       // checking if the layer is relevant for the current zoom level (allowing different parts with different resolutions)
-    //       continue;
-    //     }
-    //     yield* this.createTasksForPart(part, zoom, { destPath, grid, isNewTarget, targetFormat });
-    //   }
-    // }
   }
 
-  private preprocessParts(parts: PartSourceContext[]): ProcessedPart[] {
-    const mergedParts: ProcessedPart[] = [];
+  private unifyParts(parts: PartSourceContext[]): UnifiedPart[] {
+    const mergedParts: UnifiedPart[] = [];
     // Merge parts by union and avoid duplicate overlaps.
     for (const part of parts) {
       let merged = false;
@@ -208,24 +195,21 @@ export class TileMergeTaskManager {
         }
       }
       if (!merged) {
-        const processedPart: ProcessedPart = { ...part, footprint: geo1 };
+        const processedPart: UnifiedPart = { ...part, footprint: geo1 };
         mergedParts.push(processedPart);
       }
     }
-    this.logger.info({ msg: 'Preprocessed parts', numberOfParts: mergedParts.length });
+    this.logger.debug({ msg: 'Preprocessed parts', numberOfParts: mergedParts.length });
     return mergedParts;
   }
 
-  private doIntersect(footprint1: Feature<Polygon | MultiPolygon>, footprint2: Feature<Polygon | MultiPolygon> | null): boolean {
-    if (footprint2 === null) {
-      return false;
-    }
+  private doIntersect(footprint1: Feature<Polygon | MultiPolygon>, footprint2: Feature<Polygon | MultiPolygon>): boolean {
     const intersection = intersect(featureCollection([footprint1, footprint2]));
     return intersection !== null;
   }
 
   private async *createTasksForPart(
-    part: ProcessedPart,
+    part: UnifiedPart,
     zoom: number,
     params: { destPath: string; targetFormat: TileOutputFormat; isNewTarget: boolean; grid: Grid }
   ): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -248,7 +232,7 @@ export class TileMergeTaskManager {
     }
   }
 
-  private createPartSources(part: ProcessedPart, grid: Grid, destPath: string): MergeSources[] {
+  private createPartSources(part: UnifiedPart, grid: Grid, destPath: string): MergeSources[] {
     this.logger.debug({ msg: 'Creating source layers' });
 
     const sourceEntry: MergeSources = { type: this.tilesStorageProvider, path: destPath };
