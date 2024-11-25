@@ -1,5 +1,33 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
+import { faker } from '@faker-js/faker';
+import { BBox, Polygon } from 'geojson';
 import { PolygonPart } from '@map-colonies/mc-model-types';
+import { PartSourceContext } from '../../../src/common/interfaces';
+
+function createFakeBBox(): BBox {
+  return [
+    faker.location.longitude({ min: -180, max: 180 }),
+    faker.location.latitude({ min: -90, max: 90 }),
+    faker.location.longitude({ min: -180, max: 180 }),
+    faker.location.latitude({ min: -90, max: 90 }),
+  ];
+}
+
+function createFakePolygon(): Polygon {
+  const firstAndLastPoint = [faker.location.longitude({ min: -180, max: 180 }), faker.location.latitude({ min: -90, max: 90 })];
+  return {
+    type: 'Polygon',
+    coordinates: [
+      [
+        firstAndLastPoint,
+        [faker.location.longitude({ min: -180, max: 180 }), faker.location.latitude({ min: -90, max: 90 })],
+        [faker.location.longitude({ min: -180, max: 180 }), faker.location.latitude({ min: -90, max: 90 })],
+        [faker.location.longitude({ min: -180, max: 180 }), faker.location.latitude({ min: -90, max: 90 })],
+        firstAndLastPoint,
+      ],
+    ],
+  };
+}
 
 export const partsData: PolygonPart[] = [
   {
@@ -114,3 +142,13 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
     },
   },
 ];
+
+export function createFakePartSource(): PartSourceContext {
+  return {
+    tilesPath: `${faker.string.uuid()}/${faker.string.uuid()}`,
+    fileName: `${faker.string.alpha({ length: 8 })}.gpkg`,
+    maxZoom: faker.number.int({ min: 0, max: 21 }),
+    extent: createFakeBBox(),
+    footprint: createFakePolygon(),
+  };
+}

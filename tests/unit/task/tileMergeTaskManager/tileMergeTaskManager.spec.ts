@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { booleanEqual } from '@turf/turf';
+import { faker } from '@faker-js/faker';
 import { Feature } from 'geojson';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
-import { partsData } from '../../mocks/partsMockData';
+import { createFakePartSource, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { testData } from '../../mocks/tileMergeTaskManagerMockData';
@@ -70,6 +71,16 @@ describe('tileMergeTaskManager', () => {
     });
   });
 
+  describe('unifyParts', () => {
+    it('should unify parts correctly', () => {
+      const { tileMergeTaskManager } = testContext;
+      const partsData = faker.helpers.multiple(createFakePartSource, { count: 10 });
+      const result = tileMergeTaskManager['unifyParts'](partsData);
+
+      expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('calculateIntersectionState', () => {
     // Test case 1: No intersection found
     it('should return null intersection when no overlap is found', () => {
@@ -130,54 +141,54 @@ describe('tileMergeTaskManager', () => {
       expect(result.currentIntersection).toBeNull();
       expect(result.accumulatedIntersection).not.toBeNull();
     });
+  });
 
-    describe('pushTasks', () => {
-      it('should push tasks in batches correctly', async () => {
-        const { tileMergeTaskManager } = testContext;
-        const buildTasksParams: MergeTilesTaskParams = {
-          taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-          partsData,
-          inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-        };
+  describe('pushTasks', () => {
+    it('should push tasks in batches correctly', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
+        partsData,
+        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
+      };
 
-        const jobId = randomUUID();
+      const jobId = randomUUID();
 
-        const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
-        const path = `/jobs/${jobId}/tasks`;
-        nock(jobManagerBaseUrl).post(path).reply(200).persist();
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const path = `/jobs/${jobId}/tasks`;
+      nock(jobManagerBaseUrl).post(path).reply(200).persist();
 
-        const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
 
-        let error: Error | null = null;
-        try {
-          await tileMergeTaskManager.pushTasks(jobId, tasks);
-        } catch (err) {
-          error = err as Error;
-        }
+      let error: Error | null = null;
+      try {
+        await tileMergeTaskManager.pushTasks(jobId, tasks);
+      } catch (err) {
+        error = err as Error;
+      }
 
-        expect(error).toBeNull();
-      });
+      expect(error).toBeNull();
+    });
 
-      it('should handle errors in pushTasks correctly', async () => {
-        const { tileMergeTaskManager } = testContext;
-        const buildTasksParams: MergeTilesTaskParams = {
-          taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-          partsData,
-          inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-        };
+    it('should handle errors in pushTasks correctly', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
+        partsData,
+        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
+      };
 
-        const jobId = randomUUID();
+      const jobId = randomUUID();
 
-        const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
-        const path = `/jobs/${jobId}/tasks`;
-        nock(jobManagerBaseUrl).post(path).reply(500).persist();
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const path = `/jobs/${jobId}/tasks`;
+      nock(jobManagerBaseUrl).post(path).reply(500).persist();
 
-        const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
 
-        const action = async () => tileMergeTaskManager.pushTasks(jobId, tasks);
+      const action = async () => tileMergeTaskManager.pushTasks(jobId, tasks);
 
-        await expect(action).rejects.toThrow();
-      });
+      await expect(action).rejects.toThrow();
     });
   });
 });

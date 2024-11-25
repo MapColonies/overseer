@@ -12,7 +12,7 @@ import {
   IngestionUpdateJobParams,
 } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
-import { BBox, Polygon } from 'geojson';
+import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { Footprint, ITileRange } from '@map-colonies/mc-utils';
 import { LayerCacheType, SeedMode } from './constants';
 
@@ -118,6 +118,14 @@ export interface PartSourceContext {
   fileName: string;
   tilesPath: string;
   footprint: Polygon;
+  extent: BBox;
+  maxZoom: number;
+}
+
+export interface UnifiedPart {
+  fileName: string;
+  tilesPath: string;
+  footprint: Feature<Polygon | MultiPolygon>;
   extent: BBox;
   maxZoom: number;
 }
