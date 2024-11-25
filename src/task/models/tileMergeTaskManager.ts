@@ -181,11 +181,11 @@ export class TileMergeTaskManager {
     // Merge parts by union and avoid duplicate overlaps.
     for (const part of parts) {
       let merged = false;
-      const geo1 = polygon(part.footprint.coordinates);
+      const currentPart = polygon(part.footprint.coordinates);
       for (let i = 0; i < mergedParts.length; i++) {
-        const geo2 = mergedParts[i].footprint;
-        if (this.doIntersect(geo1, geo2)) {
-          const unionResult = union(featureCollection([geo1, geo2]));
+        const mergedPart = mergedParts[i].footprint;
+        if (this.doIntersect(currentPart, mergedPart)) {
+          const unionResult = union(featureCollection([currentPart, mergedPart]));
           if (unionResult === null) {
             continue;
           }
@@ -195,7 +195,7 @@ export class TileMergeTaskManager {
         }
       }
       if (!merged) {
-        const processedPart: UnifiedPart = { ...part, footprint: geo1 };
+        const processedPart: UnifiedPart = { ...part, footprint: currentPart };
         mergedParts.push(processedPart);
       }
     }
