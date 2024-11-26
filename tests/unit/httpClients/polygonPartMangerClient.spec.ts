@@ -15,7 +15,7 @@ describe('polygonPartsManagerClient', () => {
     jest.resetAllMocks();
   });
 
-  describe('getAggregatedPartData', () => {
+  describe('getAggregatedLayerMetadata', () => {
     it('should return aggregated part data', async () => {
       polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
 
@@ -24,7 +24,7 @@ describe('polygonPartsManagerClient', () => {
       const aggregatedPartData = createFakeAggregatedPartData();
       nock(baseUrl).get(`/aggregation/${catalogId}`).reply(200, aggregatedPartData);
 
-      const action = polygonPartsManagerClient.getAggregatedPartData(catalogId);
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(catalogId);
       const result = {
         ...aggregatedPartData,
         imagingTimeBeginUTC: aggregatedPartData.imagingTimeBeginUTC.toISOString(),

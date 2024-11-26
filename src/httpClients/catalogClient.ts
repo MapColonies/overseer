@@ -73,7 +73,7 @@ export class CatalogClient extends HttpClient {
     const { parameters, version } = job;
     const { metadata } = parameters;
 
-    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedPartData(metadata.catalogId);
+    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(metadata.catalogId);
 
     return {
       id: metadata.catalogId,
@@ -119,7 +119,7 @@ export class CatalogClient extends HttpClient {
     const catalogId = internalIdSchema.parse(job).internalId;
     const validAdditionalParams = updateAdditionalParamsSchema.parse(additionalParams);
     const { displayPath } = validAdditionalParams;
-    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedPartData(catalogId);
+    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(catalogId);
 
     return {
       metadata: {

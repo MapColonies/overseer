@@ -15,7 +15,7 @@ export class PolygonPartsMangerClient extends HttpClient {
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
   }
 
-  public async getAggregatedPartData(catalogId: string): Promise<AggregationLayerMetadata> {
+  public async getAggregatedLayerMetadata(catalogId: string): Promise<AggregationLayerMetadata> {
     const url = `aggregation/${catalogId}`;
     const res = await this.get<AggregationLayerMetadata>(url);
     return res;

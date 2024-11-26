@@ -64,7 +64,7 @@ export class SeedingJobCreator {
         type: this.seedJobType,
         parameters: {},
         status: OperationStatus.IN_PROGRESS,
-        producerName,
+        producerName: producerName ?? undefined,
         productType,
         domain,
         tasks: [
@@ -117,9 +117,9 @@ export class SeedingJobCreator {
     }
 
     logger.debug({ msg: 'Getting new footprint from layer aggregated data' });
-    const { footprint: newFootprint } = await this.polygonPartsMangerClient.getAggregatedPartData(catalogId);
+    const { footprint: aggregatedFootprint } = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(catalogId);
 
-    const footprintsFeatureCollection = featureCollection([feature(newFootprint), feature(currentFootprint)]);
+    const footprintsFeatureCollection = featureCollection([feature(aggregatedFootprint), feature(currentFootprint)]);
     const geometry = intersect<Polygon>(footprintsFeatureCollection)?.geometry;
     logger.debug({ msg: 'Calculated intersection geometry', geometry });
 

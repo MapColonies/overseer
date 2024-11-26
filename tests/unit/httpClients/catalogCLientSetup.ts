@@ -24,7 +24,7 @@ export function setupCatalogClientTest(): CatalogClientTestContext {
   } as unknown as LinkBuilder;
 
   const polygonPartsManagerClientMock = {
-    getAggregatedPartData: jest.fn(),
+    getAggregatedLayerMetadata: jest.fn(),
   } as unknown as jest.Mocked<PolygonPartsMangerClient>;
   const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), linkBuilder, polygonPartsManagerClientMock);
 

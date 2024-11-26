@@ -25,7 +25,7 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
 
   const mapproxyClientMock = { getCacheName: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
 
-  const polygonPartsManagerClientMock = { getAggregatedPartData: jest.fn() } as unknown as jest.Mocked<PolygonPartsMangerClient>;
+  const polygonPartsManagerClientMock = { getAggregatedLayerMetadata: jest.fn() } as unknown as jest.Mocked<PolygonPartsMangerClient>;
 
   const seedingJobCreator = new SeedingJobCreator(
     jsLogger({ enabled: false }),

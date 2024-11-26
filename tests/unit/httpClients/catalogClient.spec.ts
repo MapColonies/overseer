@@ -22,7 +22,7 @@ describe('CatalogClient', () => {
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const layerName = 'testLayer';
 
-      polygonPartsManagerClientMock.getAggregatedPartData.mockResolvedValue(createFakeAggregatedPartData());
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
 
       nock(baseUrl).post('/records').reply(201);
 
