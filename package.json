@@ -1,6 +1,6 @@
 {
   "name": "overseer",
-  "version": "1.3.3",
+  "version": "1.4.0",
   "description": "A geospatial data management worker service that handles initialization, merge, and finalization of geospatial jobs & tasks.",
   "main": "./src/index.ts",
   "scripts": {

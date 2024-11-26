@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.4.0](https://github.com/MapColonies/overseer/compare/v1.3.3...v1.4.0) (2024-11-26)
+
+
+### Features
+
+* Aggregation support ([#30](https://github.com/MapColonies/overseer/issues/30)) ([ace5572](https://github.com/MapColonies/overseer/commit/ace55724ecc9ce9bc3e21c303111fdcbca948c3b))
+
+
+### Bug Fixes
+
+* prevent duplicate tiles in task creation ([#29](https://github.com/MapColonies/overseer/issues/29)) ([e8fed18](https://github.com/MapColonies/overseer/commit/e8fed18b25dab3b921a904c59ae1f3c86fb625d9))
+
 ### [1.3.3](https://github.com/MapColonies/overseer/compare/v1.3.2...v1.3.3) (2024-11-19)
 
 
