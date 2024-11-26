@@ -63,7 +63,7 @@
     "geoserverDns": "GEOSERVER_DNS",
     "catalogManager": "CATALOG_MANAGER_URL",
     "mapproxyDns": "MAPPROXY_DNS",
-    "polygonPartManager": "POLYGON_PART_MANAGER_URL"
+    "polygonPartsManager": "POLYGON_PARTS_MANAGER_URL"
   },
   "jobManagement": {
     "config": {

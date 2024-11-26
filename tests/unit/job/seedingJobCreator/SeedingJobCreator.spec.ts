@@ -131,7 +131,7 @@ describe('SeedingJobCreator', () => {
           ],
         },
       } as PartAggregatedData;
-      polygonPartsManagerClientMock.getAggregatedPartData.mockReturnValue(partAggregatedData);
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(partAggregatedData);
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.SEED,
@@ -229,7 +229,7 @@ describe('SeedingJobCreator', () => {
         },
       } as PartAggregatedData;
 
-      polygonPartsManagerClientMock.getAggregatedPartData.mockReturnValue(partAggregatedData);
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(partAggregatedData);
 
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
 

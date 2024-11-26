@@ -55,7 +55,7 @@ data:
   GEOSERVER_DNS: {{ $serviceUrls.geoserverUrl | quote }}
   MAPPROXY_DNS: {{ $serviceUrls.mapServerPublicDNS | quote }}
   CATALOG_MANAGER_URL: {{ $serviceUrls.catalogManager | quote }}
-  POLYGON_PART_MANAGER_URL: {{ $serviceUrls.polygonPartManager | quote }}
+  POLYGON_PARTS_MANAGER_URL: {{ $serviceUrls.polygonPartsManager | quote }}
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
 {{- end }}

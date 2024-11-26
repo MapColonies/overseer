@@ -43,7 +43,7 @@
     "geoserverApi": "http://localhost:8084",
     "catalogManager": "http://localhost:8085",
     "mapproxyDns": "http://localhost:8086",
-    "polygonPartManager": "http://localhost:8087",
+    "polygonPartsManager": "http://localhost:8087",
     "geoserverDns": "http://localhost:8088"
   },
   "geoserver": {

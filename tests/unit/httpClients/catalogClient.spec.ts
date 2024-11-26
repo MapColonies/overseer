@@ -2,7 +2,7 @@ import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
 import { ingestionNewJobExtended, ingestionUpdateJob } from '../mocks/jobsMockData';
-import { setupCatalogClientTest } from './catalogCLientSetup';
+import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogCLientSetup';
 
 describe('CatalogClient', () => {
   beforeEach(() => {
@@ -16,11 +16,13 @@ describe('CatalogClient', () => {
   });
   describe('publish', () => {
     it('should publish a layer to catalog', async () => {
-      const { catalogClient, createLinksMock } = setupCatalogClientTest();
+      const { catalogClient, createLinksMock, polygonPartsManagerClientMock } = setupCatalogClientTest();
 
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const layerName = 'testLayer';
+
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
 
       nock(baseUrl).post('/records').reply(201);
 
