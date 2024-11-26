@@ -4,7 +4,7 @@ import { BBox, Polygon } from 'geojson';
 import { PolygonPart } from '@map-colonies/mc-model-types';
 import { PartSourceContext } from '../../../src/common/interfaces';
 
-function createFakeBBox(): BBox {
+export function createFakeBBox(): BBox {
   return [
     faker.location.longitude({ min: -180, max: 180 }),
     faker.location.latitude({ min: -90, max: 90 }),
@@ -13,7 +13,7 @@ function createFakeBBox(): BBox {
   ];
 }
 
-function createFakePolygon(): Polygon {
+export function createFakePolygon(): Polygon {
   const firstAndLastPoint = [faker.location.longitude({ min: -180, max: 180 }), faker.location.latitude({ min: -90, max: 90 })];
   return {
     type: 'Polygon',
@@ -26,6 +26,16 @@ function createFakePolygon(): Polygon {
         firstAndLastPoint,
       ],
     ],
+  };
+}
+
+export function createFakePartSource(): PartSourceContext {
+  return {
+    tilesPath: `${faker.string.uuid()}/${faker.string.uuid()}`,
+    fileName: `${faker.string.alpha({ length: 8 })}.gpkg`,
+    maxZoom: faker.number.int({ min: 0, max: 21 }),
+    extent: createFakeBBox(),
+    footprint: createFakePolygon(),
   };
 }
 
@@ -142,13 +152,3 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
     },
   },
 ];
-
-export function createFakePartSource(): PartSourceContext {
-  return {
-    tilesPath: `${faker.string.uuid()}/${faker.string.uuid()}`,
-    fileName: `${faker.string.alpha({ length: 8 })}.gpkg`,
-    maxZoom: faker.number.int({ min: 0, max: 21 }),
-    extent: createFakeBBox(),
-    footprint: createFakePolygon(),
-  };
-}

@@ -1,6 +1,5 @@
 import { inject, injectable } from 'tsyringe';
-import { ICreateJobBody, IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
+import { ICreateJobBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { Footprint, getUTCDate } from '@map-colonies/mc-utils';
 import { feature, featureCollection, intersect } from '@turf/turf';
 import { Polygon } from 'geojson';
@@ -9,7 +8,7 @@ import { IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTa
 import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { internalIdSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { PolygonPartMangerClient } from '../../httpClients/polygonPartMangerClient';
+import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
 
 @injectable()
 export class SeedingJobCreator {
@@ -20,7 +19,7 @@ export class SeedingJobCreator {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
-    private readonly polygonPartMangerClient: PolygonPartMangerClient
+    private readonly polygonPartsMangerClient: PolygonPartsMangerClient
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -29,6 +28,8 @@ export class SeedingJobCreator {
   public async create({ mode, currentFootprint, layerName, ingestionJob }: SeedJobParams): Promise<void> {
     try {
       const { type: seedTaskType } = this.tilesSeedingConfig;
+
+      const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
 
       const logger = this.logger.child({ ingestionJobId: ingestionJob.id, jobType: this.seedJobType, taskType: seedTaskType });
       logger.info({ msg: 'Starting seeding job creation process' });
@@ -40,7 +41,7 @@ export class SeedingJobCreator {
       const cacheName = await this.mapproxyClient.getCacheName({ layerName, cacheType: LayerCacheType.REDIS });
       logger.debug({ msg: 'got cache name', cacheName });
 
-      const geometry = this.calculateGeometryByMode(mode, currentFootprint, ingestionJob);
+      const geometry = await this.calculateGeometryByMode(mode, currentFootprint, validCatalogId);
 
       if (!geometry) {
         logger.warn({ msg: 'No intersection found, skipping seeding job creation' });
@@ -49,8 +50,6 @@ export class SeedingJobCreator {
 
       const seedOptions = this.createSeedOptions(mode, geometry, cacheName);
       logger.debug({ msg: 'created seed options', seedOptions });
-
-      const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
 
       logger.debug({ msg: 'creating task params' });
       const taskParams = this.createTaskParams(validCatalogId, seedOptions);
@@ -110,11 +109,7 @@ export class SeedingJobCreator {
     };
   }
 
-  private calculateGeometryByMode(
-    mode: SeedMode,
-    currentFootprint: Polygon,
-    ingestionJob: IJobResponse<IngestionUpdateJobParams, unknown>
-  ): Footprint | undefined {
+  private async calculateGeometryByMode(mode: SeedMode, currentFootprint: Polygon, catalogId: string): Promise<Footprint | undefined> {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN) {
@@ -122,7 +117,7 @@ export class SeedingJobCreator {
     }
 
     logger.debug({ msg: 'Getting new footprint from layer aggregated data' });
-    const { footprint: newFootprint } = this.polygonPartMangerClient.getAggregatedPartData(ingestionJob.parameters.partsData);
+    const { footprint: newFootprint } = await this.polygonPartsMangerClient.getAggregatedPartData(catalogId);
 
     const footprintsFeatureCollection = featureCollection([feature(newFootprint), feature(currentFootprint)]);
     const geometry = intersect<Polygon>(footprintsFeatureCollection)?.geometry;

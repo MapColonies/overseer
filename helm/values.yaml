@@ -77,7 +77,7 @@ serviceUrls:
   mapproxyApi: ""
   geoserverApiUrl: ""
   geoserverUrl: ""
-  polygonPartManager: ""
+  polygonPartsManager: ""
 
 tracing:
   enabled: false

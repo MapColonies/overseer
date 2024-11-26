@@ -9,7 +9,7 @@ import { ExtendedNewRasterLayer, CatalogUpdateRequestBody } from '../common/inte
 import { internalIdSchema, updateAdditionalParamsSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
-import { PolygonPartMangerClient } from './polygonPartMangerClient';
+import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
 @injectable()
 export class CatalogClient extends HttpClient {
@@ -19,7 +19,7 @@ export class CatalogClient extends HttpClient {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
     private readonly linkBuilder: LinkBuilder,
-    private readonly polygonPartMangerClient: PolygonPartMangerClient
+    private readonly polygonPartsMangerClient: PolygonPartsMangerClient
   ) {
     const serviceName = 'RasterCatalogManager';
     const baseUrl = config.get<string>('servicesUrl.catalogManager');
@@ -33,7 +33,7 @@ export class CatalogClient extends HttpClient {
   public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: string): Promise<void> {
     try {
       const url = '/records';
-      const publishReq: IRasterCatalogUpsertRequestBody = this.createPublishReqBody(job, layerName);
+      const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
       await this.post(url, publishReq);
     } catch (err) {
       if (err instanceof Error) {
@@ -45,7 +45,7 @@ export class CatalogClient extends HttpClient {
   public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
     const internalId = internalIdSchema.parse(job).internalId;
     const url = `/records/${internalId}`;
-    const updateReq: CatalogUpdateRequestBody = this.createUpdateReqBody(job);
+    const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
     try {
       await this.put(url, updateReq);
     } catch (err) {
@@ -55,8 +55,11 @@ export class CatalogClient extends HttpClient {
     }
   }
 
-  private createPublishReqBody(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: string): IRasterCatalogUpsertRequestBody {
-    const metadata = this.mapToPublishCatalogRecordMetadata(job);
+  private async createPublishReqBody(
+    job: IJobResponse<ExtendedNewRasterLayer, unknown>,
+    layerName: string
+  ): Promise<IRasterCatalogUpsertRequestBody> {
+    const metadata = await this.mapToPublishCatalogRecordMetadata(job);
 
     const links = this.buildLinks(layerName);
 
@@ -66,11 +69,11 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private mapToPublishCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): LayerMetadata {
+  private async mapToPublishCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): Promise<LayerMetadata> {
     const { parameters, version } = job;
-    const { partsData, metadata } = parameters;
+    const { metadata } = parameters;
 
-    const aggregatedPartData = this.polygonPartMangerClient.getAggregatedPartData(partsData);
+    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedPartData(metadata.catalogId);
 
     return {
       id: metadata.catalogId,
@@ -94,7 +97,7 @@ export class CatalogClient extends HttpClient {
       updateDateUTC: undefined,
       creationDateUTC: undefined,
       rms: undefined,
-      ingestionDate: new Date(),
+      ingestionDate: undefined,
       ...aggregatedPartData,
     };
   }
@@ -109,12 +112,14 @@ export class CatalogClient extends HttpClient {
     return this.linkBuilder.createLinks(linkBuildData);
   }
 
-  private createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): CatalogUpdateRequestBody {
+  private async createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<CatalogUpdateRequestBody> {
     const { parameters, version } = job;
-    const { partsData, metadata, additionalParams } = parameters;
+    const { metadata, additionalParams } = parameters;
+
+    const catalogId = internalIdSchema.parse(job).internalId;
     const validAdditionalParams = updateAdditionalParamsSchema.parse(additionalParams);
     const { displayPath } = validAdditionalParams;
-    const aggregatedPartData = this.polygonPartMangerClient.getAggregatedPartData(partsData);
+    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedPartData(catalogId);
 
     return {
       metadata: {
