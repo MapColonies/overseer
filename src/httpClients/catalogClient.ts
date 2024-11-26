@@ -73,7 +73,7 @@ export class CatalogClient extends HttpClient {
     const { parameters, version } = job;
     const { metadata } = parameters;
 
-    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(metadata.catalogId);
+    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(metadata.catalogId);
 
     return {
       id: metadata.catalogId,
@@ -98,7 +98,7 @@ export class CatalogClient extends HttpClient {
       creationDateUTC: undefined,
       rms: undefined,
       ingestionDate: undefined,
-      ...aggregatedPartData,
+      ...aggregatedLayerMetadata,
     };
   }
 
