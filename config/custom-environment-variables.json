@@ -114,7 +114,10 @@
         "tilesSeeding": {
           "type": "TILES_SEEDING_TASK_TYPE",
           "grid": "TILES_SEEDING_GRID",
-          "maxZoom": "TILES_SEEDING_MAX_ZOOM",
+          "maxZoom": {
+            "__name": "TILES_SEEDING_MAX_ZOOM",
+            "__format": "number"
+          },
           "skipUncached": {
             "__name": "TILES_SEEDING_SKIP_UNCACHED",
             "__format": "boolean"
