@@ -33,5 +33,27 @@ describe('polygonPartsManagerClient', () => {
       await expect(action).resolves.toEqual(result);
       expect(nock.isDone()).toBe(true);
     });
+
+    it('should throw an error when the request fails', async () => {
+      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
+
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const catalogId = faker.string.uuid();
+      nock(baseUrl).get(`/aggregation/${catalogId}`).reply(500);
+
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(catalogId);
+      await expect(action).rejects.toThrow();
+    });
+
+    it('should throw an error when the entity does not exist', async () => {
+      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
+
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const catalogId = faker.string.uuid();
+      nock(baseUrl).get(`/aggregation/${catalogId}`).reply(404);
+
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(catalogId);
+      await expect(action).rejects.toThrow();
+    });
   });
 });

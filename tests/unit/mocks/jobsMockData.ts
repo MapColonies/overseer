@@ -71,6 +71,9 @@ export const ingestionNewJobExtended: IJobResponse<ExtendedNewRasterLayer, unkno
       grid: Grid.TWO_ON_ONE,
       ...ingestionNewJob.parameters.metadata,
     },
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+    },
   },
 };
 
@@ -93,6 +96,7 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
       jobTrackerServiceURL: 'http://job-tracker-service',
       displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
       tileOutputFormat: TileOutputFormat.PNG,
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       footprint: {
         type: 'Polygon',
         coordinates: [

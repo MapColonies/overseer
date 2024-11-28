@@ -20,7 +20,7 @@ describe('CatalogClient', () => {
 
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
-      const layerName = 'testLayer';
+      const layerName = 'test-layer';
 
       polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
 
@@ -37,7 +37,7 @@ describe('CatalogClient', () => {
 
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
-      const layerName = 'testLayer';
+      const layerName = 'test-layer';
 
       nock(baseUrl).post('/records').reply(500);
 

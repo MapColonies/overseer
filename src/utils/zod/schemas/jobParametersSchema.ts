@@ -1,4 +1,4 @@
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { polygonPartsEntityNameSchema, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { z } from 'zod';
 import { polygonSchema } from './geoSchema';
 
@@ -14,6 +14,8 @@ export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend
 export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.extend({
   displayPath: z.string().uuid(),
 });
+
+export const catalogUpdateAdditionalParamsSchema = updateAdditionalParamsSchema.merge(polygonPartsEntityNameSchema);
 
 export const layerNameSchema = z.object({
   resourceId: z.string(),
