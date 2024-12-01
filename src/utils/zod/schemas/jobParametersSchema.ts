@@ -2,6 +2,8 @@ import { polygonPartsEntityNameSchema, TileOutputFormat } from '@map-colonies/mc
 import { z } from 'zod';
 import { polygonSchema } from './geoSchema';
 
+export const displayPathSchema = z.string().uuid();
+
 export const newAdditionalParamsSchema = z.object({
   jobTrackerServiceURL: z.string().url(),
 });
@@ -12,12 +14,20 @@ export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend
 });
 
 export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.extend({
-  displayPath: z.string().uuid(),
+  displayPath: displayPathSchema,
 });
 
 export const catalogUpdateAdditionalParamsSchema = z
   .object({
-    displayPath: z.string().uuid().optional(),
+    displayPath: displayPathSchema.optional(),
+  })
+  .merge(polygonPartsEntityNameSchema);
+
+export type CatalogUpdateAdditionalParams = z.infer<typeof catalogUpdateAdditionalParamsSchema>;
+
+export const catalogSwapUpdateAdditionalParamsSchema = z
+  .object({
+    displayPath: displayPathSchema,
   })
   .merge(polygonPartsEntityNameSchema);
 

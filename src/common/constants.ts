@@ -18,6 +18,10 @@ export const SERVICES = {
   TILE_RANGER: Symbol('TileRanger'),
 } satisfies Record<string, symbol>;
 
+export const INJECTION_VALUES = {
+  ingestionJobTypes: Symbol('IngestionJobTypes'),
+} satisfies Record<string, symbol>;
+
 export const TilesStorageProvider = {
   FS: 'FS',
   S3: 'S3',

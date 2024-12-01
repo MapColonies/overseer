@@ -8,7 +8,7 @@ import { instancePerContainerCachingFactory } from 'tsyringe';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import jsLogger, { Logger, LoggerOptions } from '@map-colonies/js-logger';
 import { Metrics } from '@map-colonies/telemetry';
-import { SERVICES, SERVICE_NAME } from './common/constants';
+import { INJECTION_VALUES, SERVICES, SERVICE_NAME } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
 import { NewJobHandler } from './job/models/newJobHandler';
@@ -67,6 +67,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
     { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
     { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
+    { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
     {
       token: 'onSignal',
       provider: {

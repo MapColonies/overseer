@@ -11,9 +11,15 @@ import {
   RecordType,
 } from '@map-colonies/mc-model-types';
 import { inject, injectable } from 'tsyringe';
-import { SERVICES } from '../common/constants';
+import { IngestionJobTypes } from '../utils/configUtil';
+import { INJECTION_VALUES, SERVICES } from '../common/constants';
 import { ExtendedNewRasterLayer, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
-import { catalogUpdateAdditionalParamsSchema, internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
+import {
+  catalogSwapUpdateAdditionalParamsSchema,
+  CatalogUpdateAdditionalParams,
+  catalogUpdateAdditionalParamsSchema,
+  internalIdSchema,
+} from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
@@ -25,6 +31,7 @@ export class CatalogClient extends HttpClient {
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(INJECTION_VALUES.ingestionJobTypes) protected readonly jobTypes: IngestionJobTypes,
     private readonly linkBuilder: LinkBuilder,
     private readonly polygonPartsMangerClient: PolygonPartsMangerClient
   ) {
@@ -127,7 +134,8 @@ export class CatalogClient extends HttpClient {
     const { parameters, version } = job;
     const { metadata, additionalParams } = parameters;
 
-    const { displayPath, polygonPartsEntityName } = catalogUpdateAdditionalParamsSchema.parse(additionalParams);
+    const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
+
     const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
     return {
@@ -138,5 +146,21 @@ export class CatalogClient extends HttpClient {
         ...aggregatedLayerMetadata,
       },
     };
+  }
+
+  private validateAdditionalParamsByUpdateMode(additionalParams: Record<string, unknown>, updateMode: string): CatalogUpdateAdditionalParams {
+    let validParams;
+    switch (updateMode) {
+      case this.jobTypes.Ingestion_Update:
+        validParams = catalogUpdateAdditionalParamsSchema.parse(additionalParams);
+        break;
+      case this.jobTypes.Ingestion_Swap_Update:
+        validParams = catalogSwapUpdateAdditionalParamsSchema.parse(additionalParams);
+        break;
+      default:
+        throw new Error(`Invalid update mode: ${updateMode}`);
+    }
+
+    return validParams;
   }
 }
