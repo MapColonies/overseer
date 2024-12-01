@@ -10,7 +10,7 @@ import { PartAggregatedData } from '../../../src/common/interfaces';
 import { createFakeBBox, createFakePolygon } from '../mocks/partsMockData';
 import { IngestionJobTypes } from '../../../src/utils/configUtil';
 
-const JobTypes: IngestionJobTypes = {
+const jobTypes: IngestionJobTypes = {
   Ingestion_New: 'Ingestion_New',
   Ingestion_Update: 'Ingestion_Update',
   Ingestion_Swap_Update: 'Ingestion_Swap_Update',
@@ -34,7 +34,7 @@ export function setupCatalogClientTest(): CatalogClientTestContext {
   const polygonPartsManagerClientMock = {
     getAggregatedLayerMetadata: jest.fn(),
   } as unknown as jest.Mocked<PolygonPartsMangerClient>;
-  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), JobTypes, linkBuilder, polygonPartsManagerClientMock);
+  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), jobTypes, linkBuilder, polygonPartsManagerClientMock);
 
   return {
     createLinksMock,
