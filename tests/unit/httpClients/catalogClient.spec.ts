@@ -2,7 +2,7 @@ import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
 import { ingestionNewJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateJob } from '../mocks/jobsMockData';
-import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogCLientSetup';
+import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogClientSetup';
 
 describe('CatalogClient', () => {
   beforeEach(() => {

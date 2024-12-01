@@ -13,13 +13,8 @@ import {
 import { inject, injectable } from 'tsyringe';
 import { IngestionJobTypes } from '../utils/configUtil';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import { ExtendedNewRasterLayer, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
-import {
-  catalogSwapUpdateAdditionalParamsSchema,
-  CatalogUpdateAdditionalParams,
-  catalogUpdateAdditionalParamsSchema,
-  internalIdSchema,
-} from '../utils/zod/schemas/jobParametersSchema';
+import { ExtendedNewRasterLayer, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
+import { catalogSwapUpdateAdditionalParamsSchema, internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
@@ -152,7 +147,7 @@ export class CatalogClient extends HttpClient {
     let validParams;
     switch (updateMode) {
       case this.jobTypes.Ingestion_Update:
-        validParams = catalogUpdateAdditionalParamsSchema.parse(additionalParams);
+        validParams = polygonPartsEntityNameSchema.parse(additionalParams);
         break;
       case this.jobTypes.Ingestion_Swap_Update:
         validParams = catalogSwapUpdateAdditionalParamsSchema.parse(additionalParams);

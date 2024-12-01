@@ -239,6 +239,11 @@ export interface CatalogUpdateRequestBody {
 }
 
 export type CatalogUpdateMetadata = Partial<LayerMetadata>;
+
+export interface CatalogUpdateAdditionalParams {
+  displayPath?: string;
+  polygonPartsEntityName: string;
+}
 //#endregion catalogClient
 
 //#region seedingJobCreator

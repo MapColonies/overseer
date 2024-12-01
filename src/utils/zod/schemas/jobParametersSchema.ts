@@ -17,14 +17,6 @@ export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.ext
   displayPath: displayPathSchema,
 });
 
-export const catalogUpdateAdditionalParamsSchema = z
-  .object({
-    displayPath: displayPathSchema.optional(),
-  })
-  .merge(polygonPartsEntityNameSchema);
-
-export type CatalogUpdateAdditionalParams = z.infer<typeof catalogUpdateAdditionalParamsSchema>;
-
 export const catalogSwapUpdateAdditionalParamsSchema = z
   .object({
     displayPath: displayPathSchema,

@@ -3,7 +3,7 @@ import { faker } from '@faker-js/faker';
 import nock from 'nock';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
-import { createFakeAggregatedPartData } from './catalogCLientSetup';
+import { createFakeAggregatedPartData } from './catalogClientSetup';
 
 describe('polygonPartsManagerClient', () => {
   let polygonPartsManagerClient: PolygonPartsMangerClient;
