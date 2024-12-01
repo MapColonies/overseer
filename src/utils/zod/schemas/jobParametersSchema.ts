@@ -15,7 +15,11 @@ export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.ext
   displayPath: z.string().uuid(),
 });
 
-export const catalogUpdateAdditionalParamsSchema = updateAdditionalParamsSchema.merge(polygonPartsEntityNameSchema);
+export const catalogUpdateAdditionalParamsSchema = z
+  .object({
+    displayPath: z.string().uuid().optional(),
+  })
+  .merge(polygonPartsEntityNameSchema);
 
 export const layerNameSchema = z.object({
   resourceId: z.string(),

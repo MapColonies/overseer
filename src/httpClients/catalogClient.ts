@@ -127,16 +127,15 @@ export class CatalogClient extends HttpClient {
     const { parameters, version } = job;
     const { metadata, additionalParams } = parameters;
 
-    const validAdditionalParams = catalogUpdateAdditionalParamsSchema.parse(additionalParams);
-    const { displayPath, polygonPartsEntityName } = validAdditionalParams;
-    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+    const { displayPath, polygonPartsEntityName } = catalogUpdateAdditionalParamsSchema.parse(additionalParams);
+    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
     return {
       metadata: {
         productVersion: version,
         classification: metadata.classification,
-        displayPath,
-        ...aggregatedPartData,
+        ...(displayPath !== undefined && { displayPath }),
+        ...aggregatedLayerMetadata,
       },
     };
   }
