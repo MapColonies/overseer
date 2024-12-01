@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/naming-convention */
 import { Link } from '@map-colonies/mc-model-types';
 import jsLogger from '@map-colonies/js-logger';
 import { faker } from '@faker-js/faker';
@@ -7,6 +8,13 @@ import { CatalogClient } from '../../../src/httpClients/catalogClient';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { PartAggregatedData } from '../../../src/common/interfaces';
 import { createFakeBBox, createFakePolygon } from '../mocks/partsMockData';
+import { IngestionJobTypes } from '../../../src/utils/configUtil';
+
+const JobTypes: IngestionJobTypes = {
+  Ingestion_New: 'Ingestion_New',
+  Ingestion_Update: 'Ingestion_Update',
+  Ingestion_Swap_Update: 'Ingestion_Swap_Update',
+};
 
 export type MockCreateLinks = jest.MockedFunction<(data: ILinkBuilderData) => Link[]>;
 
@@ -26,7 +34,7 @@ export function setupCatalogClientTest(): CatalogClientTestContext {
   const polygonPartsManagerClientMock = {
     getAggregatedLayerMetadata: jest.fn(),
   } as unknown as jest.Mocked<PolygonPartsMangerClient>;
-  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), linkBuilder, polygonPartsManagerClientMock);
+  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), JobTypes, linkBuilder, polygonPartsManagerClientMock);
 
   return {
     createLinksMock,
