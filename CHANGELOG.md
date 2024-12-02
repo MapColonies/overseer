@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.1](https://github.com/MapColonies/overseer/compare/v1.4.0...v1.4.1) (2024-12-02)
+
+
+### Bug Fixes
+
+* const convention ([6b2af01](https://github.com/MapColonies/overseer/commit/6b2af01884d5c60f8acbd70372b0f423bc27980e))
+* handle displayPath in different updates ([69ef6a2](https://github.com/MapColonies/overseer/commit/69ef6a20a7252955c7faacaca94c48db0c3c90b7))
+* remove unnecessary schema ([94de9a8](https://github.com/MapColonies/overseer/commit/94de9a89637e92eb5e62addfcfc1a76477795552))
+* tiles seeding hierarchy ([#31](https://github.com/MapColonies/overseer/issues/31)) ([de960d9](https://github.com/MapColonies/overseer/commit/de960d9d681db6e46a4c8821699b658a32237ed4))
+* validated catalogAdditionalParams according to jobType ([8d2b1f2](https://github.com/MapColonies/overseer/commit/8d2b1f277bfa4de0978c4d5889fee9ba5e4fe560))
+
 ## [1.4.0](https://github.com/MapColonies/overseer/compare/v1.3.3...v1.4.0) (2024-11-26)
 
 
