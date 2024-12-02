@@ -2,11 +2,19 @@ import { IConfig } from 'config';
 import { Logger } from '@map-colonies/js-logger';
 import { IJobResponse } from '@map-colonies/mc-priority-queue';
 import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { IngestionUpdateJobParams, IRasterCatalogUpsertRequestBody, LayerMetadata, Link, RecordType } from '@map-colonies/mc-model-types';
+import {
+  IngestionUpdateJobParams,
+  IRasterCatalogUpsertRequestBody,
+  LayerMetadata,
+  Link,
+  polygonPartsEntityNameSchema,
+  RecordType,
+} from '@map-colonies/mc-model-types';
 import { inject, injectable } from 'tsyringe';
-import { SERVICES } from '../common/constants';
-import { ExtendedNewRasterLayer, CatalogUpdateRequestBody } from '../common/interfaces';
-import { internalIdSchema, updateAdditionalParamsSchema } from '../utils/zod/schemas/jobParametersSchema';
+import { IngestionJobTypes } from '../utils/configUtil';
+import { INJECTION_VALUES, SERVICES } from '../common/constants';
+import { ExtendedNewRasterLayer, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
+import { catalogSwapUpdateAdditionalParamsSchema, internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
@@ -18,6 +26,7 @@ export class CatalogClient extends HttpClient {
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(INJECTION_VALUES.ingestionJobTypes) protected readonly jobTypes: IngestionJobTypes,
     private readonly linkBuilder: LinkBuilder,
     private readonly polygonPartsMangerClient: PolygonPartsMangerClient
   ) {
@@ -30,7 +39,7 @@ export class CatalogClient extends HttpClient {
     this.geoserverDns = config.get<string>('servicesUrl.geoserverDns');
   }
 
-  public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: string): Promise<void> {
+  public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: LayerName): Promise<void> {
     try {
       const url = '/records';
       const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
@@ -57,7 +66,7 @@ export class CatalogClient extends HttpClient {
 
   private async createPublishReqBody(
     job: IJobResponse<ExtendedNewRasterLayer, unknown>,
-    layerName: string
+    layerName: LayerName
   ): Promise<IRasterCatalogUpsertRequestBody> {
     const metadata = await this.mapToPublishCatalogRecordMetadata(job);
 
@@ -71,9 +80,13 @@ export class CatalogClient extends HttpClient {
 
   private async mapToPublishCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): Promise<LayerMetadata> {
     const { parameters, version } = job;
-    const { metadata } = parameters;
+    const { metadata, additionalParams } = parameters;
 
-    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(metadata.catalogId);
+    const validAdditionalParams = polygonPartsEntityNameSchema.parse(additionalParams);
+
+    const { polygonPartsEntityName } = validAdditionalParams;
+
+    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
     return {
       id: metadata.catalogId,
@@ -102,7 +115,7 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private buildLinks(layerName: string): Link[] {
+  private buildLinks(layerName: LayerName): Link[] {
     const linkBuildData: ILinkBuilderData = {
       layerName,
       mapproxyDns: this.mapproxyDns,
@@ -116,18 +129,33 @@ export class CatalogClient extends HttpClient {
     const { parameters, version } = job;
     const { metadata, additionalParams } = parameters;
 
-    const catalogId = internalIdSchema.parse(job).internalId;
-    const validAdditionalParams = updateAdditionalParamsSchema.parse(additionalParams);
-    const { displayPath } = validAdditionalParams;
-    const aggregatedPartData = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(catalogId);
+    const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
+
+    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
     return {
       metadata: {
         productVersion: version,
         classification: metadata.classification,
-        displayPath,
-        ...aggregatedPartData,
+        ...(displayPath !== undefined && { displayPath }),
+        ...aggregatedLayerMetadata,
       },
     };
+  }
+
+  private validateAdditionalParamsByUpdateMode(additionalParams: Record<string, unknown>, updateMode: string): CatalogUpdateAdditionalParams {
+    let validParams;
+    switch (updateMode) {
+      case this.jobTypes.Ingestion_Update:
+        validParams = polygonPartsEntityNameSchema.parse(additionalParams);
+        break;
+      case this.jobTypes.Ingestion_Swap_Update:
+        validParams = catalogSwapUpdateAdditionalParamsSchema.parse(additionalParams);
+        break;
+      default:
+        throw new Error(`Invalid update mode: ${updateMode}`);
+    }
+
+    return validParams;
   }
 }

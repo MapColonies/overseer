@@ -96,7 +96,7 @@ export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
   grid: Grid;
 }
 
-export type ExtendedNewRasterLayer = { metadata: ExtendedRasterLayerMetadata } & LayerData;
+export type ExtendedNewRasterLayer = { metadata: ExtendedRasterLayerMetadata; additionalParams: Record<string, unknown> } & LayerData;
 
 export type FinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
 
@@ -239,6 +239,11 @@ export interface CatalogUpdateRequestBody {
 }
 
 export type CatalogUpdateMetadata = Partial<LayerMetadata>;
+
+export interface CatalogUpdateAdditionalParams {
+  displayPath?: string;
+  polygonPartsEntityName: string;
+}
 //#endregion catalogClient
 
 //#region seedingJobCreator

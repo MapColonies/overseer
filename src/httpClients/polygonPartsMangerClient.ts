@@ -15,9 +15,14 @@ export class PolygonPartsMangerClient extends HttpClient {
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
   }
 
-  public async getAggregatedLayerMetadata(catalogId: string): Promise<AggregationLayerMetadata> {
-    const url = `aggregation/${catalogId}`;
-    const res = await this.get<AggregationLayerMetadata>(url);
-    return res;
+  public async getAggregatedLayerMetadata(polygonPartsEntityName: string): Promise<AggregationLayerMetadata> {
+    try {
+      const url = `aggregation/${polygonPartsEntityName}`;
+      const res = await this.get<AggregationLayerMetadata>(url);
+      return res;
+    } catch (err) {
+      this.logger.error({ msg: 'failed to get aggregated layer metadata', polygonPartsEntityName, err });
+      throw err;
+    }
   }
 }

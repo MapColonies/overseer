@@ -40,3 +40,5 @@ export const validateAndGetHandlersTokens = (ingestionConfig: IngestionPollingJo
     Ingestion_Swap_Update: swapUpdateJob.type,
   } as const satisfies Record<string, string>;
 };
+
+export type IngestionJobTypes = ReturnType<typeof validateAndGetHandlersTokens>;

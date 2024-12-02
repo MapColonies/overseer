@@ -1,6 +1,8 @@
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { polygonPartsEntityNameSchema, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { z } from 'zod';
 import { polygonSchema } from './geoSchema';
+
+export const displayPathSchema = z.string().uuid();
 
 export const newAdditionalParamsSchema = z.object({
   jobTrackerServiceURL: z.string().url(),
@@ -12,8 +14,14 @@ export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend
 });
 
 export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.extend({
-  displayPath: z.string().uuid(),
+  displayPath: displayPathSchema,
 });
+
+export const catalogSwapUpdateAdditionalParamsSchema = z
+  .object({
+    displayPath: displayPathSchema,
+  })
+  .merge(polygonPartsEntityNameSchema);
 
 export const layerNameSchema = z.object({
   resourceId: z.string(),
