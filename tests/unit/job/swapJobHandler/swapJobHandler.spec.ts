@@ -98,12 +98,11 @@ describe('swapJobHandler', () => {
       job.parameters.additionalParams = { displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37', ...job.parameters.additionalParams };
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
-      const { footprint, displayPath, tileOutputFormat } = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
+      const { displayPath, tileOutputFormat } = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
       const layerName: LayerName = `${job.resourceId}-${job.productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
         mode: 'clean',
-        currentFootprint: footprint,
         ingestionJob: job,
         layerName,
       };

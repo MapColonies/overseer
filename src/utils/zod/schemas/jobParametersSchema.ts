@@ -1,6 +1,6 @@
 import { polygonPartsEntityNameSchema, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { z } from 'zod';
-import { polygonSchema } from './geoSchema';
+import { multiPolygonSchema, polygonSchema } from './geoSchema';
 
 export const displayPathSchema = z.string().uuid();
 
@@ -10,7 +10,7 @@ export const newAdditionalParamsSchema = z.object({
 
 export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend({
   tileOutputFormat: z.nativeEnum(TileOutputFormat),
-  footprint: polygonSchema,
+  footprint: polygonSchema.or(multiPolygonSchema),
 });
 
 export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.extend({
