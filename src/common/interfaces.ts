@@ -250,7 +250,6 @@ export interface CatalogUpdateAdditionalParams {
 
 export interface SeedJobParams {
   mode: SeedMode;
-  currentFootprint: Polygon;
   layerName: LayerName;
   ingestionJob: IJobResponse<IngestionUpdateJobParams, unknown>;
 }

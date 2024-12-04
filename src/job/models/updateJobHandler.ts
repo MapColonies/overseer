@@ -75,8 +75,6 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       let finalizeTaskParams: IngestionUpdateFinalizeTaskParams = task.parameters;
       const { updatedInCatalog } = finalizeTaskParams;
       const { layerName } = this.validateAndGenerateLayerNameFormats(job);
-      const { additionalParams } = job.parameters;
-      const { footprint } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
 
       if (!updatedInCatalog) {
         logger.info({ msg: 'Updating layer in catalog', catalogId: job.internalId });
@@ -87,7 +85,7 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
         await this.completeTaskAndJob(job, task);
-        await this.seedingJobCreator.create({ mode: SeedMode.SEED, currentFootprint: footprint, layerName, ingestionJob: job });
+        await this.seedingJobCreator.create({ mode: SeedMode.SEED, layerName, ingestionJob: job });
       }
     } catch (err) {
       if (err instanceof Error) {

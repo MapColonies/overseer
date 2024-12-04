@@ -1,15 +1,14 @@
 import { Logger } from '@map-colonies/js-logger';
-import { IngestionUpdateJobParams, polygonPartsEntityNameSchema } from '@map-colonies/mc-model-types';
+import { IngestionUpdateJobParams, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateJobBody, IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { Footprint, getUTCDate } from '@map-colonies/mc-utils';
-import { feature, featureCollection, intersect } from '@turf/turf';
-import { Polygon } from 'geojson';
+import { feature, featureCollection, union } from '@turf/turf';
+import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { inject, injectable } from 'tsyringe';
 import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
-import { internalIdSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { internalIdSchema, swapUpdateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 
 @injectable()
 export class SeedingJobCreator {
@@ -19,14 +18,13 @@ export class SeedingJobCreator {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
-    @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
-    private readonly polygonPartsMangerClient: PolygonPartsMangerClient
+    @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
   }
 
-  public async create({ mode, currentFootprint, layerName, ingestionJob }: SeedJobParams): Promise<void> {
+  public async create({ mode, layerName, ingestionJob }: SeedJobParams): Promise<void> {
     try {
       const { type: seedTaskType } = this.tilesSeedingConfig;
 
@@ -39,10 +37,10 @@ export class SeedingJobCreator {
       const cacheName = await this.mapproxyClient.getCacheName({ layerName, cacheType: LayerCacheType.REDIS });
       logger.debug({ msg: 'Got cache name', cacheName });
 
-      const geometry = await this.calculateGeometryByMode(mode, currentFootprint, ingestionJob);
+      const geometry = this.calculateGeometryByMode(mode, ingestionJob);
 
       if (!geometry) {
-        logger.warn({ msg: 'No intersection found, skipping seeding job creation' });
+        logger.warn({ msg: 'No geometry found, skipping seeding job creation' });
         return;
       }
 
@@ -109,27 +107,27 @@ export class SeedingJobCreator {
     };
   }
 
-  private async calculateGeometryByMode(
-    mode: SeedMode,
-    currentFootprint: Polygon,
-    job: IJobResponse<IngestionUpdateJobParams, unknown>
-  ): Promise<Footprint | undefined> {
+  private calculateGeometryByMode(mode: SeedMode, job: IJobResponse<IngestionUpdateJobParams, unknown>): Footprint | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN) {
-      return currentFootprint;
+      const { footprint } = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
+      return footprint;
     }
 
-    logger.debug({ msg: 'Validating additional params', additionalParams: job.parameters.additionalParams });
-    const { polygonPartsEntityName } = polygonPartsEntityNameSchema.parse(job.parameters.additionalParams);
-
-    logger.debug({ msg: 'Getting new footprint from layer aggregated data' });
-    const { footprint: aggregatedFootprint } = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
-
-    const footprintsFeatureCollection = featureCollection([feature(aggregatedFootprint), feature(currentFootprint)]);
-    const geometry = intersect<Polygon>(footprintsFeatureCollection)?.geometry;
-    logger.debug({ msg: 'Calculated intersection geometry', geometry });
+    const feature = this.unifyParts(job.parameters.partsData);
+    const geometry = feature?.geometry;
 
     return geometry;
+  }
+
+  private unifyParts(parts: PolygonPart[]): Feature<Polygon | MultiPolygon> | null {
+    if (parts.length === 1) {
+      return feature(parts[0].footprint);
+    }
+    const polygons = parts.map((part) => feature(part.footprint));
+    const collection = featureCollection(polygons);
+    const footprint = union(collection);
+    return footprint;
   }
 }

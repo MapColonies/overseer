@@ -83,7 +83,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
       const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
       const { layerName } = this.validateAndGenerateLayerNameFormats(job);
       const { additionalParams } = job.parameters;
-      const { tileOutputFormat, displayPath, footprint } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
+      const { tileOutputFormat, displayPath } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
 
       if (!updatedInMapproxy) {
         const layerRelativePath = `${job.internalId}/${displayPath}`;
@@ -101,7 +101,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
         await this.completeTaskAndJob(job, task);
-        await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, currentFootprint: footprint, layerName, ingestionJob: job });
+        await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
       }
     } catch (err) {
       if (err instanceof ZodError) {
