@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.4.2](https://github.com/MapColonies/overseer/compare/v1.4.1...v1.4.2) (2024-12-04)
+
+
+### Bug Fixes
+
+* job seeding creation logic change ([#33](https://github.com/MapColonies/overseer/issues/33)) ([ad465c7](https://github.com/MapColonies/overseer/commit/ad465c733623ad53942dd564aa46e3b6b47c1a33))
+
 ### [1.4.1](https://github.com/MapColonies/overseer/compare/v1.4.0...v1.4.1) (2024-12-02)
 
 
