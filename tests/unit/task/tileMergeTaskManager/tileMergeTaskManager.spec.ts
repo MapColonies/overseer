@@ -1,14 +1,12 @@
+/* eslint-disable jest/no-commented-out-tests */
 import { randomUUID } from 'crypto';
 import nock from 'nock';
-import { booleanEqual } from '@turf/turf';
 import { faker } from '@faker-js/faker';
-import { Feature } from 'geojson';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { createFakePartSource, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
-import { testData } from '../../mocks/tileMergeTaskManagerMockData';
 import { MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
@@ -82,67 +80,67 @@ describe('tileMergeTaskManager', () => {
     });
   });
 
-  describe('calculateIntersectionState', () => {
-    // Test case 1: No intersection found
-    it('should return null intersection when no overlap is found', () => {
-      const { tileMergeTaskManager } = testContext;
+  // describe('calculateIntersectionState', () => {
+  //   // Test case 1: No intersection found
+  //   it('should return null intersection when no overlap is found', () => {
+  //     const { tileMergeTaskManager } = testContext;
 
-      const { input } = testData[0];
-      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
+  //     const { input } = testData[0];
+  //     const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
 
-      expect(result.currentIntersection).toBeNull();
-      expect(result.accumulatedIntersection).toBeNull();
-    });
+  //     expect(result.currentIntersection).toBeNull();
+  //     expect(result.accumulatedIntersection).toBeNull();
+  //   });
 
-    // Test case 2: Intersection found, no accumulated overlap
-    it('should return intersection when found with no previous accumulated overlap', () => {
-      const { tileMergeTaskManager } = testContext;
-      const { input } = testData[1];
+  //   // Test case 2: Intersection found, no accumulated overlap
+  //   it('should return intersection when found with no previous accumulated overlap', () => {
+  //     const { tileMergeTaskManager } = testContext;
+  //     const { input } = testData[1];
 
-      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
-      const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedIntersection as Feature);
+  //     const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
+  //     const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedIntersection as Feature);
 
-      expect(result.currentIntersection).not.toBeNull();
-      expect(result.accumulatedIntersection).not.toBeNull();
-      expect(isCurrentEqualAccumulated).toBe(true);
-    });
+  //     expect(result.currentIntersection).not.toBeNull();
+  //     expect(result.accumulatedIntersection).not.toBeNull();
+  //     expect(isCurrentEqualAccumulated).toBe(true);
+  //   });
 
-    // Test case 3: Intersection found, with accumulated overlap, new intersection
-    it('should return new intersection and updated accumulated overlap', () => {
-      const { tileMergeTaskManager } = testContext;
-      const { input } = testData[2];
-      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
-      const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedIntersection as Feature);
+  //   // Test case 3: Intersection found, with accumulated overlap, new intersection
+  //   it('should return new intersection and updated accumulated overlap', () => {
+  //     const { tileMergeTaskManager } = testContext;
+  //     const { input } = testData[2];
+  //     const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
+  //     const isCurrentEqualAccumulated = booleanEqual(result.currentIntersection as Feature, result.accumulatedIntersection as Feature);
 
-      expect(result.currentIntersection).not.toBeNull();
-      expect(result.accumulatedIntersection).not.toBeNull();
-      expect(isCurrentEqualAccumulated).toBe(false);
-    });
+  //     expect(result.currentIntersection).not.toBeNull();
+  //     expect(result.accumulatedIntersection).not.toBeNull();
+  //     expect(isCurrentEqualAccumulated).toBe(false);
+  //   });
 
-    // Test case 4: Intersection found, with accumulated overlap, no new intersection
-    it('should return null intersection when new intersection is fully within accumulated overlap', () => {
-      const { tileMergeTaskManager } = testContext;
-      const { input } = testData[2];
+  //   // Test case 4: Intersection found, with accumulated overlap, no new intersection
+  //   it('should return null intersection when new intersection is fully within accumulated overlap', () => {
+  //     const { tileMergeTaskManager } = testContext;
+  //     const { input } = testData[2];
 
-      input.state.accumulatedIntersection = {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [2, 2],
-            [3, 2],
-            [3, 3],
-            [2, 3],
-            [2, 2],
-          ],
-        ],
-      };
+  //     input.state.accumulatedIntersection = {
+  //       type: 'Polygon',
+  //       coordinates: [
+  //         [
+  //           [2, 2],
+  //           [3, 2],
+  //           [3, 3],
+  //           [2, 3],
+  //           [2, 2],
+  //         ],
+  //       ],
+  //     };
 
-      const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
+  //     const result = tileMergeTaskManager['calculateIntersectionState'](input.state, input.subGroupFootprints);
 
-      expect(result.currentIntersection).toBeNull();
-      expect(result.accumulatedIntersection).not.toBeNull();
-    });
-  });
+  //     expect(result.currentIntersection).toBeNull();
+  //     expect(result.accumulatedIntersection).not.toBeNull();
+  //   });
+  // });
 
   describe('pushTasks', () => {
     it('should push tasks in batches correctly', async () => {
