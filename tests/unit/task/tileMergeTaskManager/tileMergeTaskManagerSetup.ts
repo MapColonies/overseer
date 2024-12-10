@@ -5,6 +5,7 @@ import { TileRanger } from '@map-colonies/mc-utils';
 import { configMock } from '../../mocks/configMock';
 import { JobManagerConfig } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
+import { taskMetricsMock } from '../../mocks/metricsMock';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -40,7 +41,7 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, configMock, new TileRanger(), queueClient);
+  const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, configMock, new TileRanger(), queueClient, taskMetricsMock);
   return {
     tileMergeTaskManager,
   };

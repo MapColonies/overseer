@@ -6,6 +6,7 @@ import { Feature } from 'geojson';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { createFakePartSource, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
+import { ingestionNewJob } from '../../mocks/jobsMockData';
 import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { testData } from '../../mocks/tileMergeTaskManagerMockData';
 import { MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
@@ -162,7 +163,7 @@ describe('tileMergeTaskManager', () => {
 
       let error: Error | null = null;
       try {
-        await tileMergeTaskManager.pushTasks(jobId, tasks);
+        await tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
       } catch (err) {
         error = err as Error;
       }
@@ -186,7 +187,7 @@ describe('tileMergeTaskManager', () => {
 
       const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
 
-      const action = async () => tileMergeTaskManager.pushTasks(jobId, tasks);
+      const action = async () => tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
 
       await expect(action).rejects.toThrow();
     });

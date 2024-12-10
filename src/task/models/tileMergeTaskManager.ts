@@ -23,6 +23,7 @@ import {
 } from '../../common/interfaces';
 import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 
 @injectable()
 export class TileMergeTaskManager {
@@ -34,7 +35,8 @@ export class TileMergeTaskManager {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
-    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
+    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
+    private readonly taskMetrics: TaskMetrics
   ) {
     this.tilesStorageProvider = this.config.get<TilesStorageProvider>('tilesStorageProvider');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
@@ -59,14 +61,17 @@ export class TileMergeTaskManager {
     }
   }
 
-  public async pushTasks(jobId: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
-    const logger = this.logger.child({ jobId, taskType: this.taskType });
+  public async pushTasks(jobId: string, jobType: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
+    this.taskMetrics.resetTrackTasksEnqueue(jobType, this.taskType);
+
+    const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
     let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
 
     try {
       for await (const task of tasks) {
         const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
         taskBatch.push(taskBody);
+        this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
 
         if (taskBatch.length === this.taskBatchSize) {
           logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });

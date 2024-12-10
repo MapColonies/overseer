@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { finalizeTaskForIngestionNew } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionNew, initTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
 import { MergeTaskParameters } from '../../../../src/common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
@@ -16,29 +16,29 @@ describe('NewJobHandler', () => {
     it('should handle job init successfully', async () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
-      const taskId = '7e630dea-ea29-4b30-a88e-5407bf67d1bc';
+      const task = initTaskForIngestionNew;
       const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
-      await newJobHandler.handleJobInit(job, taskId);
+      await newJobHandler.handleJobInit(job, task);
 
       expect(taskBuilderMock.buildTasks).toHaveBeenCalled();
-      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, tasks);
+      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, tasks);
       expect(queueClientMock.jobManagerClient.updateJob).toHaveBeenCalledWith(job.id, {
         internalId: expect.any(String),
         parameters: expect.any(Object),
       });
-      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, taskId);
+      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
     it('should handle job init failure and reject the task', async () => {
       const { newJobHandler, taskBuilderMock, queueClientMock } = setupNewJobHandlerTest();
 
       const job = ingestionNewJob;
-      const taskId = '7e630dea-ea29-4b30-a88e-5407bf67d1bc';
+      const task = initTaskForIngestionNew;
       const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
@@ -47,9 +47,9 @@ describe('NewJobHandler', () => {
       taskBuilderMock.pushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);
 
-      await newJobHandler.handleJobInit(job, taskId);
+      await newJobHandler.handleJobInit(job, task);
 
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, taskId, true, error.message);
+      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
   });
 

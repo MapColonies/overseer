@@ -6,6 +6,7 @@ import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { UpdateJobHandler } from '../../../../src/job/models/updateJobHandler';
 import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
+import { taskMetricsMock } from '../../mocks/metricsMock';
 
 export interface UpdateJobHandlerTestContext {
   updateJobHandler: UpdateJobHandler;
@@ -45,7 +46,8 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     taskBuilderMock,
     queueClientMock,
     catalogClientMock,
-    seedingJobCreatorMock
+    seedingJobCreatorMock,
+    taskMetricsMock
   );
 
   return {
