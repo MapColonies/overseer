@@ -11,6 +11,12 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
@@ -19,8 +25,9 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": 73,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -61,7 +68,7 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 24,
+        "w": 8,
         "x": 0,
         "y": 0
       },
@@ -80,7 +87,7 @@
         "textMode": "auto",
         "wideLayout": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "9.4.7",
       "repeat": "jobType",
       "repeatDirection": "h",
       "targets": [
@@ -126,7 +133,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "Milliseconds",
@@ -140,7 +146,6 @@
               "tooltip": false,
               "viz": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
@@ -178,7 +183,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 24,
+        "w": 8,
         "x": 0,
         "y": 7
       },
@@ -261,73 +266,6 @@
                 "value": null
               },
               {
-                "color": "red",
-                "value": 10000
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 15
-      },
-      "id": 10,
-      "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "",
-          "values": false
-        },
-        "showThresholdLabels": true,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
-      },
-      "pluginVersion": "11.0.0",
-      "repeat": "jobType",
-      "repeatDirection": "h",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "editorMode": "code",
-          "expr": "sum(overseer_total_tiles_merging_batch_created_per_job{namespace=\"$namespace\",pod=~\"$pod\",jobType='$jobType', app='$app'}) by (jobType, taskType, pod)",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "title": "Batch total count per job ($jobType)",
-      "type": "gauge"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
                 "color": "#EAB839",
                 "value": 2000
               },
@@ -342,9 +280,9 @@
       },
       "gridPos": {
         "h": 9,
-        "w": 24,
+        "w": 8,
         "x": 0,
-        "y": 23
+        "y": 15
       },
       "id": 9,
       "options": {
@@ -360,7 +298,7 @@
         "showThresholdMarkers": true,
         "sizing": "auto"
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "9.4.7",
       "repeat": "jobType",
       "repeatDirection": "h",
       "targets": [
@@ -392,10 +330,79 @@
       ],
       "title": "tiles-merging tasks for current job ($jobType))",
       "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 10000
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 24
+      },
+      "id": 10,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": true,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "9.4.7",
+      "repeat": "jobType",
+      "repeatDirection": "h",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(overseer_total_tiles_merging_batch_created_per_job{namespace=\"$namespace\",pod=~\"$pod\",jobType='$jobType', app='$app'}) by (jobType, taskType, pod)",
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Batch total count per job ($jobType)",
+      "type": "gauge"
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 39,
+  "revision": 1,
+  "schemaVersion": 38,
+  "style": "dark",
   "tags": ["task-processing", "overseer"],
   "templating": {
     "list": [
@@ -403,8 +410,8 @@
         "allValue": "",
         "current": {
           "selected": true,
-          "text": "Ingestion_New",
-          "value": "Ingestion_New"
+          "text": "All",
+          "value": "$__all"
         },
         "datasource": {
           "type": "prometheus",
@@ -431,23 +438,22 @@
         "allValue": ".*",
         "current": {
           "selected": true,
-          "text": ["All"],
-          "value": ["$__all"]
+          "text": ["beta-overseer-deployment-869755c699-8xnpm"],
+          "value": ["beta-overseer-deployment-869755c699-8xnpm"]
         },
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values(nodejs_version_info{namespace=\"$namespace\",release=\"$release\",app_kubernetes_io_name=\"overseer\"},pod)",
+        "definition": "label_values(nodejs_version_info{namespace=\"$namespace\",app=\"$app\"},pod)",
         "hide": 0,
         "includeAll": true,
         "multi": true,
         "name": "pod",
         "options": [],
         "query": {
-          "qryType": 5,
-          "query": "label_values(nodejs_version_info{namespace=\"$namespace\",release=\"$release\",app_kubernetes_io_name=\"overseer\"},pod)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          "query": "label_values(nodejs_version_info{namespace=\"$namespace\",app=\"$app\"},pod)",
+          "refId": "StandardVariableQuery"
         },
         "refresh": 1,
         "regex": "",
@@ -457,25 +463,23 @@
       },
       {
         "current": {
-          "isNone": true,
-          "selected": false,
-          "text": "None",
-          "value": ""
+          "selected": true,
+          "text": "raster-dev",
+          "value": "raster-dev"
         },
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
-        "definition": "label_values({app=\"$app_name\"},namespace)",
+        "definition": "label_values({app=\"$app\"},namespace)",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "namespace",
         "options": [],
         "query": {
-          "qryType": 5,
-          "query": "label_values({app=\"$app_name\"},namespace)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+          "query": "label_values({app=\"$app\"},namespace)",
+          "refId": "StandardVariableQuery"
         },
         "refresh": 1,
         "regex": "",
@@ -493,16 +497,15 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-12h",
     "to": "now"
   },
-  "timeRangeUpdatedDuringEditOrView": false,
   "timepicker": {
     "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "",
-  "title": "Overseer Task Processing Metrics",
+  "title": "Overseer Metrics",
   "uid": "overseer-task-metrics",
-  "version": 3,
+  "version": 7,
   "weekStart": ""
 }
