@@ -1,5 +1,5 @@
 import { Feature, Polygon } from 'geojson';
-import { Footprint } from '@map-colonies/mc-utils';
+import { Footprint } from '../common/interfaces';
 
 // we need to use FootprintFeature because turf supporting this type
 export type FootprintFeature = Feature<Polygon>;

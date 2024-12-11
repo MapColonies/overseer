@@ -3,9 +3,8 @@ import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { Logger } from '@map-colonies/js-logger';
 import { InputFiles, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { degreesPerPixelToZoomLevel, Footprint, multiIntersect, subGroupsGen, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
+import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
 import { bbox, featureCollection, intersect, polygon, union } from '@turf/turf';
-import { difference } from '@turf/difference';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import {
@@ -15,14 +14,12 @@ import {
   MergeSources,
   MergeTaskParameters,
   MergeTilesTaskParams,
-  PartsIntersection,
   PartSourceContext,
-  IntersectionState,
   PartsSourceWithMaxZoom,
   UnifiedPart,
 } from '../../common/interfaces';
-import { convertToFeature } from '../../utils/geoUtils';
 import { fileExtensionExtractor } from '../../utils/fileutils';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 
 @injectable()
 export class TileMergeTaskManager {
@@ -34,7 +31,8 @@ export class TileMergeTaskManager {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
-    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
+    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
+    private readonly taskMetrics: TaskMetrics
   ) {
     this.tilesStorageProvider = this.config.get<TilesStorageProvider>('tilesStorageProvider');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
@@ -59,14 +57,17 @@ export class TileMergeTaskManager {
     }
   }
 
-  public async pushTasks(jobId: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
-    const logger = this.logger.child({ jobId, taskType: this.taskType });
+  public async pushTasks(jobId: string, jobType: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
+    this.taskMetrics.resetTrackTasksEnqueue(jobType, this.taskType);
+
+    const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
     let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
 
     try {
       for await (const task of tasks) {
         const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
         taskBatch.push(taskBody);
+        this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
 
         if (taskBatch.length === this.taskBatchSize) {
           logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });
@@ -257,92 +258,92 @@ export class TileMergeTaskManager {
    * @futureUse This function may be needed for upcoming features(two or more ingestion sources).
    */
   /* istanbul ignore next */
-  private *findPartsIntersections(parts: PartSourceContext[]): Generator<PartsIntersection, void, void> {
-    this.logger.debug({ msg: 'Searching for parts intersection' });
+  // private *findPartsIntersections(parts: PartSourceContext[]): Generator<PartsIntersection, void, void> {
+  //   this.logger.debug({ msg: 'Searching for parts intersection' });
 
-    //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not intersect and we can yield them as is
-    let state: IntersectionState = { currentIntersection: null, accumulatedIntersection: null };
+  //   //In current implementation we are supporting one file ingestion per layer so we can assume that the layers are not intersect and we can yield them as is
+  //   let state: IntersectionState = { currentIntersection: null, accumulatedIntersection: null };
 
-    const subGroups = subGroupsGen(parts, parts.length, false);
-    for (const subGroup of subGroups) {
-      const subGroupFootprints = subGroup.map((layer) => layer.footprint as Footprint);
-      this.logger.debug({ msg: 'Processing sub group' });
-      try {
-        state = this.calculateIntersectionState(state, subGroupFootprints);
-        if (state.currentIntersection) {
-          this.logger.debug({ msg: 'Yielding part intersection', intersection: state.currentIntersection });
-          yield {
-            parts: subGroup,
-            intersection: state.currentIntersection,
-          };
-        }
-        yield {
-          parts: subGroup,
-          intersection: null,
-        };
-      } catch (error) {
-        const errorMsg = (error as Error).message;
-        this.logger.error({ msg: `Failed to calculate intersection, error: ${errorMsg}`, error });
-        throw error;
-      }
-    }
+  //   const subGroups = subGroupsGen(parts, parts.length, false);
+  //   for (const subGroup of subGroups) {
+  //     const subGroupFootprints = subGroup.map((layer) => layer.footprint as Footprint);
+  //     this.logger.debug({ msg: 'Processing sub group' });
+  //     try {
+  //       state = this.calculateIntersectionState(state, subGroupFootprints);
+  //       if (state.currentIntersection) {
+  //         this.logger.debug({ msg: 'Yielding part intersection', intersection: state.currentIntersection });
+  //         yield {
+  //           parts: subGroup,
+  //           intersection: state.currentIntersection,
+  //         };
+  //       }
+  //       yield {
+  //         parts: subGroup,
+  //         intersection: null,
+  //       };
+  //     } catch (error) {
+  //       const errorMsg = (error as Error).message;
+  //       this.logger.error({ msg: `Failed to calculate intersection, error: ${errorMsg}`, error });
+  //       throw error;
+  //     }
+  //   }
 
-    this.logger.info({ msg: `Completed finding parts intersection` });
-  }
+  //   this.logger.info({ msg: `Completed finding parts intersection` });
+  // }
 
-  private calculateIntersectionState(state: IntersectionState, subGroupFootprints: Footprint[]): IntersectionState {
-    const logger = this.logger.child({ intersectionState: state });
-    logger.debug({ msg: 'Calculating intersection for current subGroup' });
+  // private calculateIntersectionState(state: IntersectionState, subGroupFootprints: Footprint[]): IntersectionState {
+  //   const logger = this.logger.child({ intersectionState: state });
+  //   logger.debug({ msg: 'Calculating intersection for current subGroup' });
 
-    // Calculate the intersection of all footprints in the subgroup
-    const intersection = multiIntersect(subGroupFootprints);
-    if (!intersection) {
-      // If no intersection is found, return the state with null current intersection
-      logger.debug({ msg: 'No intersection found for the current subgroup' });
-      return { ...state, currentIntersection: null };
-    }
+  //   // Calculate the intersection of all footprints in the subgroup
+  //   const intersection = multiIntersect(subGroupFootprints);
+  //   if (!intersection) {
+  //     // If no intersection is found, return the state with null current intersection
+  //     logger.debug({ msg: 'No intersection found for the current subgroup' });
+  //     return { ...state, currentIntersection: null };
+  //   }
 
-    if (!state.accumulatedIntersection) {
-      // If there's no accumulated intersection yet, return the current intersection as both current and accumulated
-      logger.debug({ msg: 'No accumulated intersection yet (first iteration), returning current intersection' });
-      return {
-        currentIntersection: intersection,
-        accumulatedIntersection: intersection,
-      };
-    }
+  //   if (!state.accumulatedIntersection) {
+  //     // If there's no accumulated intersection yet, return the current intersection as both current and accumulated
+  //     logger.debug({ msg: 'No accumulated intersection yet (first iteration), returning current intersection' });
+  //     return {
+  //       currentIntersection: intersection,
+  //       accumulatedIntersection: intersection,
+  //     };
+  //   }
 
-    // Calculate the difference between the current intersection and the accumulated intersection
-    const intersectionDifference = this.calculateIntersectionDifference(intersection, state.accumulatedIntersection);
-    logger.debug({
-      msg: 'new intersection calculated by difference between current intersection and accumulated intersection',
-      intersectionDifference,
-    });
+  //   // Calculate the difference between the current intersection and the accumulated intersection
+  //   const intersectionDifference = this.calculateIntersectionDifference(intersection, state.accumulatedIntersection);
+  //   logger.debug({
+  //     msg: 'new intersection calculated by difference between current intersection and accumulated intersection',
+  //     intersectionDifference,
+  //   });
 
-    if (!intersectionDifference) {
-      // If no new intersection is found, return the state with null current intersection
-      logger.debug({
-        msg: 'no difference found between current intersection and accumulated intersection',
-      });
-      return { ...state, currentIntersection: null };
-    }
+  //   if (!intersectionDifference) {
+  //     // If no new intersection is found, return the state with null current intersection
+  //     logger.debug({
+  //       msg: 'no difference found between current intersection and accumulated intersection',
+  //     });
+  //     return { ...state, currentIntersection: null };
+  //   }
 
-    logger.debug({ msg: 'calculating union of accumulated intersection and intersection difference', intersectionDifference });
-    //Calculate the union of the accumulated intersection and the new intersection and return the updated state with the new intersection and accumulated intersection
-    const newAccumulatedIntersection = this.calculateNewAccumulatedIntersection(state.accumulatedIntersection, intersectionDifference);
+  //   logger.debug({ msg: 'calculating union of accumulated intersection and intersection difference', intersectionDifference });
+  //   //Calculate the union of the accumulated intersection and the new intersection and return the updated state with the new intersection and accumulated intersection
+  //   const newAccumulatedIntersection = this.calculateNewAccumulatedIntersection(state.accumulatedIntersection, intersectionDifference);
 
-    return {
-      currentIntersection: intersectionDifference,
-      accumulatedIntersection: newAccumulatedIntersection,
-    };
-  }
+  //   return {
+  //     currentIntersection: intersectionDifference,
+  //     accumulatedIntersection: newAccumulatedIntersection,
+  //   };
+  // }
 
-  private calculateIntersectionDifference(intersection: Footprint, accumulatedIntersection: Footprint): Footprint | null {
-    const differenceFeatureCollection = featureCollection([convertToFeature(intersection), convertToFeature(accumulatedIntersection)]);
-    return difference(differenceFeatureCollection);
-  }
+  // private calculateIntersectionDifference(intersection: Footprint, accumulatedIntersection: Footprint): Footprint | null {
+  //   const differenceFeatureCollection = featureCollection([convertToFeature(intersection), convertToFeature(accumulatedIntersection)]);
+  //   return difference(differenceFeatureCollection);
+  // }
 
-  private calculateNewAccumulatedIntersection(accumulatedIntersection: Footprint, intersectionDifference: Footprint): Footprint | null {
-    const unionFeatureCollection = featureCollection([convertToFeature(accumulatedIntersection), convertToFeature(intersectionDifference)]);
-    return union(unionFeatureCollection);
-  }
+  // private calculateNewAccumulatedIntersection(accumulatedIntersection: Footprint, intersectionDifference: Footprint): Footprint | null {
+  //   const unionFeatureCollection = featureCollection([convertToFeature(accumulatedIntersection), convertToFeature(intersectionDifference)]);
+  //   return union(unionFeatureCollection);
+  // }
 }

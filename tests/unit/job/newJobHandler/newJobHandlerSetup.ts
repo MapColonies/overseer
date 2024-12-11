@@ -5,6 +5,7 @@ import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { NewJobHandler } from '../../../../src/job/models/newJobHandler';
+import { taskMetricsMock } from '../../mocks/metricsMock';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
@@ -43,7 +44,8 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
     queueClientMock,
     catalogClientMock,
     mapproxyClientMock,
-    geoserverClientMock
+    geoserverClientMock,
+    taskMetricsMock
   );
 
   return {

@@ -1,9 +1,9 @@
 import { TileOutputFormat, Transparency } from '@map-colonies/mc-model-types';
-import { Footprint } from '@map-colonies/mc-utils';
 import { fileExtensionExtractor } from '../../../src/utils/fileutils';
 import { convertToFeature } from '../../../src/utils/geoUtils';
 import { getTileOutputFormat } from '../../../src/utils/imageFormatUtil';
 import { registerDefaultConfig } from '../mocks/configMock';
+import { Footprint } from '../../../src/common/interfaces';
 
 describe('utils', () => {
   beforeEach(() => {

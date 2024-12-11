@@ -75,7 +75,7 @@ describe('JobProcessor', () => {
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
-      expect(mockHandler.handleJobInit).toHaveBeenCalledWith(job, task.id);
+      expect(mockHandler.handleJobInit).toHaveBeenCalledWith(job, task);
     });
 
     test.each(finalizeTestCases)('should process job of type $jobType and finalize task successfully', async ({ job, task }) => {

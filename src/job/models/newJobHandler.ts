@@ -7,6 +7,7 @@ import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMe
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { newAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, ExtendedNewRasterLayer } from '../../common/interfaces';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
@@ -23,15 +24,18 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
-    @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient
+    @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
+    private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, queueClient);
   }
 
-  public async handleJobInit(job: IJobResponse<IngestionNewJobParams, unknown>, taskId: string): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId });
+  public async handleJobInit(job: IJobResponse<IngestionNewJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });
+    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+
     try {
-      logger.info({ msg: `handling ${job.type} job with "init" task` });
+      logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
 
       const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
       const validAdditionalParams = this.validateAdditionalParams(additionalParams, newAdditionalParamsSchema);
@@ -52,7 +56,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
       logger.info({ msg: 'pushing tasks' });
-      await this.taskBuilder.pushTasks(job.id, mergeTasks);
+      await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
       logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
       await this.queueClient.jobManagerClient.updateJob(job.id, {
@@ -61,13 +65,15 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       });
 
       logger.info({ msg: 'Acking task' });
-      await this.queueClient.ack(job.id, taskId);
+      await this.queueClient.ack(job.id, task.id);
+      taskProcessTracking?.success();
 
       logger.info({ msg: 'Job init completed successfully' });
     } catch (err) {
       if (err instanceof Error) {
         logger.error({ msg: 'Failed to handle job init', error: err });
-        await this.queueClient.reject(job.id, taskId, true, err.message);
+        await this.queueClient.reject(job.id, task.id, true, err.message);
+        taskProcessTracking?.failure(err.name);
       }
     }
   }
@@ -77,6 +83,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
     task: ITaskResponse<IngestionNewFinalizeTaskParams>
   ): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, taskId: task.id });
+    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
     try {
       logger.info({ msg: `handling ${job.type} job with "finalize"` });
@@ -109,12 +116,14 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
         await this.completeTaskAndJob(job, task);
+        taskProcessTracking?.success();
       }
     } catch (err) {
       if (err instanceof Error) {
         const errorMsg = `Failed to handle job finalize: ${err.message}`;
         logger.error({ msg: errorMsg, error: err });
         await this.queueClient.reject(job.id, task.id, true, err.message);
+        taskProcessTracking?.failure(err.name);
       }
     }
   }

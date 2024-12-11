@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
-import { Footprint } from '@map-colonies/mc-utils';
-import { IntersectionState } from '../../../src/common/interfaces';
+import { Footprint, IntersectionState } from '../../../src/common/interfaces';
 
 export const testData: {
   description: string;

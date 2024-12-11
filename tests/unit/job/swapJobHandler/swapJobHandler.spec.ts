@@ -6,7 +6,7 @@ import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, SeedJobParams, LayerName } from '../../../../src/common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
-import { finalizeTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
 
@@ -20,7 +20,7 @@ describe('swapJobHandler', () => {
     it('should handle job init successfully', async () => {
       const { swapJobHandler, queueClientMock, taskBuilderMock, jobManagerClientMock } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
-      const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
+      const task = initTaskForIngestionSwapUpdate;
 
       const additionalParams = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 
@@ -45,11 +45,11 @@ describe('swapJobHandler', () => {
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
-      await swapJobHandler.handleJobInit(job, taskId);
+      await swapJobHandler.handleJobInit(job, task);
 
       expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams);
-      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, mergeTasks);
-      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, taskId);
+      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, mergeTasks);
+      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
       expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
         parameters: { ...job.parameters, additionalParams: { ...additionalParams, displayPath: newDisplayPath } },
       });
@@ -59,8 +59,7 @@ describe('swapJobHandler', () => {
       const { swapJobHandler, taskBuilderMock, queueClientMock } = setupSwapJobHandlerTest();
 
       const job = structuredClone(ingestionSwapUpdateJob);
-
-      const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
+      const task = initTaskForIngestionSwapUpdate;
       const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
@@ -69,22 +68,22 @@ describe('swapJobHandler', () => {
       taskBuilderMock.pushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);
 
-      await swapJobHandler.handleJobInit(job, taskId);
+      await swapJobHandler.handleJobInit(job, task);
 
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, taskId, true, error.message);
+      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
 
     it('should handle job init failure with ZodError and Failed the job', async () => {
       const { swapJobHandler, jobManagerClientMock, queueClientMock } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
+      const task = initTaskForIngestionSwapUpdate;
       job.parameters.additionalParams = { wrongField: 'wrongValue' };
-      const taskId = '291bf779-efe0-42bd-8357-aaede47e4d37';
       const validAdditionalParamsSpy = jest.spyOn(swapUpdateAdditionalParamsSchema, 'parse');
 
-      await swapJobHandler.handleJobInit(job, taskId);
+      await swapJobHandler.handleJobInit(job, task);
 
       expect(validAdditionalParamsSpy).toThrow(ZodError);
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, taskId, false, expect.any(String));
+      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: expect.any(String) });
     });

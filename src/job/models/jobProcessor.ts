@@ -69,7 +69,7 @@ export class JobProcessor {
 
       switch (task.type) {
         case taskTypes.init:
-          await jobHandler.handleJobInit(job, task.id);
+          await jobHandler.handleJobInit(job, task);
           break;
         case taskTypes.finalize:
           await jobHandler.handleJobFinalize(job, task);

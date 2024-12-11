@@ -8,6 +8,7 @@ import { Grid, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { CatalogClient } from '../../httpClients/catalogClient';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { SeedMode, SERVICES } from '../../common/constants';
 import { JobHandler } from './jobHandler';
@@ -21,16 +22,18 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
-    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator
+    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
+    private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, queueClient);
   }
 
-  public async handleJobInit(job: IJobResponse<IngestionUpdateJobParams, unknown>, taskId: string): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId, jobType: job.type });
+  public async handleJobInit(job: IJobResponse<IngestionUpdateJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type });
+    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
     try {
-      logger.info({ msg: `handling ${job.type} job with "init" task` });
+      logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
       const { inputFiles, partsData, additionalParams } = job.parameters;
 
       const validAdditionalParams = this.validateAdditionalParams(additionalParams, swapUpdateAdditionalParamsSchema);
@@ -51,22 +54,24 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
       const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
       logger.info({ msg: 'pushing tasks' });
-      await this.taskBuilder.pushTasks(job.id, mergeTasks);
+      await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
       logger.info({ msg: 'Acking task' });
-      await this.queueClient.ack(job.id, taskId);
+      await this.queueClient.ack(job.id, task.id);
+      taskProcessTracking?.success();
 
       await this.updateJobAdditionalParams(job, validAdditionalParams, displayPath);
     } catch (err) {
+      taskProcessTracking?.failure((err as Error).name);
       if (err instanceof ZodError) {
         const errorMsg = `Failed to validate additionalParams: ${err.message}`;
         logger.error({ msg: errorMsg, err });
-        await this.queueClient.reject(job.id, taskId, false, err.message);
+        await this.queueClient.reject(job.id, task.id, false, err.message);
         return await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: errorMsg });
       }
       if (err instanceof Error) {
         logger.error({ msg: 'Failed to handle job init', error: err });
-        await this.queueClient.reject(job.id, taskId, true, err.message);
+        await this.queueClient.reject(job.id, task.id, true, err.message);
       }
     }
   }
@@ -76,6 +81,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
     task: ITaskResponse<IngestionSwapUpdateFinalizeTaskParams>
   ): Promise<void> {
     const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
+    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
     try {
       logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
@@ -101,9 +107,11 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
         await this.completeTaskAndJob(job, task);
+        taskProcessTracking?.success();
         await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
       }
     } catch (err) {
+      taskProcessTracking?.failure((err as Error).name);
       if (err instanceof ZodError) {
         const errorMsg = `Failed to validate additionalParams: ${err.message}`;
         logger.error({ msg: errorMsg, err });

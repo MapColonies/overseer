@@ -13,7 +13,7 @@ import {
 } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
-import { Footprint, ITileRange } from '@map-colonies/mc-utils';
+import { ITileRange } from '@map-colonies/mc-utils';
 import { LayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces
@@ -75,7 +75,7 @@ export interface TilesSeedingTaskConfig {
 //#region job/task interfaces
 export interface IJobHandler {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobInit: (job: IJobResponse<any, any>, taskId: string) => Promise<void>;
+  handleJobInit: (job: IJobResponse<any, any>, task: ITaskResponse<any>) => Promise<void>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handleJobFinalize: (job: IJobResponse<any, any>, task: ITaskResponse<any>) => Promise<void>;
 }
@@ -114,6 +114,9 @@ export interface IBBox {
   maxX: number;
   maxY: number;
 }
+
+export type Footprint = Polygon | MultiPolygon | Feature<Polygon | MultiPolygon>;
+
 export interface PartSourceContext {
   fileName: string;
   tilesPath: string;

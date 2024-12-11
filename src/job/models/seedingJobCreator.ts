@@ -1,12 +1,12 @@
 import { Logger } from '@map-colonies/js-logger';
 import { IngestionUpdateJobParams, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateJobBody, IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { Footprint, getUTCDate } from '@map-colonies/mc-utils';
+import { getUTCDate } from '@map-colonies/mc-utils';
 import { feature, featureCollection, union } from '@turf/turf';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { inject, injectable } from 'tsyringe';
 import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
-import { IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
+import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { internalIdSchema, swapUpdateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 

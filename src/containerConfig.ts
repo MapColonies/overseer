@@ -3,11 +3,11 @@ import config from 'config';
 import { getOtelMixin } from '@map-colonies/telemetry';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { IHttpRetryConfig, TileRanger } from '@map-colonies/mc-utils';
-import { trace, metrics as OtelMetrics } from '@opentelemetry/api';
-import { instancePerContainerCachingFactory } from 'tsyringe';
+import { trace } from '@opentelemetry/api';
+import { Registry } from 'prom-client';
+import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import jsLogger, { Logger, LoggerOptions } from '@map-colonies/js-logger';
-import { Metrics } from '@map-colonies/telemetry';
 import { INJECTION_VALUES, SERVICES, SERVICE_NAME } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
@@ -47,9 +47,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
   const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
   const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin(), pinoCaller: loggerConfig.pinoCaller });
 
-  const metrics = new Metrics();
-  metrics.start();
-
+  const metricsRegistry = new Registry();
   const tracer = trace.getTracer(SERVICE_NAME);
 
   const ingestionConfig = config.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
@@ -61,7 +59,6 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.LOGGER, provider: { useValue: logger } },
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
     { token: SERVICES.QUEUE_CLIENT, provider: { useFactory: instancePerContainerCachingFactory(queueClientFactory) } },
-    { token: SERVICES.METER, provider: { useValue: OtelMetrics.getMeterProvider().getMeter(SERVICE_NAME) } },
     { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
     { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
     { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
@@ -69,11 +66,26 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
     { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
     {
+      token: SERVICES.METRICS,
+      provider: {
+        useFactory: instanceCachingFactory((container) => {
+          const config = container.resolve<IConfig>(SERVICES.CONFIG);
+
+          if (config.get<boolean>('telemetry.metrics.enabled')) {
+            metricsRegistry.setDefaultLabels({
+              app: SERVICE_NAME,
+            });
+            return metricsRegistry;
+          }
+        }),
+      },
+    },
+    {
       token: 'onSignal',
       provider: {
         useValue: {
           useValue: async (): Promise<void> => {
-            await Promise.all([tracing.stop(), metrics.stop()]);
+            await Promise.all([tracing.stop()]);
           },
         },
       },

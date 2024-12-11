@@ -5,6 +5,7 @@ import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { SwapJobHandler } from '../../../../src/job/models/swapJobHandler';
 import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
+import { taskMetricsMock } from '../../mocks/metricsMock';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
@@ -43,7 +44,8 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
     taskBuilderMock,
     mapproxyClientMock,
     catalogClientMock,
-    seedingJobCreatorMock
+    seedingJobCreatorMock,
+    taskMetricsMock
   );
 
   return {
