@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.5.0](https://github.com/MapColonies/overseer/compare/v1.4.2...v1.5.0) (2024-12-15)
+
+
+### Features
+
+* add metrics support(MAPCO-5641) ([#34](https://github.com/MapColonies/overseer/issues/34)) ([513a959](https://github.com/MapColonies/overseer/commit/513a959deb014800ab4f34ca122501a1c0006a23))
+
 ### [1.4.2](https://github.com/MapColonies/overseer/compare/v1.4.1...v1.4.2) (2024-12-04)
 
 
