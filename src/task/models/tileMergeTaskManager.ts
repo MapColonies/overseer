@@ -14,10 +14,11 @@ import {
   MergeTaskParameters,
   MergeTilesTaskParams,
   PolygonFeature,
-  PartsWitZoomDefinitions,
+  FeatureCollectionWitZoomDefinitions,
   UnifiedPart,
   TilesSource,
   MergeTilesMetadata,
+  PPFeatureCollection,
 } from '../../common/interfaces';
 import { fileExtensionExtractor } from '../../utils/fileutils';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
@@ -110,11 +111,11 @@ export class TileMergeTaskManager {
 
     logger.info({ msg: 'creating task parameters' });
 
-    const { parts, zoomDefinitions } = this.createPartsWithZoomDefinitions(partsData);
+    const { ppCollection, zoomDefinitions } = this.createFeatureCollectionWithZoomDefinitions(partsData);
     const tilesSource = this.extractTilesSource(inputFiles);
 
     return {
-      parts,
+      ppCollection,
       zoomDefinitions,
       taskMetadata,
       tilesSource,
@@ -135,7 +136,7 @@ export class TileMergeTaskManager {
     };
   }
 
-  private createPartsWithZoomDefinitions(parts: PolygonPart[]): PartsWitZoomDefinitions {
+  private createFeatureCollectionWithZoomDefinitions(parts: PolygonPart[]): FeatureCollectionWitZoomDefinitions {
     this.logger.info({
       msg: 'Generating featureParts',
       numberOfParts: parts.length,
@@ -165,7 +166,7 @@ export class TileMergeTaskManager {
     });
 
     return {
-      parts: featureParts,
+      ppCollection: featureCollection(featureParts),
       zoomDefinitions,
     };
   }
@@ -183,27 +184,28 @@ export class TileMergeTaskManager {
   }
 
   private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
-    const { parts, taskMetadata, zoomDefinitions, tilesSource } = params;
+    const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
     const { maxZoom, partsZoomLevelMatch } = zoomDefinitions;
 
-    let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(parts, tilesSource) : null;
+    let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(ppCollection, tilesSource) : null;
 
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
       if (!partsZoomLevelMatch) {
-        const filteredParts = parts.filter((part) => part.properties.maxZoom >= zoom);
-        unifiedPart = this.unifyParts(filteredParts, tilesSource);
+        const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
+        const collection = featureCollection(filteredFeatures);
+        unifiedPart = this.unifyParts(collection, tilesSource);
       }
 
       yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata);
     }
   }
 
-  private unifyParts(parts: PolygonFeature[], tilesSource: TilesSource): UnifiedPart {
+  private unifyParts(featureCollection: PPFeatureCollection, tilesSource: TilesSource): UnifiedPart {
     const { fileName, tilesPath } = tilesSource;
-    const isOnePart = parts.length === 1;
+    const isOnePart = featureCollection.features.length === 1;
 
     if (isOnePart) {
-      const featurePart = parts[0];
+      const featurePart = featureCollection.features[0];
       return {
         fileName: fileName,
         tilesPath: tilesPath,
@@ -212,7 +214,7 @@ export class TileMergeTaskManager {
       };
     }
 
-    const mergedFootprint = union(featureCollection(parts));
+    const mergedFootprint = union(featureCollection);
     if (mergedFootprint === null) {
       throw new Error('Failed to merge footprints because the union result is null');
     }

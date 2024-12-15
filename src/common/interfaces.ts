@@ -12,7 +12,7 @@ import {
   IngestionUpdateJobParams,
 } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
-import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
+import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { ITileRange } from '@map-colonies/mc-utils';
 import { LayerCacheType, SeedMode } from './constants';
 
@@ -117,22 +117,36 @@ export interface IBBox {
 
 export type Footprint = Polygon | MultiPolygon | Feature<Polygon | MultiPolygon>;
 
-export type PolygonFeature = Feature<Polygon, { maxZoom: number }>;
+export interface PolygonProperties {
+  maxZoom: number;
+}
+
+export type PolygonFeature = Feature<Polygon, PolygonProperties>;
+
+export type PPFeatureCollection = FeatureCollection<Polygon, PolygonProperties>;
+
+export interface FeatureCollectionWitZoomDefinitions {
+  ppCollection: PPFeatureCollection;
+  zoomDefinitions: ZoomDefinitions;
+}
+
+export interface ZoomDefinitions {
+  maxZoom: number;
+  partsZoomLevelMatch: boolean;
+}
 
 export interface TilesSource {
   fileName: string;
   tilesPath: string;
 }
 
-export interface UnifiedPart {
-  fileName: string;
-  tilesPath: string;
+export type UnifiedPart = {
   footprint: Feature<Polygon | MultiPolygon>;
   extent: BBox;
-}
+} & TilesSource;
 
 export interface MergeParameters {
-  parts: PolygonFeature[];
+  ppCollection: PPFeatureCollection;
   zoomDefinitions: ZoomDefinitions;
   taskMetadata: MergeTilesMetadata;
   tilesSource: TilesSource;
@@ -175,15 +189,6 @@ export interface MergeTilesMetadata {
   grid: Grid;
 }
 
-export interface PartsWitZoomDefinitions {
-  parts: PolygonFeature[];
-  zoomDefinitions: ZoomDefinitions;
-}
-
-export interface ZoomDefinitions {
-  maxZoom: number;
-  partsZoomLevelMatch: boolean;
-}
 //#endregion task
 
 //#region finalize task

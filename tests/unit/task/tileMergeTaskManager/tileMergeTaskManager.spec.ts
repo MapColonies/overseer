@@ -1,10 +1,9 @@
 /* eslint-disable jest/no-commented-out-tests */
 import { randomUUID } from 'crypto';
 import nock from 'nock';
-import { faker } from '@faker-js/faker';
 import { bbox } from '@turf/turf';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
-import { createFakePolygonFeature, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
+import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
@@ -89,7 +88,7 @@ describe('tileMergeTaskManager', () => {
   describe('unifyParts', () => {
     it('should unify parts correctly', () => {
       const { tileMergeTaskManager } = testContext;
-      const partsData = faker.helpers.multiple(createFakePolygonFeature, { count: 10 });
+      const partsData = createFakeFeatureCollection();
       const result = tileMergeTaskManager['unifyParts'](partsData, { fileName: 'fileName', tilesPath: 'tilesPath' });
 
       expect(result.extent).toEqual(bbox(result.footprint.geometry));

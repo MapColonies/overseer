@@ -2,7 +2,7 @@
 import { faker } from '@faker-js/faker';
 import { BBox, Polygon } from 'geojson';
 import { PolygonPart } from '@map-colonies/mc-model-types';
-import { PolygonFeature } from '../../../src/common/interfaces';
+import { PolygonFeature, PPFeatureCollection } from '../../../src/common/interfaces';
 
 export function createFakeBBox(): BBox {
   return [
@@ -36,6 +36,13 @@ export function createFakePolygonFeature(): PolygonFeature {
     properties: {
       maxZoom: faker.number.int({ min: 0, max: 20 }),
     },
+  };
+}
+
+export function createFakeFeatureCollection(): PPFeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, createFakePolygonFeature),
   };
 }
 
