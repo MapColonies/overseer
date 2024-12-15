@@ -12,7 +12,7 @@ import {
   IngestionUpdateJobParams,
 } from '@map-colonies/mc-model-types';
 import { TilesMimeFormat } from '@map-colonies/types';
-import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
+import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { ITileRange } from '@map-colonies/mc-utils';
 import { LayerCacheType, SeedMode } from './constants';
 
@@ -117,29 +117,39 @@ export interface IBBox {
 
 export type Footprint = Polygon | MultiPolygon | Feature<Polygon | MultiPolygon>;
 
-export interface PartSourceContext {
-  fileName: string;
-  tilesPath: string;
-  footprint: Polygon;
-  extent: BBox;
+export interface PolygonProperties {
   maxZoom: number;
 }
 
-export interface UnifiedPart {
+export type PolygonFeature = Feature<Polygon, PolygonProperties>;
+
+export type PPFeatureCollection = FeatureCollection<Polygon, PolygonProperties>;
+
+export interface FeatureCollectionWitZoomDefinitions {
+  ppCollection: PPFeatureCollection;
+  zoomDefinitions: ZoomDefinitions;
+}
+
+export interface ZoomDefinitions {
+  maxZoom: number;
+  partsZoomLevelMatch: boolean;
+}
+
+export interface TilesSource {
   fileName: string;
   tilesPath: string;
+}
+
+export type UnifiedPart = {
   footprint: Feature<Polygon | MultiPolygon>;
   extent: BBox;
-  maxZoom: number;
-}
+} & TilesSource;
 
 export interface MergeParameters {
-  parts: PartSourceContext[];
-  destPath: string;
-  maxZoom: number;
-  grid: Grid;
-  targetFormat: TileOutputFormat;
-  isNewTarget: boolean;
+  ppCollection: PPFeatureCollection;
+  zoomDefinitions: ZoomDefinitions;
+  taskMetadata: MergeTilesMetadata;
+  tilesSource: TilesSource;
 }
 
 export interface MergeSources {
@@ -157,7 +167,7 @@ export interface MergeTaskParameters {
 }
 
 export interface PartsIntersection {
-  parts: PartSourceContext[];
+  parts: PolygonFeature[];
   intersection: Footprint | null;
 }
 
@@ -179,10 +189,6 @@ export interface MergeTilesMetadata {
   grid: Grid;
 }
 
-export interface PartsSourceWithMaxZoom {
-  parts: PartSourceContext[];
-  maxZoom: number;
-}
 //#endregion task
 
 //#region finalize task
