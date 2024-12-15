@@ -117,12 +117,11 @@ export interface IBBox {
 
 export type Footprint = Polygon | MultiPolygon | Feature<Polygon | MultiPolygon>;
 
-export interface PartSourceContext {
+export type PolygonFeature = Feature<Polygon, { maxZoom: number }>;
+
+export interface TilesSource {
   fileName: string;
   tilesPath: string;
-  footprint: Polygon;
-  extent: BBox;
-  maxZoom: number;
 }
 
 export interface UnifiedPart {
@@ -130,16 +129,13 @@ export interface UnifiedPart {
   tilesPath: string;
   footprint: Feature<Polygon | MultiPolygon>;
   extent: BBox;
-  maxZoom: number;
 }
 
 export interface MergeParameters {
-  parts: PartSourceContext[];
-  destPath: string;
-  maxZoom: number;
-  grid: Grid;
-  targetFormat: TileOutputFormat;
-  isNewTarget: boolean;
+  parts: PolygonFeature[];
+  zoomDefinitions: ZoomDefinitions;
+  taskMetadata: MergeTilesMetadata;
+  tilesSource: TilesSource;
 }
 
 export interface MergeSources {
@@ -157,7 +153,7 @@ export interface MergeTaskParameters {
 }
 
 export interface PartsIntersection {
-  parts: PartSourceContext[];
+  parts: PolygonFeature[];
   intersection: Footprint | null;
 }
 
@@ -179,9 +175,14 @@ export interface MergeTilesMetadata {
   grid: Grid;
 }
 
-export interface PartsSourceWithMaxZoom {
-  parts: PartSourceContext[];
+export interface PartsWitZoomDefinitions {
+  parts: PolygonFeature[];
+  zoomDefinitions: ZoomDefinitions;
+}
+
+export interface ZoomDefinitions {
   maxZoom: number;
+  partsZoomLevelMatch: boolean;
 }
 //#endregion task
 

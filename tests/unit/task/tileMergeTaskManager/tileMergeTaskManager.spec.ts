@@ -2,8 +2,9 @@
 import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { faker } from '@faker-js/faker';
+import { bbox } from '@turf/turf';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
-import { createFakePartSource, partsData } from '../../mocks/partsMockData';
+import { createFakePolygonFeature, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
@@ -21,13 +22,21 @@ describe('tileMergeTaskManager', () => {
   });
 
   describe('buildTasks', () => {
-    it('should build tasks successfully for Ingestion New init task', async () => {
-      const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
+    const successTestCases: MergeTilesTaskParams[] = [
+      {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
         partsData,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-      };
+        inputFiles: { originDirectory: 'originDirectory', fileNames: ['unified_zoom_level'] },
+      },
+      {
+        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
+        partsData: multiPartDataWithDifferentResolution,
+        inputFiles: { originDirectory: 'originDirectory', fileNames: ['different_zoom_level'] },
+      },
+    ];
+
+    test.each(successTestCases)('should build tasks successfully', async (buildTasksParams) => {
+      const { tileMergeTaskManager } = testContext;
 
       const result = tileMergeTaskManager.buildTasks(buildTasksParams);
       const tasks: MergeTaskParameters[] = [];
@@ -45,18 +54,25 @@ describe('tileMergeTaskManager', () => {
       expect(samplingTask.batches.length).toBeGreaterThan(0);
     });
 
-    it('should handle errors in buildTasks correctly', () => {
+    const failureTestCases: MergeTilesTaskParams[] = [
+      // {
+      //   taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
+      //   partsData,
+      //   inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
+      // },
+      {
+        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
+        partsData,
+        inputFiles: { originDirectory: 'originDirectory', fileNames: ['file1', 'file2'] },
+      },
+    ];
+
+    test.each(failureTestCases)('should handle errors in buildTasks correctly', (buildTasksParams) => {
       const { tileMergeTaskManager } = testContext;
 
       jest.spyOn(tileMergeTaskManager as unknown as { prepareMergeParameters: jest.Func }, 'prepareMergeParameters').mockImplementationOnce(() => {
         throw new Error('Mocked error');
       });
-
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partsData,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-      };
 
       let error: Error | null = null;
 
@@ -73,10 +89,11 @@ describe('tileMergeTaskManager', () => {
   describe('unifyParts', () => {
     it('should unify parts correctly', () => {
       const { tileMergeTaskManager } = testContext;
-      const partsData = faker.helpers.multiple(createFakePartSource, { count: 10 });
-      const result = tileMergeTaskManager['unifyParts'](partsData);
+      const partsData = faker.helpers.multiple(createFakePolygonFeature, { count: 10 });
+      const result = tileMergeTaskManager['unifyParts'](partsData, { fileName: 'fileName', tilesPath: 'tilesPath' });
 
-      expect(result.length).toBeGreaterThan(0);
+      expect(result.extent).toEqual(bbox(result.footprint.geometry));
+      expect(result.footprint).not.toBeNull();
     });
   });
 

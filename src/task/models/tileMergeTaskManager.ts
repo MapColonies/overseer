@@ -1,10 +1,9 @@
 import { join } from 'path';
-import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { Logger } from '@map-colonies/js-logger';
-import { InputFiles, PolygonPart, TileOutputFormat } from '@map-colonies/mc-model-types';
+import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, featureCollection, intersect, polygon, union } from '@turf/turf';
+import { bbox, featureCollection, polygon, union } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import {
@@ -14,9 +13,11 @@ import {
   MergeSources,
   MergeTaskParameters,
   MergeTilesTaskParams,
-  PartSourceContext,
-  PartsSourceWithMaxZoom,
+  PolygonFeature,
+  PartsWitZoomDefinitions,
   UnifiedPart,
+  TilesSource,
+  MergeTilesMetadata,
 } from '../../common/interfaces';
 import { fileExtensionExtractor } from '../../utils/fileutils';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
@@ -109,123 +110,138 @@ export class TileMergeTaskManager {
 
     logger.info({ msg: 'creating task parameters' });
 
-    const { parts, maxZoom } = this.generatePartsSourceWithMaxZoom(partsData, inputFiles);
+    const { parts, zoomDefinitions } = this.createPartsWithZoomDefinitions(partsData);
+    const tilesSource = this.extractTilesSource(inputFiles);
 
     return {
       parts,
-      destPath: taskMetadata.layerRelativePath,
-      grid: taskMetadata.grid,
-      targetFormat: taskMetadata.tileOutputFormat,
-      isNewTarget: taskMetadata.isNewTarget,
-      maxZoom,
+      zoomDefinitions,
+      taskMetadata,
+      tilesSource,
     };
   }
 
-  private generatePartsSourceWithMaxZoom(parts: PolygonPart[], inputFiles: InputFiles): PartsSourceWithMaxZoom {
-    this.logger.info({ msg: 'Generating parts with source context', inputFiles, numberOfParts: parts.length });
-
-    const partsContext: PartSourceContext[] = [];
-    let maxZoom = 0;
-
-    parts.forEach((part) => {
-      const currentZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
-      maxZoom = Math.max(maxZoom, currentZoom);
-      const parts = this.linkPartToInputFiles(part, inputFiles);
-      partsContext.push(...parts);
-    });
-
-    this.logger.info({ msg: 'Calculated parts max zoom', maxZoom });
-    return { parts: partsContext, maxZoom };
-  }
-
-  private linkPartToInputFiles(part: PolygonPart, inputFiles: InputFiles): PartSourceContext[] {
-    this.logger.debug({ msg: 'linking parts to input files', part, inputFiles, numberOfFiles: inputFiles.fileNames.length });
-    return inputFiles.fileNames.map<PartSourceContext>((fileName) => this.linkPartToFile(part, fileName, inputFiles.originDirectory));
-  }
-
-  private linkPartToFile(part: PolygonPart, fileName: string, originDirectory: string): PartSourceContext {
-    const logger = this.logger.child({
-      partName: part.sourceName,
-      fileName,
-      originDirectory,
-    });
-
-    logger.debug({ msg: 'Linking part to input file' });
+  private extractTilesSource(inputFiles: InputFiles): TilesSource {
+    const { originDirectory, fileNames } = inputFiles;
+    if (fileNames.length > 1) {
+      throw new Error('Multiple files ingestion is currently not supported');
+    }
+    const fileName = fileNames[0];
     const tilesPath = join(originDirectory, fileName);
-    const footprint = part.footprint;
-    const extent: BBox = bbox(footprint);
-    const maxZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
 
     return {
       fileName,
       tilesPath,
-      footprint,
-      extent,
-      maxZoom,
     };
   }
 
+  private createPartsWithZoomDefinitions(parts: PolygonPart[]): PartsWitZoomDefinitions {
+    this.logger.info({
+      msg: 'Generating featureParts',
+      numberOfParts: parts.length,
+    });
+
+    let partsMaxZoom = 0;
+
+    const featureParts = parts.map((part) => {
+      const featurePart = this.createFeaturePolygon(part);
+      const currentZoom = featurePart.properties.maxZoom;
+
+      partsMaxZoom = Math.max(partsMaxZoom, currentZoom);
+      return featurePart;
+    });
+
+    const partsZoomLevelMatch = featureParts.every((part) => part.properties.maxZoom === partsMaxZoom);
+
+    const zoomDefinitions = {
+      maxZoom: partsMaxZoom,
+      partsZoomLevelMatch,
+    };
+
+    this.logger.info({
+      msg: 'Calculated parts zoom definitions',
+      partsMaxZoom,
+      partsZoomLevelMatch,
+    });
+
+    return {
+      parts: featureParts,
+      zoomDefinitions,
+    };
+  }
+
+  private createFeaturePolygon(part: PolygonPart): PolygonFeature {
+    const logger = this.logger.child({
+      partName: part.sourceName,
+    });
+
+    const maxZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
+    logger.debug({ msg: `Part max zoom: ${maxZoom}` });
+    const featurePolygon = polygon(part.footprint.coordinates, { maxZoom });
+
+    return featurePolygon;
+  }
+
   private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
-    const { parts, destPath, targetFormat, isNewTarget, grid, maxZoom } = params;
+    const { parts, taskMetadata, zoomDefinitions, tilesSource } = params;
+    const { maxZoom, partsZoomLevelMatch } = zoomDefinitions;
+
+    let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(parts, tilesSource) : null;
 
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
-      const filteredParts = parts.filter((part) => part.maxZoom >= zoom);
-      const processedParts = this.unifyParts(filteredParts);
-      for await (const part of processedParts) {
-        yield* this.createTasksForPart(part, zoom, { destPath, grid, isNewTarget, targetFormat });
+      if (!partsZoomLevelMatch) {
+        const filteredParts = parts.filter((part) => part.properties.maxZoom >= zoom);
+        unifiedPart = this.unifyParts(filteredParts, tilesSource);
       }
+
+      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata);
     }
   }
 
-  private unifyParts(parts: PartSourceContext[]): UnifiedPart[] {
-    const mergedParts: UnifiedPart[] = [];
-    // Merge parts by union and avoid duplicate overlaps.
-    for (const part of parts) {
-      let merged = false;
-      const currentPart = polygon(part.footprint.coordinates);
-      for (let i = 0; i < mergedParts.length; i++) {
-        const mergedPart = mergedParts[i].footprint;
-        if (this.doIntersect(currentPart, mergedPart)) {
-          const unionResult = union(featureCollection([currentPart, mergedPart]));
-          if (unionResult === null) {
-            continue;
-          }
-          mergedParts[i].footprint = unionResult;
-          merged = true;
-          break;
-        }
-      }
-      if (!merged) {
-        const processedPart: UnifiedPart = { ...part, footprint: currentPart };
-        mergedParts.push(processedPart);
-      }
-    }
-    this.logger.debug({ msg: 'Preprocessed parts', numberOfParts: mergedParts.length });
-    return mergedParts;
-  }
+  private unifyParts(parts: PolygonFeature[], tilesSource: TilesSource): UnifiedPart {
+    const { fileName, tilesPath } = tilesSource;
+    const isOnePart = parts.length === 1;
 
-  private doIntersect(footprint1: Feature<Polygon | MultiPolygon>, footprint2: Feature<Polygon | MultiPolygon>): boolean {
-    const intersection = intersect(featureCollection([footprint1, footprint2]));
-    return intersection !== null;
+    if (isOnePart) {
+      const featurePart = parts[0];
+      return {
+        fileName: fileName,
+        tilesPath: tilesPath,
+        footprint: featurePart,
+        extent: bbox(featurePart),
+      };
+    }
+
+    const mergedFootprint = union(featureCollection(parts));
+    if (mergedFootprint === null) {
+      throw new Error('Failed to merge footprints because the union result is null');
+    }
+
+    return {
+      fileName: fileName,
+      tilesPath: tilesPath,
+      footprint: mergedFootprint,
+      extent: bbox(mergedFootprint),
+    };
   }
 
   private async *createTasksForPart(
     part: UnifiedPart,
     zoom: number,
-    params: { destPath: string; targetFormat: TileOutputFormat; isNewTarget: boolean; grid: Grid }
+    tilesMetadata: MergeTilesMetadata
   ): AsyncGenerator<MergeTaskParameters, void, void> {
-    const { destPath, grid, isNewTarget, targetFormat } = params;
-    const logger = this.logger.child({ zoomLevel: zoom, isNewTarget, destPath, targetFormat, grid });
+    const { layerRelativePath, grid, isNewTarget, tileOutputFormat } = tilesMetadata;
+    const logger = this.logger.child({ zoomLevel: zoom, isNewTarget, layerRelativePath, tileOutputFormat, grid });
 
     const footprint = part.footprint;
     const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
     const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
-    const sources = this.createPartSources(part, grid, destPath);
+    const sources = this.createPartSources(part, grid, layerRelativePath);
 
     for await (const batch of batches) {
       logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
       yield {
-        targetFormat,
+        targetFormat: tileOutputFormat,
         isNewTarget: isNewTarget,
         batches: batch,
         sources,
