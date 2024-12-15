@@ -53,25 +53,14 @@ describe('tileMergeTaskManager', () => {
       expect(samplingTask.batches.length).toBeGreaterThan(0);
     });
 
-    const failureTestCases: MergeTilesTaskParams[] = [
-      // {
-      //   taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-      //   partsData,
-      //   inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-      // },
-      {
+    it('should handle errors in buildTasks correctly', () => {
+      const { tileMergeTaskManager } = testContext;
+
+      const buildTasksParams = {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
         partsData,
         inputFiles: { originDirectory: 'originDirectory', fileNames: ['file1', 'file2'] },
-      },
-    ];
-
-    test.each(failureTestCases)('should handle errors in buildTasks correctly', (buildTasksParams) => {
-      const { tileMergeTaskManager } = testContext;
-
-      jest.spyOn(tileMergeTaskManager as unknown as { prepareMergeParameters: jest.Func }, 'prepareMergeParameters').mockImplementationOnce(() => {
-        throw new Error('Mocked error');
-      });
+      };
 
       let error: Error | null = null;
 
