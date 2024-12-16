@@ -62,17 +62,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
 
       await this.updateJobAdditionalParams(job, validAdditionalParams, displayPath);
     } catch (err) {
-      taskProcessTracking?.failure((err as Error).name);
-      if (err instanceof ZodError) {
-        const errorMsg = `Failed to validate additionalParams: ${err.message}`;
-        logger.error({ msg: errorMsg, err });
-        await this.queueClient.reject(job.id, task.id, false, err.message);
-        return await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: errorMsg });
-      }
-      if (err instanceof Error) {
-        logger.error({ msg: 'Failed to handle job init', error: err });
-        await this.queueClient.reject(job.id, task.id, true, err.message);
-      }
+      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
     }
   }
 
@@ -111,18 +101,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
         await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
       }
     } catch (err) {
-      taskProcessTracking?.failure((err as Error).name);
-      if (err instanceof ZodError) {
-        const errorMsg = `Failed to validate additionalParams: ${err.message}`;
-        logger.error({ msg: errorMsg, err });
-        await this.queueClient.reject(job.id, task.id, false, err.message);
-        return await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: errorMsg });
-      }
-      if (err instanceof Error) {
-        const errorMsg = `Failed to handle job finalize: ${err.message}`;
-        logger.error({ msg: errorMsg, error: err });
-        await this.queueClient.reject(job.id, task.id, true, err.message);
-      }
+      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
     }
   }
 

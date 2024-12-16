@@ -282,9 +282,21 @@ export interface SeedTaskParams {
 
 //#endregion seedingJobCreator
 
-//#region trace
+//#region telemetry
 export interface TraceParentContext {
   traceparent?: string;
   tracestate?: string;
 }
-//#endregion trace
+
+export type TaskProcessingTracker =
+  | {
+      success: () => void;
+      failure: (errorType: string) => void;
+    }
+  | undefined;
+
+export interface JobAndTaskTelemetry {
+  taskTracker: TaskProcessingTracker;
+  tracing?: TraceParentContext;
+}
+//#endregion telemetry

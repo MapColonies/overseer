@@ -1,7 +1,6 @@
-import { ZodError } from 'zod';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { OperationStatus, TaskHandler as QueueClient, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { TaskHandler as QueueClient, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { IngestionUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
 import { CatalogClient } from '../../httpClients/catalogClient';
 import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
@@ -57,17 +56,7 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       await this.queueClient.ack(job.id, task.id);
       taskProcessTracking?.success();
     } catch (err) {
-      taskProcessTracking?.failure((err as Error).name);
-      if (err instanceof ZodError) {
-        const errorMsg = `Failed to validate additionalParams: ${err.message}`;
-        logger.error({ msg: errorMsg, err });
-        await this.queueClient.reject(job.id, task.id, false, err.message);
-        return await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: errorMsg });
-      }
-      if (err instanceof Error) {
-        logger.error({ msg: 'Failed to handle job init', error: err });
-        await this.queueClient.reject(job.id, task.id, true, err.message);
-      }
+      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
     }
   }
 
@@ -97,12 +86,7 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
         await this.seedingJobCreator.create({ mode: SeedMode.SEED, layerName, ingestionJob: job });
       }
     } catch (err) {
-      if (err instanceof Error) {
-        const errorMsg = `Failed to handle job finalize: ${err.message}`;
-        logger.error({ msg: errorMsg, error: err });
-        await this.queueClient.reject(job.id, task.id, true, err.message);
-        taskProcessTracking?.failure(err.name);
-      }
+      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
     }
   }
 }

@@ -8,7 +8,7 @@ import { Registry } from 'prom-client';
 import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
 import { DependencyContainer } from 'tsyringe/dist/typings/types';
 import jsLogger, { Logger, LoggerOptions } from '@map-colonies/js-logger';
-import { INJECTION_VALUES, SERVICES, SERVICE_NAME } from './common/constants';
+import { INJECTION_VALUES, SERVICES, SERVICE_NAME, SERVICE_VERSION } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
 import { NewJobHandler } from './job/models/newJobHandler';
@@ -48,7 +48,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
   const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin(), pinoCaller: loggerConfig.pinoCaller });
 
   const metricsRegistry = new Registry();
-  const tracer = trace.getTracer(SERVICE_NAME);
+  const tracer = trace.getTracer(SERVICE_NAME, SERVICE_VERSION);
 
   const ingestionConfig = config.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
 

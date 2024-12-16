@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
+import { Tracer } from '@opentelemetry/api';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
@@ -20,6 +21,7 @@ import { JobHandler } from './jobHandler';
 export class NewJobHandler extends JobHandler implements IJobHandler {
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
@@ -31,51 +33,59 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
   }
 
   public async handleJobInit(job: IJobResponse<IngestionNewJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });
-    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
-
-    try {
-      logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
-
-      const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
-      const validAdditionalParams = this.validateAdditionalParams(additionalParams, newAdditionalParamsSchema);
-      const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
-
-      const taskBuildParams: MergeTilesTaskParams = {
-        inputFiles,
-        taskMetadata: {
-          layerRelativePath: extendedLayerMetadata.layerRelativePath,
-          tileOutputFormat: extendedLayerMetadata.tileOutputFormat,
-          isNewTarget: true,
-          grid: extendedLayerMetadata.grid,
-        },
-        partsData,
-      };
-
-      logger.info({ msg: 'building tasks' });
-      const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
-
-      logger.info({ msg: 'pushing tasks' });
-      await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
-
-      logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
-      await this.queueClient.jobManagerClient.updateJob(job.id, {
-        internalId: extendedLayerMetadata.catalogId,
-        parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams: validAdditionalParams },
+    await this.tracer.startActiveSpan(`${NewJobHandler.name}.${this.handleJobInit.name}`, async (span) => {
+      span.setAttributes({
+        jobId: job.id,
+        jobType: job.type,
+        taskId: task.id,
+        taskType: task.type,
+        taskAttempts: task.attempts,
       });
 
-      logger.info({ msg: 'Acking task' });
-      await this.queueClient.ack(job.id, task.id);
-      taskProcessTracking?.success();
+      const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });
+      const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
-      logger.info({ msg: 'Job init completed successfully' });
-    } catch (err) {
-      if (err instanceof Error) {
-        logger.error({ msg: 'Failed to handle job init', error: err });
-        await this.queueClient.reject(job.id, task.id, true, err.message);
-        taskProcessTracking?.failure(err.name);
+      try {
+        logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
+
+        const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
+        const validAdditionalParams = this.validateAdditionalParams(additionalParams, newAdditionalParamsSchema);
+        const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
+
+        const taskBuildParams: MergeTilesTaskParams = {
+          inputFiles,
+          taskMetadata: {
+            layerRelativePath: extendedLayerMetadata.layerRelativePath,
+            tileOutputFormat: extendedLayerMetadata.tileOutputFormat,
+            isNewTarget: true,
+            grid: extendedLayerMetadata.grid,
+          },
+          partsData,
+        };
+
+        logger.info({ msg: 'building tasks' });
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
+
+        logger.info({ msg: 'pushing tasks' });
+        await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+
+        logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
+        await this.queueClient.jobManagerClient.updateJob(job.id, {
+          internalId: extendedLayerMetadata.catalogId,
+          parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams: validAdditionalParams },
+        });
+
+        logger.info({ msg: 'Acking task' });
+        await this.queueClient.ack(job.id, task.id);
+        taskProcessTracking?.success();
+
+        logger.info({ msg: 'Job init completed successfully' });
+      } catch (err) {
+        await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
+      } finally {
+        span.end();
       }
-    }
+    });
   }
 
   public async handleJobFinalize(
@@ -119,12 +129,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
         taskProcessTracking?.success();
       }
     } catch (err) {
-      if (err instanceof Error) {
-        const errorMsg = `Failed to handle job finalize: ${err.message}`;
-        logger.error({ msg: errorMsg, error: err });
-        await this.queueClient.reject(job.id, task.id, true, err.message);
-        taskProcessTracking?.failure(err.name);
-      }
+      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
     }
   }
 

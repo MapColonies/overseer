@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/member-ordering */
-import z from 'zod';
+import z, { ZodError } from 'zod';
 import { IJobResponse, ITaskResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { Logger } from '@map-colonies/js-logger';
 import { layerNameSchema } from '../../utils/zod/schemas/jobParametersSchema';
-import { FinalizeTaskParams, LayerNameFormats } from '../../common/interfaces';
+import { FinalizeTaskParams, LayerNameFormats, JobAndTaskTelemetry } from '../../common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../common/constants';
 
 export class JobHandler {
@@ -56,5 +55,27 @@ export class JobHandler {
       percentage: COMPLETED_PERCENTAGE,
       reason: JOB_SUCCESS_MESSAGE,
     });
+  }
+
+  protected async handleError(
+    error: unknown,
+    job: IJobResponse<unknown, unknown>,
+    task: ITaskResponse<unknown>,
+    telemetry: JobAndTaskTelemetry
+  ): Promise<void> {
+    const { taskTracker } = telemetry;
+    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
+    const errName = error instanceof Error ? error.name : 'unknown';
+    const msg = `Failed to handle ${job.type} job with ${task.type} task`;
+    const reason = error instanceof Error ? error.message : String(error);
+    const isRecoverable = !(error instanceof ZodError);
+
+    logger.error({ msg, reason, error });
+    taskTracker?.failure(errName);
+    await this.queueClient.reject(job.id, task.id, isRecoverable, reason);
+
+    if (!isRecoverable) {
+      await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: error.message });
+    }
   }
 }

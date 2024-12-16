@@ -2,7 +2,7 @@ import { inject, singleton } from 'tsyringe';
 import { Counter, Gauge, Histogram, Registry } from 'prom-client';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { SERVICES } from '../../common/constants';
-import { IConfig } from '../../common/interfaces';
+import { IConfig, TaskProcessingTracker } from '../../common/interfaces';
 
 @singleton()
 export class TaskMetrics {
@@ -64,7 +64,7 @@ export class TaskMetrics {
     }
   }
 
-  public trackTaskProcessing(jobType: string, taskType: string): { success: () => void; failure: (errorType: string) => void } | void {
+  public trackTaskProcessing(jobType: string, taskType: string): TaskProcessingTracker | undefined {
     const timer = this.tasksProcessingDuration?.startTimer({
       jobType,
       taskType,
