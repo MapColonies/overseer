@@ -1,8 +1,8 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse, ITaskResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { ZodError } from 'zod';
+import { context, trace, Tracer } from '@opentelemetry/api';
+import { IJobResponse, ITaskResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { IngestionSwapUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
 import { Grid, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
@@ -18,6 +18,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 export class SwapJobHandler extends JobHandler implements IJobHandler {
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
@@ -29,41 +30,49 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
   }
 
   public async handleJobInit(job: IJobResponse<IngestionUpdateJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type });
-    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SwapJobHandler.name}.${this.handleJobInit.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
 
-    try {
-      logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
-      const { inputFiles, partsData, additionalParams } = job.parameters;
+      const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type });
+      const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
-      const validAdditionalParams = this.validateAdditionalParams(additionalParams, swapUpdateAdditionalParamsSchema);
-      const displayPath = randomUUID();
+      try {
+        logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
+        const { inputFiles, partsData, additionalParams, metadata } = job.parameters;
 
-      const taskBuildParams: MergeTilesTaskParams = {
-        inputFiles,
-        partsData,
-        taskMetadata: {
-          tileOutputFormat: validAdditionalParams.tileOutputFormat,
-          isNewTarget: true,
-          layerRelativePath: `${job.internalId}/${displayPath}`,
-          grid: Grid.TWO_ON_ONE,
-        },
-      };
+        activeSpan?.setAttributes({ ...metadata });
 
-      logger.info({ msg: 'building tasks' });
-      const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
+        const validAdditionalParams = this.validateAdditionalParams(additionalParams, swapUpdateAdditionalParamsSchema);
+        activeSpan?.addEvent('validateAdditionalParams.success');
 
-      logger.info({ msg: 'pushing tasks' });
-      await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+        const displayPath = randomUUID();
 
-      logger.info({ msg: 'Acking task' });
-      await this.queueClient.ack(job.id, task.id);
-      taskProcessTracking?.success();
+        activeSpan?.addEvent('generateDisplayPath.success', { displayPath });
 
-      await this.updateJobAdditionalParams(job, validAdditionalParams, displayPath);
-    } catch (err) {
-      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
-    }
+        const taskBuildParams: MergeTilesTaskParams = {
+          inputFiles,
+          partsData,
+          taskMetadata: {
+            tileOutputFormat: validAdditionalParams.tileOutputFormat,
+            isNewTarget: true,
+            layerRelativePath: `${job.internalId}/${displayPath}`,
+            grid: Grid.TWO_ON_ONE,
+          },
+        };
+
+        logger.info({ msg: 'building tasks' });
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
+
+        logger.info({ msg: 'pushing tasks' });
+        await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+
+        await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+      } catch (err) {
+        await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+      } finally {
+        activeSpan?.end();
+      }
+    });
   }
 
   public async handleJobFinalize(
@@ -96,7 +105,7 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
 
       if (this.isAllStepsCompleted(finalizeTaskParams)) {
         logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-        await this.completeTaskAndJob(job, task);
+        await this.completeTaskAndJob(job, task, {});
         taskProcessTracking?.success();
         await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
       }

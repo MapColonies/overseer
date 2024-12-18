@@ -10,6 +10,7 @@ import {
   polygonPartsEntityNameSchema,
   RecordType,
 } from '@map-colonies/mc-model-types';
+import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IngestionJobTypes } from '../utils/configUtil';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
@@ -26,6 +27,7 @@ export class CatalogClient extends HttpClient {
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(INJECTION_VALUES.ingestionJobTypes) protected readonly jobTypes: IngestionJobTypes,
     private readonly linkBuilder: LinkBuilder,
     private readonly polygonPartsMangerClient: PolygonPartsMangerClient
@@ -40,15 +42,26 @@ export class CatalogClient extends HttpClient {
   }
 
   public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: LayerName): Promise<void> {
-    try {
-      const url = '/records';
-      const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
-      await this.post(url, publishReq);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new PublishLayerError(this.targetService, layerName, err);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.publish.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttribute('layerName', layerName);
+      try {
+        const url = '/records';
+        const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
+
+        activeSpan?.addEvent('createPublishReqBody.created', {
+          metadata: JSON.stringify(publishReq.metadata),
+          links: JSON.stringify(publishReq.links),
+        });
+        await this.post(url, publishReq);
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new PublishLayerError(this.targetService, layerName, err);
+        }
       }
-    }
+    });
   }
 
   public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {

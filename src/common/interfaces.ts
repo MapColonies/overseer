@@ -14,6 +14,7 @@ import {
 import { TilesMimeFormat } from '@map-colonies/types';
 import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { ITileRange } from '@map-colonies/mc-utils';
+import { Span } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces
@@ -296,7 +297,7 @@ export type TaskProcessingTracker =
   | undefined;
 
 export interface JobAndTaskTelemetry {
-  taskTracker: TaskProcessingTracker;
-  tracing?: TraceParentContext;
+  taskTracker?: TaskProcessingTracker;
+  tracingSpan?: Span;
 }
 //#endregion telemetry

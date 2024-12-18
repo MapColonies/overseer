@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
-import { Tracer } from '@opentelemetry/api';
+import { context, trace, Tracer } from '@opentelemetry/api';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
@@ -21,7 +21,7 @@ import { JobHandler } from './jobHandler';
 export class NewJobHandler extends JobHandler implements IJobHandler {
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
-    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
+    @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
@@ -33,24 +33,20 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
   }
 
   public async handleJobInit(job: IJobResponse<IngestionNewJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
-    await this.tracer.startActiveSpan(`${NewJobHandler.name}.${this.handleJobInit.name}`, async (span) => {
-      span.setAttributes({
-        jobId: job.id,
-        jobType: job.type,
-        taskId: task.id,
-        taskType: task.type,
-        taskAttempts: task.attempts,
-      });
-
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobInit.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });
       const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
-
       try {
         logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
 
         const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
+
         const validAdditionalParams = this.validateAdditionalParams(additionalParams, newAdditionalParamsSchema);
+        activeSpan?.addEvent('validateAdditionalParams.valid');
+
         const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
+        activeSpan?.setAttributes({ ...extendedLayerMetadata });
 
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
@@ -74,16 +70,13 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
           internalId: extendedLayerMetadata.catalogId,
           parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams: validAdditionalParams },
         });
+        activeSpan?.addEvent('updateJob.completed', { ...extendedLayerMetadata });
 
-        logger.info({ msg: 'Acking task' });
-        await this.queueClient.ack(job.id, task.id);
-        taskProcessTracking?.success();
-
-        logger.info({ msg: 'Job init completed successfully' });
+        await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {
-        await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
+        await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } finally {
-        span.end();
+        activeSpan?.end();
       }
     });
   }
@@ -92,47 +85,58 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
     job: IJobResponse<ExtendedNewRasterLayer, unknown>,
     task: ITaskResponse<IngestionNewFinalizeTaskParams>
   ): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId: task.id });
-    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobFinalize.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
 
-    try {
-      logger.info({ msg: `handling ${job.type} job with "finalize"` });
+      const logger = this.logger.child({ jobId: job.id, taskId: task.id });
+      const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
-      let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
-      const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
-      const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
-      const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
+      try {
+        logger.info({ msg: `handling ${job.type} job with ${task.type}` });
 
-      if (!insertedToMapproxy) {
-        const layerName = layerNameFormats.layerName;
-        logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
-        await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');
+        let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
+        activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
+        const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
+        const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
+        const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
+        activeSpan?.addEvent('validateAndGenerateLayerNameFormats.success', { ...layerNameFormats });
+
+        if (!insertedToMapproxy) {
+          const layerName = layerNameFormats.layerName;
+          logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
+          await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');
+          activeSpan?.addEvent('publishToMapproxy.success', { ...finalizeTaskParams });
+        }
+
+        if (!insertedToGeoServer) {
+          logger.info({ msg: 'publishing to geoserver', layerNameFormats });
+          await this.geoserverClient.publish(layerNameFormats);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToGeoServer');
+          activeSpan?.addEvent('publishToGeoServer.success', { ...finalizeTaskParams });
+        }
+
+        if (!insertedToCatalog) {
+          const layerName = layerNameFormats.layerName;
+          logger.info({ msg: 'publishing to catalog', layerName });
+          await this.catalogClient.publish(job, layerName);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');
+          activeSpan?.addEvent('publishToCatalog.success', { ...finalizeTaskParams });
+        }
+
+        if (this.isAllStepsCompleted(finalizeTaskParams)) {
+          logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
+          await this.completeTaskAndJob(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+        }
+      } catch (err) {
+        await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
+      } finally {
+        activeSpan?.end();
       }
-
-      if (!insertedToGeoServer) {
-        logger.info({ msg: 'publishing to geoserver', layerNameFormats });
-        await this.geoserverClient.publish(layerNameFormats);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToGeoServer');
-      }
-
-      if (!insertedToCatalog) {
-        const layerName = layerNameFormats.layerName;
-        logger.info({ msg: 'publishing to catalog', layerName });
-        await this.catalogClient.publish(job, layerName);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');
-      }
-
-      if (this.isAllStepsCompleted(finalizeTaskParams)) {
-        logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-        await this.completeTaskAndJob(job, task);
-        taskProcessTracking?.success();
-      }
-    } catch (err) {
-      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
-    }
+    });
   }
 
+  // eslint-disable-next-line @typescript-eslint/member-ordering
   private readonly mapToExtendedNewLayerMetadata = (metadata: NewRasterLayerMetadata): ExtendedRasterLayerMetadata => {
     const catalogId = randomUUID();
     const displayPath = randomUUID();

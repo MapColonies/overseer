@@ -1,6 +1,7 @@
 import { IConfig } from 'config';
 import { Logger } from '@map-colonies/js-logger';
 import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { NotFoundError } from '@map-colonies/error-types';
@@ -18,7 +19,11 @@ import {
 export class MapproxyApiClient extends HttpClient {
   private readonly tilesStorageProvider: TilesStorageProvider;
   private readonly layerCacheType: LayerCacheType;
-  public constructor(@inject(SERVICES.CONFIG) private readonly config: IConfig, @inject(SERVICES.LOGGER) protected readonly logger: Logger) {
+  public constructor(
+    @inject(SERVICES.CONFIG) private readonly config: IConfig,
+    @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer
+  ) {
     const serviceName = 'MapproxyApi';
     const baseUrl = config.get<string>('servicesUrl.mapproxyApi');
     const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
@@ -29,22 +34,31 @@ export class MapproxyApiClient extends HttpClient {
   }
 
   public async publish(layerName: string, tilesPath: string, format: TileOutputFormat): Promise<void> {
-    const cacheType = this.layerCacheType;
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${MapproxyApiClient.name}.${this.publish.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const cacheType = this.layerCacheType;
 
-    try {
-      const publishReq: PublishMapLayerRequest = {
-        name: layerName,
-        tilesPath,
-        format,
-        cacheType,
-      };
-      const url = '/layer';
-      await this.post(url, publishReq);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new PublishLayerError(this.targetService, layerName, err);
+      activeSpan?.setAttributes({ layerName, tilesPath, format, cacheType });
+
+      try {
+        const publishReq: PublishMapLayerRequest = {
+          name: layerName,
+          tilesPath,
+          format,
+          cacheType,
+        };
+        const url = '/layer';
+        await this.post(url, publishReq);
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new PublishLayerError(this.targetService, layerName, err);
+        }
+      } finally {
+        activeSpan?.end();
       }
-    }
+    });
   }
 
   public async update(layerName: string, tilesPath: string, format: TileOutputFormat): Promise<void> {

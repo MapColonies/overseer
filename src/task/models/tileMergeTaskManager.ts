@@ -1,5 +1,6 @@
 import { join } from 'path';
 import { Logger } from '@map-colonies/js-logger';
+import { context, Span, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
@@ -22,6 +23,7 @@ import {
 } from '../../common/interfaces';
 import { fileExtensionExtractor } from '../../utils/fileutils';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
+import { createChildSpan } from '../../common/tracing';
 
 @injectable()
 export class TileMergeTaskManager {
@@ -31,6 +33,7 @@ export class TileMergeTaskManager {
   private readonly taskType: string;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
@@ -43,51 +46,81 @@ export class TileMergeTaskManager {
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
-    const logger = this.logger.child({ taskType: this.taskType });
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.buildTasks.name}`)), () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttributes({
+        taskType: this.taskType,
+        partsLength: taskBuildParams.partsData.length,
+        ...taskBuildParams.taskMetadata,
+        ...taskBuildParams.inputFiles,
+      });
 
-    logger.debug({ msg: `Building tasks for ${this.taskType} task` });
+      const logger = this.logger.child({ taskType: this.taskType });
 
-    try {
-      const mergeParams = this.prepareMergeParameters(taskBuildParams);
-      const tasks = this.createZoomLevelTasks(mergeParams);
-      logger.debug({ msg: `Successfully built tasks for ${this.taskType} task` });
-      return tasks;
-    } catch (error) {
-      const errorMsg = (error as Error).message;
-      logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, error });
-      throw error;
-    }
+      logger.debug({ msg: `Building tasks for ${this.taskType} task` });
+
+      try {
+        const mergeParams = this.prepareMergeParameters(taskBuildParams);
+        activeSpan?.addEvent('Merge parameters prepared', {
+          ...mergeParams.zoomDefinitions,
+          ...mergeParams.tilesSource,
+        });
+
+        const tasks = this.createZoomLevelTasks(mergeParams, activeSpan);
+
+        logger.debug({ msg: `Successfully built tasks for ${this.taskType} task` });
+        return tasks;
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        const errorMsg = error.message;
+        logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, error });
+        activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: errorMsg });
+        activeSpan?.recordException(error);
+        throw error;
+      } finally {
+        activeSpan?.end();
+      }
+    });
   }
 
   public async pushTasks(jobId: string, jobType: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
-    this.taskMetrics.resetTrackTasksEnqueue(jobType, this.taskType);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.pushTasks.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
 
-    const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
-    let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
+      activeSpan?.setAttributes({ taskBatchSize: this.taskBatchSize });
+      this.taskMetrics.resetTrackTasksEnqueue(jobType, this.taskType);
 
-    try {
-      for await (const task of tasks) {
-        const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
-        taskBatch.push(taskBody);
-        this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
+      const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
+      let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
 
-        if (taskBatch.length === this.taskBatchSize) {
-          logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });
-          await this.enqueueTasks(jobId, taskBatch);
-          taskBatch = [];
+      try {
+        for await (const task of tasks) {
+          // const span = createChildSpan(`${TileMergeTaskManager.name}.${this.pushTasks.name}`, task.span);
+          const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
+          taskBatch.push(taskBody);
+          this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
+
+          if (taskBatch.length === this.taskBatchSize) {
+            logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });
+            activeSpan?.addEvent('enqueueTasks', { currentTaskBatchSize: taskBatch.length });
+            await this.enqueueTasks(jobId, taskBatch);
+            taskBatch = [];
+          }
         }
-      }
 
-      if (taskBatch.length > 0) {
-        logger.debug({ msg: 'Pushing last task batch to queue', batchLength: taskBatch.length, taskBatch });
-        await this.enqueueTasks(jobId, taskBatch);
+        if (taskBatch.length > 0) {
+          logger.debug({ msg: 'Pushing last tasks batch to queue', batchLength: taskBatch.length, taskBatch });
+          activeSpan?.addEvent('enqueueTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
+          await this.enqueueTasks(jobId, taskBatch);
+        }
+        logger.info({ msg: `Successfully pushed all tasks to queue` });
+      } catch (error) {
+        logger.error({ msg: 'Failed to push tasks to queue', error });
+        throw error;
+      } finally {
+        activeSpan?.end();
       }
-    } catch (error) {
-      logger.error({ msg: 'Failed to push tasks to queue', error });
-      throw error;
-    }
-
-    logger.info({ msg: `Successfully pushed all tasks to queue` });
+    });
   }
 
   private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[]): Promise<void> {
@@ -183,11 +216,15 @@ export class TileMergeTaskManager {
     return featurePolygon;
   }
 
-  private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
+  private async *createZoomLevelTasks(params: MergeParameters, parentSpan: Span | undefined): AsyncGenerator<MergeTaskParameters, void, void> {
+    const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createZoomLevelTasks.name}`, parentSpan);
+
     const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
     const { maxZoom, partsZoomLevelMatch } = zoomDefinitions;
 
     let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(ppCollection, tilesSource) : null;
+
+    span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
       if (!partsZoomLevelMatch) {
@@ -195,9 +232,9 @@ export class TileMergeTaskManager {
         const collection = featureCollection(filteredFeatures);
         unifiedPart = this.unifyParts(collection, tilesSource);
       }
-
-      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata);
+      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, span);
     }
+    span.end();
   }
 
   private unifyParts(featureCollection: PPFeatureCollection, tilesSource: TilesSource): UnifiedPart {
@@ -230,8 +267,11 @@ export class TileMergeTaskManager {
   private async *createTasksForPart(
     part: UnifiedPart,
     zoom: number,
-    tilesMetadata: MergeTilesMetadata
+    tilesMetadata: MergeTilesMetadata,
+    parentSpan?: Span | undefined
   ): AsyncGenerator<MergeTaskParameters, void, void> {
+    const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createTasksForPart.name}.zoom.${zoom}`, parentSpan);
+    span.setAttributes({ part: JSON.stringify(part), zoom, maxTileBatchSize: this.tileBatchSize });
     const { layerRelativePath, grid, isNewTarget, tileOutputFormat } = tilesMetadata;
     const logger = this.logger.child({ zoomLevel: zoom, isNewTarget, layerRelativePath, tileOutputFormat, grid });
 
@@ -242,6 +282,7 @@ export class TileMergeTaskManager {
 
     for await (const batch of batches) {
       logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
+      span.addEvent('Yielding batch task', { batchSize: batch.length, batch: JSON.stringify(batch) });
       yield {
         targetFormat: tileOutputFormat,
         isNewTarget: isNewTarget,
@@ -249,6 +290,7 @@ export class TileMergeTaskManager {
         sources,
       };
     }
+    span.end();
   }
 
   private createPartSources(part: UnifiedPart, grid: Grid, destPath: string): MergeSources[] {
