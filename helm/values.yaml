@@ -123,6 +123,8 @@ jobDefinitions:
         type: ""
         tileBatchSize: 10000
         taskBatchSize: 5
+        radiusBuffer: 0.000006
+        radiusBufferUnits: "degrees" # supported values are: "degrees" | "centimeters" | "meters" | "millimeters" | "kilometers" | "miles" | "inches" | "yards" | "feet" | "radians"
       seed:
         type: ""
         grid: "WorldCRS84"

@@ -1,9 +1,10 @@
 import { join } from 'path';
 import { Logger } from '@map-colonies/js-logger';
+import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, featureCollection, polygon, union } from '@turf/turf';
+import { bbox, buffer, featureCollection, polygon, union, Units } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import {
@@ -29,6 +30,8 @@ export class TileMergeTaskManager {
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
+  private readonly radiusBuffer: number;
+  private readonly radiusBufferUnits: Units;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
@@ -40,6 +43,8 @@ export class TileMergeTaskManager {
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
+    this.radiusBuffer = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.radiusBuffer');
+    this.radiusBufferUnits = this.config.get<Units>('jobManagement.ingestion.tasks.tilesMerging.radiusBufferUnits');
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -215,16 +220,42 @@ export class TileMergeTaskManager {
     }
 
     const mergedFootprint = union(featureCollection);
+
     if (mergedFootprint === null) {
-      throw new Error('Failed to merge footprints because the union result is null');
+      throw new Error('Failed to merge parts because the union result is null');
     }
+    const bufferedFeature = this.createBufferedFeature(mergedFootprint);
 
     return {
       fileName: fileName,
       tilesPath: tilesPath,
-      footprint: mergedFootprint,
-      extent: bbox(mergedFootprint),
+      footprint: bufferedFeature,
+      extent: bbox(bufferedFeature),
     };
+  }
+
+  //strip out all gaps and holes in the polygon which simplifies the polygon(solved the issue with tileRanger intersect error)
+  private createBufferedFeature(feature: Feature<Polygon | MultiPolygon>): Feature<Polygon | MultiPolygon> {
+    const logger = this.logger.child({ featureType: feature.type, radiusBuffer: this.radiusBuffer });
+
+    const bufferOutFeature = buffer(feature.geometry, this.radiusBuffer, { units: this.radiusBufferUnits });
+
+    if (bufferOutFeature === undefined) {
+      const errorMsg = 'Failed to buffer Out feature because the result is undefined';
+      logger.error({ errorMsg });
+      throw new Error(errorMsg);
+    }
+
+    const bufferInFeature = buffer(bufferOutFeature.geometry, -this.radiusBuffer, { units: this.radiusBufferUnits });
+
+    if (bufferInFeature === undefined) {
+      const errorMsg = 'Failed to buffer In feature because the result is undefined';
+      logger.error({ errorMsg });
+      throw new Error(errorMsg);
+    }
+
+    logger.debug({ msg: 'Successfully created buffered feature' });
+    return bufferInFeature;
   }
 
   private async *createTasksForPart(
