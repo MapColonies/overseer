@@ -123,6 +123,7 @@ jobDefinitions:
         type: ""
         tileBatchSize: 10000
         taskBatchSize: 5
+        radiusBufferCM: 30
       seed:
         type: ""
         grid: "WorldCRS84"

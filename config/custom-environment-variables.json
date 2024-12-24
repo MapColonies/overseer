@@ -109,6 +109,10 @@
           "taskBatchSize": {
             "__name": "TILES_MERGING_TASK_BATCH_SIZE",
             "__format": "number"
+          },
+          "radiusBufferCM": {
+            "__name": "TILES_MERGING_RADIUS_BUFFER_CM",
+            "__format": "number"
           }
         },
         "tilesSeeding": {
