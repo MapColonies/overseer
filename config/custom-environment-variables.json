@@ -111,7 +111,7 @@
             "__format": "number"
           },
           "radiusBuffer": {
-            "__name": "TILES_MERGING_RADIUS_BUFFER_CM",
+            "__name": "TILES_MERGING_RADIUS_BUFFER",
             "__format": "number"
           },
           "radiusBufferUnits": "TILES_MERGING_RADIUS_BUFFER_UNITS"
