@@ -77,14 +77,14 @@ export class TileMergeTaskManager {
         this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
 
         if (taskBatch.length === this.taskBatchSize) {
-          logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });
+          logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
           await this.enqueueTasks(jobId, taskBatch);
           taskBatch = [];
         }
       }
 
       if (taskBatch.length > 0) {
-        logger.debug({ msg: 'Pushing last task batch to queue', batchLength: taskBatch.length, taskBatch });
+        logger.info({ msg: 'Pushing last task batch to queue', batchLength: taskBatch.length });
         await this.enqueueTasks(jobId, taskBatch);
       }
     } catch (error) {
@@ -191,10 +191,13 @@ export class TileMergeTaskManager {
   private async *createZoomLevelTasks(params: MergeParameters): AsyncGenerator<MergeTaskParameters, void, void> {
     const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
     const { maxZoom, partsZoomLevelMatch } = zoomDefinitions;
+    const logger = this.logger.child({ taskType: this.taskType, maxZoom, partsZoomLevelMatch });
 
     let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(ppCollection, tilesSource) : null;
+    logger.info({ msg: 'Creating tasks for zoom levels' });
 
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
+      logger.info({ msg: 'Processing zoom level', zoom });
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
         const collection = featureCollection(filteredFeatures);
