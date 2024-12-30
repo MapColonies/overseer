@@ -33,7 +33,7 @@ export class PollingWorker {
 
     this.worker.on('message', (message: { type: string; error?: string }) => {
       if (message.type === messageTypes.ERROR) {
-        this.logger.error('Polling error', { error: message.error });
+        this.logger.fatal('Polling error', { error: message.error });
         this.stop();
       }
     });

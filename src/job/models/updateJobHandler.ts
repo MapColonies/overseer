@@ -50,7 +50,6 @@ export class UpdateJobHandler extends JobHandler implements IJobHandler {
       logger.info({ msg: 'building tasks' });
       const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
-      logger.info({ msg: 'pushing tasks' });
       await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
       logger.info({ msg: 'Acking task' });
