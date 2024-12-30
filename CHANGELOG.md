@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.6.1](https://github.com/MapColonies/overseer/compare/v1.6.0...v1.6.1) (2024-12-30)
+
+
+### Bug Fixes
+
+* prevent worker thread blocking during large polygon ingestion ([#37](https://github.com/MapColonies/overseer/issues/37)) ([3616b3b](https://github.com/MapColonies/overseer/commit/3616b3b90efc4e8189c766dd96203799561713da))
+
 ## [1.6.0](https://github.com/MapColonies/overseer/compare/v1.5.0...v1.6.0) (2024-12-25)
 
 
