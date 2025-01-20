@@ -46,6 +46,8 @@ data:
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}
+  TILES_MERGING_RADIUS_BUFFER: {{ $jobDefinitions.tasks.merge.radiusBuffer | quote }}
+  TILES_MERGING_RADIUS_BUFFER_UNITS: {{ $jobDefinitions.tasks.merge.radiusBufferUnits | quote }}
   TILES_SEEDING_TASK_TYPE: {{ $jobDefinitions.tasks.seed.type | quote }}
   TILES_SEEDING_GRID : {{ $jobDefinitions.tasks.seed.grid | quote }}
   TILES_SEEDING_MAX_ZOOM : {{ $jobDefinitions.tasks.seed.maxZoom | quote }}

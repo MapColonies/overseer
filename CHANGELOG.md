@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.6.0](https://github.com/MapColonies/overseer/compare/v1.5.0...v1.6.0) (2024-12-25)
+
+
+### Features
+
+* **tileMergeTaskManager:** create buffered version of the unified parts ([#36](https://github.com/MapColonies/overseer/issues/36)) ([763d95d](https://github.com/MapColonies/overseer/commit/763d95df56c9b16994629edd287090a1371db996))
+
 ## [1.5.0](https://github.com/MapColonies/overseer/compare/v1.4.2...v1.5.0) (2024-12-15)
 
 

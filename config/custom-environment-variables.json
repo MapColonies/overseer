@@ -109,7 +109,12 @@
           "taskBatchSize": {
             "__name": "TILES_MERGING_TASK_BATCH_SIZE",
             "__format": "number"
-          }
+          },
+          "radiusBuffer": {
+            "__name": "TILES_MERGING_RADIUS_BUFFER",
+            "__format": "number"
+          },
+          "radiusBufferUnits": "TILES_MERGING_RADIUS_BUFFER_UNITS"
         },
         "tilesSeeding": {
           "type": "TILES_SEEDING_TASK_TYPE",
