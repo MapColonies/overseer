@@ -240,7 +240,7 @@ export class TileMergeTaskManager {
   }
 
   //strip out all gaps and holes in the polygon which simplifies the polygon(solved the issue with tileRanger intersect error)
-  public createBufferedFeature(feature: Feature<Polygon | MultiPolygon>): Feature<Polygon | MultiPolygon> {
+  private createBufferedFeature(feature: Feature<Polygon | MultiPolygon>): Feature<Polygon | MultiPolygon> {
     const logger = this.logger.child({ featureType: feature.type, radiusBuffer: this.radiusBuffer });
 
     const bufferOutFeature = buffer(feature.geometry, this.radiusBuffer, { units: this.radiusBufferUnits });
