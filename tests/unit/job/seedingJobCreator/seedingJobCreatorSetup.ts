@@ -1,9 +1,9 @@
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
+import { trace } from '@opentelemetry/api';
 import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
-import { trace } from '@opentelemetry/api';
 
 export interface SeedingJobCreatorTestContext {
   seedingJobCreator: SeedingJobCreator;
