@@ -118,7 +118,8 @@ export class TileMergeTaskManager {
         }
 
         if (taskBatch.length === this.taskBatchSize) {
-          logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
+          logger.info({ msg: 'Pushing leftovers task batch to queue', batchLength: taskBatch.length });
+          activeSpan?.addEvent('enqueueTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
           await this.enqueueTasks(jobId, taskBatch);
         }
         logger.info({ msg: `Successfully pushed all tasks to queue` });
