@@ -3,6 +3,7 @@ import jsLogger from '@map-colonies/js-logger';
 import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
+import { trace } from '@opentelemetry/api';
 
 export interface SeedingJobCreatorTestContext {
   seedingJobCreator: SeedingJobCreator;
@@ -22,8 +23,9 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
   } as unknown as jest.Mocked<QueueClient>;
 
   const mapproxyClientMock = { getCacheName: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
+  const tracerMock = trace.getTracer('test');
 
-  const seedingJobCreator = new SeedingJobCreator(jsLogger({ enabled: false }), configMock, queueClientMock, mapproxyClientMock);
+  const seedingJobCreator = new SeedingJobCreator(jsLogger({ enabled: false }), tracerMock, configMock, queueClientMock, mapproxyClientMock);
 
   return {
     seedingJobCreator,

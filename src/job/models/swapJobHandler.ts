@@ -15,7 +15,12 @@ import { JobHandler } from './jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()
-export class SwapJobHandler extends JobHandler implements IJobHandler {
+/* eslint-disable @typescript-eslint/brace-style */
+export class SwapJobHandler
+  extends JobHandler
+  implements IJobHandler<IngestionUpdateJobParams, unknown, IngestionUpdateJobParams, IngestionSwapUpdateFinalizeTaskParams>
+{
+  /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -63,10 +68,12 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
         logger.info({ msg: 'building tasks' });
         const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
-        logger.info({ msg: 'pushing tasks' });
         await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
         await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+
+        await this.updateJobAdditionalParams(job, additionalParams, displayPath);
+        activeSpan?.addEvent('updateJobAdditionalParams.success', { displayPath });
       } catch (err) {
         await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } finally {
@@ -79,39 +86,52 @@ export class SwapJobHandler extends JobHandler implements IJobHandler {
     job: IJobResponse<IngestionUpdateJobParams, unknown>,
     task: ITaskResponse<IngestionSwapUpdateFinalizeTaskParams>
   ): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
-    const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SwapJobHandler.name}.${this.handleJobFinalize.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
+      const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
-    try {
-      logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
-      let finalizeTaskParams: IngestionSwapUpdateFinalizeTaskParams = task.parameters;
-      const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
-      const { layerName } = this.validateAndGenerateLayerNameFormats(job);
-      const { additionalParams } = job.parameters;
-      const { tileOutputFormat, displayPath } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
+      try {
+        logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
+        let finalizeTaskParams: IngestionSwapUpdateFinalizeTaskParams = task.parameters;
+        activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
 
-      if (!updatedInMapproxy) {
-        const layerRelativePath = `${job.internalId}/${displayPath}`;
-        logger.info({ msg: 'Updating layer in mapproxy', layerName, layerRelativePath, tileOutputFormat });
-        await this.mapproxyClient.update(layerName, layerRelativePath, tileOutputFormat);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInMapproxy');
+        const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
+        const { layerName } = this.validateAndGenerateLayerNameFormats(job);
+        activeSpan?.addEvent('layerNameFormat.valid', { layerName });
+
+        const { additionalParams } = job.parameters;
+        const { tileOutputFormat, displayPath } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
+        activeSpan?.addEvent('additionalParams.valid', { tileOutputFormat, displayPath });
+
+        if (!updatedInMapproxy) {
+          const layerRelativePath = `${job.internalId}/${displayPath}`;
+          logger.info({ msg: 'Updating layer in mapproxy', layerName, layerRelativePath, tileOutputFormat });
+          await this.mapproxyClient.update(layerName, layerRelativePath, tileOutputFormat);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInMapproxy');
+          activeSpan?.addEvent('updateMapproxy.success', { ...finalizeTaskParams });
+        }
+
+        if (!updatedInCatalog) {
+          logger.info({ msg: 'Updating layer in catalog', displayPath });
+          await this.catalogClient.update(job);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInCatalog');
+          activeSpan?.addEvent('updateCatalog.success', { ...finalizeTaskParams });
+        }
+
+        if (this.isAllStepsCompleted(finalizeTaskParams)) {
+          logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
+          await this.completeTaskAndJob(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+
+          activeSpan?.addEvent('createSeedingJob.start', { layerName, seedMode: SeedMode.CLEAN });
+          await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
+        }
+      } catch (err) {
+        await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+      } finally {
+        activeSpan?.end();
       }
-
-      if (!updatedInCatalog) {
-        logger.info({ msg: 'Updating layer in catalog', displayPath });
-        await this.catalogClient.update(job);
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInCatalog');
-      }
-
-      if (this.isAllStepsCompleted(finalizeTaskParams)) {
-        logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-        await this.completeTaskAndJob(job, task, {});
-        taskProcessTracking?.success();
-        await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
-      }
-    } catch (err) {
-      await this.handleError(err, job, task, { taskTracker: taskProcessTracking });
-    }
+    });
   }
 
   private async updateJobAdditionalParams(

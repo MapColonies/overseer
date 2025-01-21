@@ -74,11 +74,9 @@ export interface TilesSeedingTaskConfig {
 //#endregion config
 
 //#region job/task interfaces
-export interface IJobHandler {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobInit: (job: IJobResponse<any, any>, task: ITaskResponse<any>) => Promise<void>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  handleJobFinalize: (job: IJobResponse<any, any>, task: ITaskResponse<any>) => Promise<void>;
+export interface IJobHandler<TInitJobParams = unknown, TInitTaskParams = unknown, TFinalizeJobParams = unknown, TFinalizeTaskParam = unknown> {
+  handleJobInit: (job: IJobResponse<TInitJobParams, TInitTaskParams>, task: ITaskResponse<TInitTaskParams>) => Promise<void>;
+  handleJobFinalize: (job: IJobResponse<TFinalizeJobParams, TFinalizeTaskParam>, task: ITaskResponse<TFinalizeTaskParam>) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {

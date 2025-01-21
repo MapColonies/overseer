@@ -106,16 +106,15 @@ export class TileMergeTaskManager {
           this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
 
           if (taskBatch.length === this.taskBatchSize) {
-            logger.debug({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length, taskBatch });
+            logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
             activeSpan?.addEvent('enqueueTasks', { currentTaskBatchSize: taskBatch.length });
             await this.enqueueTasks(jobId, taskBatch);
             taskBatch = [];
           }
         }
 
-        if (taskBatch.length > 0) {
-          logger.debug({ msg: 'Pushing last tasks batch to queue', batchLength: taskBatch.length, taskBatch });
-          activeSpan?.addEvent('enqueueTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
+        if (taskBatch.length === this.taskBatchSize) {
+          logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
           await this.enqueueTasks(jobId, taskBatch);
         }
         logger.info({ msg: `Successfully pushed all tasks to queue` });
@@ -226,12 +225,15 @@ export class TileMergeTaskManager {
 
     const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
     const { maxZoom, partsZoomLevelMatch } = zoomDefinitions;
+    const logger = this.logger.child({ taskType: this.taskType, maxZoom, partsZoomLevelMatch });
 
     let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(ppCollection, tilesSource) : null;
+    logger.info({ msg: 'Creating tasks for zoom levels' });
 
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
     for (let zoom = maxZoom; zoom >= 0; zoom--) {
+      logger.info({ msg: 'Processing zoom level', zoom });
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
         const collection = featureCollection(filteredFeatures);

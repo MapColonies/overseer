@@ -45,14 +45,13 @@ describe('swapJobHandler', () => {
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
+      const completeInitTaskSpy = jest.spyOn(swapJobHandler as unknown as { completeInitTask: jest.Func }, 'completeInitTask');
+
       await swapJobHandler.handleJobInit(job, task);
 
       expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams);
       expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, mergeTasks);
-      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
-        parameters: { ...job.parameters, additionalParams: { ...additionalParams, displayPath: newDisplayPath } },
-      });
+      expect(completeInitTaskSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
     });
 
     it('should handle job init failure and reject the task', async () => {

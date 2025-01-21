@@ -1,11 +1,11 @@
 import { IConfig } from 'config';
 import { Logger } from '@map-colonies/js-logger';
 import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
 import { InsertGeoserverRequest, LayerNameFormats } from '../common/interfaces';
 import { PublishLayerError } from '../common/errors';
-import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 
 @injectable()
 export class GeoserverClient extends HttpClient {
@@ -40,6 +40,7 @@ export class GeoserverClient extends HttpClient {
         };
 
         await this.post(url, publishReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer published successfully to geoserver' });
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });

@@ -54,27 +54,41 @@ export class CatalogClient extends HttpClient {
           links: JSON.stringify(publishReq.links),
         });
         await this.post(url, publishReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer published successfully to catalog' });
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
           activeSpan?.recordException(err);
           throw new PublishLayerError(this.targetService, layerName, err);
         }
+      } finally {
+        activeSpan?.end();
       }
     });
   }
 
   public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
-    const internalId = internalIdSchema.parse(job).internalId;
-    const url = `/records/${internalId}`;
-    const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
-    try {
-      await this.put(url, updateReq);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new UpdateLayerError(this.targetService, internalId, err);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.update.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const internalId = internalIdSchema.parse(job).internalId;
+      const url = `/records/${internalId}`;
+      const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
+      activeSpan?.setAttributes({ internalId, metadata: JSON.stringify(updateReq) });
+
+      try {
+        activeSpan?.addEvent('createUpdateReqBody.created');
+        await this.put(url, updateReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer updated successfully' });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new UpdateLayerError(this.targetService, internalId, err);
+        }
+      } finally {
+        activeSpan?.end();
       }
-    }
+    });
   }
 
   private async createPublishReqBody(
@@ -139,21 +153,44 @@ export class CatalogClient extends HttpClient {
   }
 
   private async createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<CatalogUpdateRequestBody> {
-    const { parameters, version } = job;
-    const { metadata, additionalParams } = parameters;
+    // eslint-disable-next-line @typescript-eslint/return-await
+    return await context.with(
+      trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.createUpdateReqBody.name}`)),
+      async () => {
+        const activeSpan = trace.getActiveSpan();
 
-    const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
+        try {
+          const { parameters, version } = job;
+          const { metadata, additionalParams } = parameters;
 
-    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+          const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
+          activeSpan?.addEvent('validateAdditionalParams.success', { displayPath, polygonPartsEntityName });
 
-    return {
-      metadata: {
-        productVersion: version,
-        classification: metadata.classification,
-        ...(displayPath !== undefined && { displayPath }),
-        ...aggregatedLayerMetadata,
-      },
-    };
+          activeSpan?.addEvent('getAggregatedLayerMetadata.start', { polygonPartsEntityName });
+          const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+          activeSpan?.addEvent('getAggregatedLayerMetadata.success', { aggregatedLayerMetadata: JSON.stringify(aggregatedLayerMetadata) });
+
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Update request body created successfully' });
+
+          return {
+            metadata: {
+              productVersion: version,
+              classification: metadata.classification,
+              ...(displayPath !== undefined && { displayPath }),
+              ...aggregatedLayerMetadata,
+            },
+          };
+        } catch (err) {
+          if (err instanceof Error) {
+            activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+            activeSpan?.recordException(err);
+          }
+          throw err;
+        } finally {
+          activeSpan?.end();
+        }
+      }
+    );
   }
 
   private validateAdditionalParamsByUpdateMode(additionalParams: Record<string, unknown>, updateMode: string): CatalogUpdateAdditionalParams {

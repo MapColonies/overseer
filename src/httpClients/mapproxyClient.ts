@@ -49,6 +49,7 @@ export class MapproxyApiClient extends HttpClient {
         };
         const url = '/layer';
         await this.post(url, publishReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer published successfully' });
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
@@ -62,22 +63,34 @@ export class MapproxyApiClient extends HttpClient {
   }
 
   public async update(layerName: string, tilesPath: string, format: TileOutputFormat): Promise<void> {
-    const cacheType = this.layerCacheType;
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${MapproxyApiClient.name}.${this.publish.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const cacheType = this.layerCacheType;
 
-    try {
-      const updateReq: PublishMapLayerRequest = {
-        name: layerName,
-        tilesPath,
-        format,
-        cacheType,
-      };
-      const url = `/layer/${layerName}`;
-      await this.put(url, updateReq);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new UpdateLayerError(this.targetService, layerName, err);
+      activeSpan?.setAttributes({ layerName, tilesPath, format, cacheType });
+
+      try {
+        const updateReq: PublishMapLayerRequest = {
+          name: layerName,
+          tilesPath,
+          format,
+          cacheType,
+        };
+        const url = `/layer/${layerName}`;
+
+        activeSpan?.addEvent('updateLayer');
+        await this.put(url, updateReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer updated successfully' });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new UpdateLayerError(this.targetService, layerName, err);
+        }
+      } finally {
+        activeSpan?.end();
       }
-    }
+    });
   }
 
   public async getCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {

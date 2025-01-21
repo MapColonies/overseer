@@ -1,5 +1,6 @@
 import jsLogger from '@map-colonies/js-logger';
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { trace } from '@opentelemetry/api';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
@@ -37,9 +38,11 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
   const mapproxyClientMock = { update: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
   const catalogClientMock = { update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
   const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
+  const tracerMock = trace.getTracer('test');
 
   const swapJobHandler = new SwapJobHandler(
     jsLogger({ enabled: false }),
+    tracerMock,
     queueClientMock,
     taskBuilderMock,
     mapproxyClientMock,

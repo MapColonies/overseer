@@ -18,7 +18,12 @@ import { CatalogClient } from '../../httpClients/catalogClient';
 import { JobHandler } from './jobHandler';
 
 @injectable()
-export class NewJobHandler extends JobHandler implements IJobHandler {
+/* eslint-disable @typescript-eslint/brace-style */
+export class NewJobHandler
+  extends JobHandler
+  implements IJobHandler<IngestionNewJobParams, unknown, ExtendedNewRasterLayer, IngestionNewFinalizeTaskParams>
+{
+  /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
@@ -62,7 +67,6 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
         logger.info({ msg: 'building tasks' });
         const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
-        logger.info({ msg: 'pushing tasks' });
         await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
         logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
@@ -99,7 +103,7 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
         const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
         const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
         const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
-        activeSpan?.addEvent('validateAndGenerateLayerNameFormats.success', { ...layerNameFormats });
+        activeSpan?.addEvent('layerNameFormats.valid', { ...layerNameFormats });
 
         if (!insertedToMapproxy) {
           const layerName = layerNameFormats.layerName;
@@ -136,7 +140,6 @@ export class NewJobHandler extends JobHandler implements IJobHandler {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/member-ordering
   private readonly mapToExtendedNewLayerMetadata = (metadata: NewRasterLayerMetadata): ExtendedRasterLayerMetadata => {
     const catalogId = randomUUID();
     const displayPath = randomUUID();

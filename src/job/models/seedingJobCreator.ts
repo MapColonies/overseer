@@ -5,6 +5,7 @@ import { getUTCDate } from '@map-colonies/mc-utils';
 import { feature, featureCollection, union } from '@turf/turf';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { inject, injectable } from 'tsyringe';
+import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
@@ -16,6 +17,7 @@ export class SeedingJobCreator {
   private readonly seedJobType: string;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient
@@ -25,62 +27,74 @@ export class SeedingJobCreator {
   }
 
   public async create({ mode, layerName, ingestionJob }: SeedJobParams): Promise<void> {
-    try {
-      const { type: seedTaskType } = this.tilesSeedingConfig;
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SeedingJobCreator.name}.${this.create.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      try {
+        const { type: seedTaskType } = this.tilesSeedingConfig;
 
-      const logger = this.logger.child({ ingestionJobId: ingestionJob.id, jobType: this.seedJobType, taskType: seedTaskType });
-      logger.info({ msg: 'Starting seeding job creation process' });
+        const logger = this.logger.child({ ingestionJobId: ingestionJob.id, jobType: this.seedJobType, taskType: seedTaskType });
+        logger.info({ msg: 'Starting seeding job creation process' });
 
-      logger.debug({ msg: 'Creating seeding job for Ingestion Job', ingestionJob });
+        activeSpan?.setAttributes({
+          ingestionJobId: ingestionJob.id,
+          seedJobType: this.seedJobType,
+          seedTaskType,
+          mode,
+          layerName,
+        });
 
-      logger.debug({ msg: 'Getting cache name for layer', layerName });
-      const cacheName = await this.mapproxyClient.getCacheName({ layerName, cacheType: LayerCacheType.REDIS });
-      logger.debug({ msg: 'Got cache name', cacheName });
+        logger.debug({ msg: 'Getting cache name for layer', layerName });
+        const cacheName = await this.mapproxyClient.getCacheName({ layerName, cacheType: LayerCacheType.REDIS });
+        activeSpan?.addEvent('getCacheName.success', { cacheName });
 
-      const geometry = this.calculateGeometryByMode(mode, ingestionJob);
+        const geometry = this.calculateGeometryByMode(mode, ingestionJob);
 
-      if (!geometry) {
-        logger.warn({ msg: 'No geometry found, skipping seeding job creation' });
-        return;
+        if (!geometry) {
+          activeSpan?.addEvent('calculateGeometry.empty');
+          logger.warn({ msg: 'No geometry found, skipping seeding job creation' });
+          return;
+        }
+        activeSpan?.addEvent('calculateGeometry.success', { geometry: JSON.stringify(geometry) });
+
+        const seedOptions = this.createSeedOptions(mode, geometry, cacheName);
+        activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(seedOptions) });
+
+        const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
+        const taskParams = this.createTaskParams(validCatalogId, seedOptions);
+        activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+
+        const { resourceId, version, producerName, productType, domain } = ingestionJob;
+        const createJobRequest: ICreateJobBody<unknown, SeedTaskParams> = {
+          resourceId,
+          internalId: validCatalogId,
+          version,
+          type: this.seedJobType,
+          parameters: {},
+          status: OperationStatus.IN_PROGRESS,
+          producerName: producerName ?? undefined,
+          productType,
+          domain,
+          tasks: [
+            {
+              type: seedTaskType,
+              parameters: taskParams,
+            },
+          ],
+        };
+
+        const res = await this.queueClient.jobManagerClient.createJob(createJobRequest);
+        activeSpan?.addEvent('createJob.success', { seedJobId: res.id });
+        logger.info({ msg: 'Seeding job created successfully', seedJobId: res.id, seedTaskIds: res.taskIds });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.recordException(err);
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR });
+          return this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, error: err });
+        }
+      } finally {
+        activeSpan?.end();
       }
-
-      const seedOptions = this.createSeedOptions(mode, geometry, cacheName);
-      logger.debug({ msg: 'Created seed options', seedOptions });
-
-      logger.debug({ msg: 'Creating task params' });
-      const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
-      const taskParams = this.createTaskParams(validCatalogId, seedOptions);
-
-      logger.debug({ msg: 'Created task params', taskParams });
-
-      const { resourceId, version, producerName, productType, domain } = ingestionJob;
-      logger.info({ msg: 'Creating seeding job' });
-      const createJobRequest: ICreateJobBody<unknown, SeedTaskParams> = {
-        resourceId,
-        internalId: validCatalogId,
-        version,
-        type: this.seedJobType,
-        parameters: {},
-        status: OperationStatus.IN_PROGRESS,
-        producerName: producerName ?? undefined,
-        productType,
-        domain,
-        tasks: [
-          {
-            type: seedTaskType,
-            parameters: taskParams,
-          },
-        ],
-      };
-
-      logger.info({ msg: 'Sending seeding job to queue', createJobRequest });
-      const res = await this.queueClient.jobManagerClient.createJob(createJobRequest);
-      logger.info({ msg: 'Seeding job created successfully', seedJobId: res.id, seedTaskIds: res.taskIds });
-    } catch (err) {
-      if (err instanceof Error) {
-        return this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, error: err });
-      }
-    }
+    });
   }
 
   private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string): SeedTaskOptions {

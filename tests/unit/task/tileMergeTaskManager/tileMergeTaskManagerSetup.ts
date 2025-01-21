@@ -2,6 +2,7 @@ import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
+import { trace } from '@opentelemetry/api';
 import { configMock } from '../../mocks/configMock';
 import { JobManagerConfig } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
@@ -41,7 +42,8 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, configMock, new TileRanger(), queueClient, taskMetricsMock);
+  const tracerMock = trace.getTracer('test');
+  const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, tracerMock, configMock, new TileRanger(), queueClient, taskMetricsMock);
   return {
     tileMergeTaskManager,
   };
