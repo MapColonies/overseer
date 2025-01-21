@@ -5,7 +5,7 @@ import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, buffer, featureCollection, polygon, union, Units } from '@turf/turf';
+import { bbox, buffer, truncate, featureCollection, polygon, Units, union } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import {
@@ -34,6 +34,8 @@ export class TileMergeTaskManager {
   private readonly taskType: string;
   private readonly radiusBuffer: number;
   private readonly radiusBufferUnits: Units;
+  private readonly truncatePrecision: number;
+  private readonly truncateCoordinates: number;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -48,6 +50,8 @@ export class TileMergeTaskManager {
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
     this.radiusBuffer = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.radiusBuffer');
     this.radiusBufferUnits = this.config.get<Units>('jobManagement.ingestion.tasks.tilesMerging.radiusBufferUnits');
+    this.truncatePrecision = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncatePrecision');
+    this.truncateCoordinates = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncateCoordinates');
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -258,8 +262,9 @@ export class TileMergeTaskManager {
       };
     }
 
-    const mergedFootprint = union(featureCollection);
-
+    // trancate is recommended by turf: https://github.com/Turfjs/turf/issues/1983 due an open accuracy bug
+    const truncatedFeatureCollection = truncate(featureCollection, { precision: this.truncatePrecision, coordinates: this.truncateCoordinates });
+    const mergedFootprint = union(truncatedFeatureCollection);
     if (mergedFootprint === null) {
       throw new Error('Failed to merge parts because the union result is null');
     }
