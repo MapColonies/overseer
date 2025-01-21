@@ -114,7 +114,15 @@
             "__name": "TILES_MERGING_RADIUS_BUFFER",
             "__format": "number"
           },
-          "radiusBufferUnits": "TILES_MERGING_RADIUS_BUFFER_UNITS"
+          "radiusBufferUnits": "TILES_MERGING_RADIUS_BUFFER_UNITS",
+          "truncatePrecision": {
+            "__name": "TILES_MERGING_TRUNCATE_PRECISION",
+            "__format": "number"
+          },
+          "truncateCoordinates": {
+            "__name": "TILES_MERGING_TRUNCATE_COORDINATES",
+            "__format": "number"
+          }
         },
         "tilesSeeding": {
           "type": "TILES_SEEDING_TASK_TYPE",

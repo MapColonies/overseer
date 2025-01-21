@@ -125,6 +125,8 @@ jobDefinitions:
         taskBatchSize: 5
         radiusBuffer: 0.000006
         radiusBufferUnits: "degrees" # supported values are: "degrees" | "centimeters" | "meters" | "millimeters" | "kilometers" | "miles" | "inches" | "yards" | "feet" | "radians"
+        truncatePrecision: 11 # coordinate decimal precision 
+        truncateCoordinates: 2 # maximum number of coordinates (primarly used to remove z coordinates)
       seed:
         type: ""
         grid: "WorldCRS84"
