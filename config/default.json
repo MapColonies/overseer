@@ -87,7 +87,9 @@
           "tileBatchSize": 10000,
           "taskBatchSize": 5,
           "radiusBuffer": 0.000006,
-          "radiusBufferUnits": "degrees"
+          "radiusBufferUnits": "degrees",
+          "truncatePrecision": 11,
+          "truncateCoordinates": 2
         },
         "tilesSeeding": {
           "type": "tiles-seeding",
