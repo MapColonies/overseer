@@ -14,7 +14,7 @@ import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IngestionJobTypes } from '../utils/configUtil';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import { ExtendedNewRasterLayer, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
+import { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
 import { catalogSwapUpdateAdditionalParamsSchema, internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
@@ -41,7 +41,7 @@ export class CatalogClient extends HttpClient {
     this.geoserverDns = config.get<string>('servicesUrl.geoserverDns');
   }
 
-  public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: LayerName): Promise<void> {
+  public async publish(job: IJobResponse<IngestionNewExtendedJobParams, unknown>, layerName: LayerName): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.publish.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttribute('layerName', layerName);
@@ -72,11 +72,13 @@ export class CatalogClient extends HttpClient {
       const activeSpan = trace.getActiveSpan();
       const internalId = internalIdSchema.parse(job).internalId;
       const url = `/records/${internalId}`;
-      const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
-      activeSpan?.setAttributes({ internalId, metadata: JSON.stringify(updateReq) });
 
       try {
+        const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
+
+        activeSpan?.setAttributes({ internalId, metadata: JSON.stringify(updateReq) });
         activeSpan?.addEvent('createUpdateReqBody.created');
+
         await this.put(url, updateReq);
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer updated successfully' });
       } catch (err) {
@@ -92,7 +94,7 @@ export class CatalogClient extends HttpClient {
   }
 
   private async createPublishReqBody(
-    job: IJobResponse<ExtendedNewRasterLayer, unknown>,
+    job: IJobResponse<IngestionNewExtendedJobParams, unknown>,
     layerName: LayerName
   ): Promise<IRasterCatalogUpsertRequestBody> {
     const metadata = await this.mapToPublishCatalogRecordMetadata(job);
@@ -105,7 +107,7 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private async mapToPublishCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): Promise<LayerMetadata> {
+  private async mapToPublishCatalogRecordMetadata(job: IJobResponse<IngestionNewExtendedJobParams, unknown>): Promise<LayerMetadata> {
     const { parameters, version } = job;
     const { metadata, additionalParams } = parameters;
 

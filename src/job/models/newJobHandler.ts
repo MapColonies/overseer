@@ -7,7 +7,7 @@ import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
 import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { newAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
-import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, ExtendedNewRasterLayer } from '../../common/interfaces';
+import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IngestionNewExtendedJobParams } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../common/constants';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
@@ -21,7 +21,7 @@ import { JobHandler } from './jobHandler';
 /* eslint-disable @typescript-eslint/brace-style */
 export class NewJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionNewJobParams, unknown, ExtendedNewRasterLayer, IngestionNewFinalizeTaskParams>
+  implements IJobHandler<IngestionNewJobParams, unknown, IngestionNewExtendedJobParams, IngestionNewFinalizeTaskParams>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -86,7 +86,7 @@ export class NewJobHandler
   }
 
   public async handleJobFinalize(
-    job: IJobResponse<ExtendedNewRasterLayer, unknown>,
+    job: IJobResponse<IngestionNewExtendedJobParams, unknown>,
     task: ITaskResponse<IngestionNewFinalizeTaskParams>
   ): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobFinalize.name}`)), async () => {

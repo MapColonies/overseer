@@ -104,7 +104,6 @@ export class TileMergeTaskManager {
 
       try {
         for await (const task of tasks) {
-          // const span = createChildSpan(`${TileMergeTaskManager.name}.${this.pushTasks.name}`, task.span);
           const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
           taskBatch.push(taskBody);
           this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
@@ -124,6 +123,10 @@ export class TileMergeTaskManager {
         }
         logger.info({ msg: `Successfully pushed all tasks to queue` });
       } catch (error) {
+        if (error instanceof Error) {
+          activeSpan?.recordException(error);
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+        }
         logger.error({ msg: 'Failed to push tasks to queue', error });
         throw error;
       } finally {

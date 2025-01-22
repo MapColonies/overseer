@@ -63,7 +63,7 @@ export class MapproxyApiClient extends HttpClient {
   }
 
   public async update(layerName: string, tilesPath: string, format: TileOutputFormat): Promise<void> {
-    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${MapproxyApiClient.name}.${this.publish.name}`)), async () => {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${MapproxyApiClient.name}.${this.update.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const cacheType = this.layerCacheType;
 

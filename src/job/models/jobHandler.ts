@@ -53,7 +53,7 @@ export class JobHandler {
     logger.info({ msg: 'Acking task' });
     await this.queueClient.ack(job.id, task.id);
 
-    const successMsg = `${task.type} task  completed successfully`;
+    const successMsg = `${task.type} task completed successfully`;
     taskTracker?.success();
     tracingSpan?.setStatus({ code: SpanStatusCode.OK, message: successMsg });
     logger.info({ msg: successMsg });

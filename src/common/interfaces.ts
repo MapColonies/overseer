@@ -95,7 +95,7 @@ export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
   grid: Grid;
 }
 
-export type ExtendedNewRasterLayer = { metadata: ExtendedRasterLayerMetadata; additionalParams: Record<string, unknown> } & LayerData;
+export type IngestionNewExtendedJobParams = { metadata: ExtendedRasterLayerMetadata; additionalParams: Record<string, unknown> } & LayerData;
 
 export type FinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
 
@@ -287,8 +287,7 @@ export interface TraceParentContext {
   tracestate?: string;
 }
 
-export type TaskProcessingTracker =
-  | {
+export type TaskProcessingTracker = {
       success: () => void;
       failure: (errorType: string) => void;
     }

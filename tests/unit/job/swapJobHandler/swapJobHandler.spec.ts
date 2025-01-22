@@ -18,7 +18,7 @@ describe('swapJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { swapJobHandler, queueClientMock, taskBuilderMock, jobManagerClientMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, taskBuilderMock } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = initTaskForIngestionSwapUpdate;
 

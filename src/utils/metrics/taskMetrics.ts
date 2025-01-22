@@ -64,7 +64,7 @@ export class TaskMetrics {
     }
   }
 
-  public trackTaskProcessing(jobType: string, taskType: string): TaskProcessingTracker | undefined {
+  public trackTaskProcessing(jobType: string, taskType: string): TaskProcessingTracker {
     const timer = this.tasksProcessingDuration?.startTimer({
       jobType,
       taskType,
