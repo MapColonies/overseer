@@ -1,6 +1,6 @@
 import { IngestionNewJobParams, IngestionUpdateJobParams, ProductType, TileOutputFormat, Transparency } from '@map-colonies/mc-model-types';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
-import { ExtendedNewRasterLayer, Grid } from '../../../src/common/interfaces';
+import { IngestionNewExtendedJobParams, Grid } from '../../../src/common/interfaces';
 import { partsData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
@@ -58,7 +58,7 @@ export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionNewJobExtended: IJobResponse<ExtendedNewRasterLayer, unknown> = {
+export const ingestionNewJobExtended: IJobResponse<IngestionNewExtendedJobParams, unknown> = {
   ...ingestionNewJob,
   parameters: {
     ...ingestionNewJob.parameters,

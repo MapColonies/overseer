@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { Link } from '@map-colonies/mc-model-types';
 import jsLogger from '@map-colonies/js-logger';
+import { trace } from '@opentelemetry/api';
 import { faker } from '@faker-js/faker';
 import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
@@ -34,7 +35,9 @@ export function setupCatalogClientTest(): CatalogClientTestContext {
   const polygonPartsManagerClientMock = {
     getAggregatedLayerMetadata: jest.fn(),
   } as unknown as jest.Mocked<PolygonPartsMangerClient>;
-  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), jobTypes, linkBuilder, polygonPartsManagerClientMock);
+
+  const tracerMock = trace.getTracer('test');
+  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), tracerMock, jobTypes, linkBuilder, polygonPartsManagerClientMock);
 
   return {
     createLinksMock,

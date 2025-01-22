@@ -1,5 +1,6 @@
 import nock from 'nock';
 import jsLogger from '@map-colonies/js-logger';
+import { trace } from '@opentelemetry/api';
 import { GeoserverClient } from '../../../src/httpClients/geoserverClient';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError } from '../../../src/common/errors';
@@ -9,7 +10,8 @@ describe('GeoserverClient', () => {
   let geoServerClient: GeoserverClient;
   beforeEach(() => {
     registerDefaultConfig();
-    geoServerClient = new GeoserverClient(configMock, jsLogger({ enabled: false }));
+    const tracerMock = trace.getTracer('test');
+    geoServerClient = new GeoserverClient(configMock, jsLogger({ enabled: false }), tracerMock);
   });
 
   afterEach(() => {

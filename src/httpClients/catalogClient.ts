@@ -10,10 +10,11 @@ import {
   polygonPartsEntityNameSchema,
   RecordType,
 } from '@map-colonies/mc-model-types';
+import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IngestionJobTypes } from '../utils/configUtil';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import { ExtendedNewRasterLayer, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
+import { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
 import { catalogSwapUpdateAdditionalParamsSchema, internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
@@ -26,6 +27,7 @@ export class CatalogClient extends HttpClient {
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(INJECTION_VALUES.ingestionJobTypes) protected readonly jobTypes: IngestionJobTypes,
     private readonly linkBuilder: LinkBuilder,
     private readonly polygonPartsMangerClient: PolygonPartsMangerClient
@@ -39,33 +41,60 @@ export class CatalogClient extends HttpClient {
     this.geoserverDns = config.get<string>('servicesUrl.geoserverDns');
   }
 
-  public async publish(job: IJobResponse<ExtendedNewRasterLayer, unknown>, layerName: LayerName): Promise<void> {
-    try {
-      const url = '/records';
-      const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
-      await this.post(url, publishReq);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new PublishLayerError(this.targetService, layerName, err);
+  public async publish(job: IJobResponse<IngestionNewExtendedJobParams, unknown>, layerName: LayerName): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.publish.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttribute('layerName', layerName);
+      try {
+        const url = '/records';
+        const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
+
+        activeSpan?.addEvent('createPublishReqBody.created', {
+          metadata: JSON.stringify(publishReq.metadata),
+          links: JSON.stringify(publishReq.links),
+        });
+        await this.post(url, publishReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer published successfully to catalog' });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new PublishLayerError(this.targetService, layerName, err);
+        }
+      } finally {
+        activeSpan?.end();
       }
-    }
+    });
   }
 
   public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
-    const internalId = internalIdSchema.parse(job).internalId;
-    const url = `/records/${internalId}`;
-    const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
-    try {
-      await this.put(url, updateReq);
-    } catch (err) {
-      if (err instanceof Error) {
-        throw new UpdateLayerError(this.targetService, internalId, err);
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.update.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const internalId = internalIdSchema.parse(job).internalId;
+      const url = `/records/${internalId}`;
+
+      try {
+        const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
+
+        activeSpan?.setAttributes({ internalId, metadata: JSON.stringify(updateReq) });
+        activeSpan?.addEvent('createUpdateReqBody.created');
+
+        await this.put(url, updateReq);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer updated successfully' });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new UpdateLayerError(this.targetService, internalId, err);
+        }
+      } finally {
+        activeSpan?.end();
       }
-    }
+    });
   }
 
   private async createPublishReqBody(
-    job: IJobResponse<ExtendedNewRasterLayer, unknown>,
+    job: IJobResponse<IngestionNewExtendedJobParams, unknown>,
     layerName: LayerName
   ): Promise<IRasterCatalogUpsertRequestBody> {
     const metadata = await this.mapToPublishCatalogRecordMetadata(job);
@@ -78,7 +107,7 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private async mapToPublishCatalogRecordMetadata(job: IJobResponse<ExtendedNewRasterLayer, unknown>): Promise<LayerMetadata> {
+  private async mapToPublishCatalogRecordMetadata(job: IJobResponse<IngestionNewExtendedJobParams, unknown>): Promise<LayerMetadata> {
     const { parameters, version } = job;
     const { metadata, additionalParams } = parameters;
 
@@ -126,21 +155,44 @@ export class CatalogClient extends HttpClient {
   }
 
   private async createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<CatalogUpdateRequestBody> {
-    const { parameters, version } = job;
-    const { metadata, additionalParams } = parameters;
+    // eslint-disable-next-line @typescript-eslint/return-await
+    return await context.with(
+      trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.createUpdateReqBody.name}`)),
+      async () => {
+        const activeSpan = trace.getActiveSpan();
 
-    const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
+        try {
+          const { parameters, version } = job;
+          const { metadata, additionalParams } = parameters;
 
-    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+          const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
+          activeSpan?.addEvent('validateAdditionalParams.success', { displayPath, polygonPartsEntityName });
 
-    return {
-      metadata: {
-        productVersion: version,
-        classification: metadata.classification,
-        ...(displayPath !== undefined && { displayPath }),
-        ...aggregatedLayerMetadata,
-      },
-    };
+          activeSpan?.addEvent('getAggregatedLayerMetadata.start', { polygonPartsEntityName });
+          const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+          activeSpan?.addEvent('getAggregatedLayerMetadata.success', { aggregatedLayerMetadata: JSON.stringify(aggregatedLayerMetadata) });
+
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Update request body created successfully' });
+
+          return {
+            metadata: {
+              productVersion: version,
+              classification: metadata.classification,
+              ...(displayPath !== undefined && { displayPath }),
+              ...aggregatedLayerMetadata,
+            },
+          };
+        } catch (err) {
+          if (err instanceof Error) {
+            activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+            activeSpan?.recordException(err);
+          }
+          throw err;
+        } finally {
+          activeSpan?.end();
+        }
+      }
+    );
   }
 
   private validateAdditionalParamsByUpdateMode(additionalParams: Record<string, unknown>, updateMode: string): CatalogUpdateAdditionalParams {

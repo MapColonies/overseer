@@ -1,5 +1,6 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
+import { trace } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { JobProcessor } from '../../../../src/job/models/jobProcessor';
 import { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory';
@@ -52,7 +53,8 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const jobProcessor = new JobProcessor(mockLogger, configMock, mockJobHandlerFactory, queueClient);
+  const tracerMock = trace.getTracer('test');
+  const jobProcessor = new JobProcessor(mockLogger, tracerMock, configMock, mockJobHandlerFactory, queueClient);
   return {
     jobProcessor,
     mockJobHandlerFactory,

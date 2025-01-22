@@ -1,5 +1,6 @@
 import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
+import { SpanStatusCode, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { getAvailableJobTypes } from '../../utils/configUtil';
@@ -16,6 +17,7 @@ export class JobProcessor {
   private isRunning = true;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(JOB_HANDLER_FACTORY_SYMBOL) private readonly jobHandlerFactory: JobHandlerFactory,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
@@ -63,24 +65,38 @@ export class JobProcessor {
 
   private async processJob(jobAndTask: JobAndTaskResponse): Promise<void> {
     const { job, task } = jobAndTask;
-    try {
-      const taskTypes = this.ingestionConfig.pollingTasks;
-      const jobHandler = this.jobHandlerFactory(job.type);
+    await this.tracer.startActiveSpan(`${JobProcessor.name}.${this.processJob.name}.${job.type}.${task.type}`, async (span) => {
+      span.setAttributes({
+        jobId: job.id,
+        jobType: job.type,
+        taskId: task.id,
+        taskType: task.type,
+        taskAttempts: task.attempts,
+      });
 
-      switch (task.type) {
-        case taskTypes.init:
-          await jobHandler.handleJobInit(job, task);
-          break;
-        case taskTypes.finalize:
-          await jobHandler.handleJobFinalize(job, task);
-          break;
+      try {
+        const taskTypes = this.ingestionConfig.pollingTasks;
+        const jobHandler = this.jobHandlerFactory(job.type);
+
+        switch (task.type) {
+          case taskTypes.init:
+            await jobHandler.handleJobInit(job, task);
+            break;
+          case taskTypes.finalize:
+            await jobHandler.handleJobFinalize(job, task);
+            break;
+        }
+      } catch (error) {
+        if (error instanceof Error) {
+          this.logger.error({ msg: `failed processing the job: ${error.message}`, error });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+          span.recordException(error);
+        }
+        throw error;
+      } finally {
+        span.end();
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error({ msg: `failed processing the job: ${error.message}`, error });
-      }
-      throw error;
-    }
+    });
   }
 
   private async getJobAndTaskResponse(): Promise<JobAndTaskResponse | undefined> {
