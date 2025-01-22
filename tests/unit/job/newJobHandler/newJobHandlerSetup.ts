@@ -1,5 +1,5 @@
 import jsLogger from '@map-colonies/js-logger';
-import { trace, Tracer } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
