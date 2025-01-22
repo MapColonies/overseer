@@ -287,7 +287,8 @@ export interface TraceParentContext {
   tracestate?: string;
 }
 
-export type TaskProcessingTracker = {
+export type TaskProcessingTracker =
+  | {
       success: () => void;
       failure: (errorType: string) => void;
     }
