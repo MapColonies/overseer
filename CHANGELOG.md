@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.7.0](https://github.com/MapColonies/overseer/compare/v1.6.0...v1.7.0) (2025-01-22)
+
+
+### Features
+
+* add OpenTelemetry tracing to overseer worker(MAPCO-5642) ([#39](https://github.com/MapColonies/overseer/issues/39)) ([0e5ad52](https://github.com/MapColonies/overseer/commit/0e5ad52a5ac38017ce937734435de1a970be9ea8))
+
+
+### Bug Fixes
+
+* added truncate for feature collection before union due to floating point number turf bug ([084fcde](https://github.com/MapColonies/overseer/commit/084fcdee2f40cefe084571209afdad0b69df7bc6))
+
 ## [1.6.0](https://github.com/MapColonies/overseer/compare/v1.5.0...v1.6.0) (2024-12-25)
 
 
