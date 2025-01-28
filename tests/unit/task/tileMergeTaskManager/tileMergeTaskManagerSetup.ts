@@ -1,10 +1,11 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
+import { TileOutputFormat } from '@map-colonies/mc-model-types';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
 import { trace } from '@opentelemetry/api';
 import { configMock } from '../../mocks/configMock';
-import { JobManagerConfig } from '../../../../src/common/interfaces';
+import { JobManagerConfig, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 
@@ -47,4 +48,16 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   return {
     tileMergeTaskManager,
   };
+}
+
+// eslint-disable-next-line @typescript-eslint/require-await
+export async function* createTaskGenerator(numTasks: number): AsyncGenerator<MergeTaskParameters, void, void> {
+  for (let i = 0; i < numTasks; i++) {
+    yield {
+      isNewTarget: true,
+      targetFormat: TileOutputFormat.PNG,
+      sources: [{ path: 'layerRelativePath', type: 'source' }],
+      batches: [{ maxX: 1, maxY: 1, minX: 0, minY: 0, zoom: 1 }],
+    };
+  }
 }
