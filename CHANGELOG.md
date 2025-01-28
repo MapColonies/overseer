@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.7.1](https://github.com/MapColonies/overseer/compare/v1.7.0...v1.7.1) (2025-01-28)
+
+
+### Bug Fixes
+
+* taskBatch leftovers condition (MAPCO-6587) ([#41](https://github.com/MapColonies/overseer/issues/41)) ([1eb8b5b](https://github.com/MapColonies/overseer/commit/1eb8b5be0c77f9dea1db928d1da3ad655b722349))
+* taskBatch leftovers condition fix ([46be4c6](https://github.com/MapColonies/overseer/commit/46be4c6deab2e5bf793fe0bc137d9fb340e1848a))
+
 ## [1.7.0](https://github.com/MapColonies/overseer/compare/v1.6.0...v1.7.0) (2025-01-22)
 
 
