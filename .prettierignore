@@ -14,3 +14,4 @@ coverage
 helm
 reports
 config/local.json
+.release-please-manifest.json
