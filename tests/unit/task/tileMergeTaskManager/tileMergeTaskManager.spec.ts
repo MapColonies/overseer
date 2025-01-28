@@ -7,7 +7,7 @@ import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, part
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
-import { MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
+import { createTaskGenerator, MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
   let testContext: MergeTilesTaskBuilderContext;
@@ -172,6 +172,32 @@ describe('tileMergeTaskManager', () => {
       }
 
       expect(error).toBeNull();
+    });
+
+    it('should push leftover tasks correctly', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const taskBatchSize = configMock.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
+      const numberOfTasks = 3;
+      const enqueueTasksTotal = Math.ceil(numberOfTasks / taskBatchSize);
+      const jobId = randomUUID();
+
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const path = `/jobs/${jobId}/tasks`;
+      nock(jobManagerBaseUrl).post(path).reply(200).persist();
+
+      const tasks = createTaskGenerator(numberOfTasks);
+
+      const enqueueTasksSpy = jest.spyOn(tileMergeTaskManager as unknown as { enqueueTasks: jest.Func }, 'enqueueTasks');
+
+      let error: Error | null = null;
+      try {
+        await tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+      } catch (err) {
+        error = err as Error;
+      }
+
+      expect(error).toBeNull();
+      expect(enqueueTasksSpy).toHaveBeenCalledTimes(enqueueTasksTotal);
     });
 
     it('should handle errors in pushTasks correctly', async () => {
