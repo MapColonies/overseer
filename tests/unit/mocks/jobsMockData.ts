@@ -1,6 +1,11 @@
-import { IngestionNewJobParams, IngestionUpdateJobParams, ProductType, TileOutputFormat, Transparency } from '@map-colonies/mc-model-types';
+import { IngestionNewJobParams, IngestionSwapUpdateJobParams, Transparency, TileOutputFormat, RasterProductTypes } from '@map-colonies/raster-shared';
 import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
-import { IngestionNewExtendedJobParams, Grid } from '../../../src/common/interfaces';
+import {
+  IngestionNewExtendedJobParams,
+  Grid,
+  IngestionUpdateFinalizeJobParams,
+  IngestionSwapUpdateFinalizeJobParams,
+} from '../../../src/common/interfaces';
 import { partsData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
@@ -17,10 +22,10 @@ export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
       scale: 100000000,
       region: ['string'],
       srsName: 'WGS84GEO',
-      productId: 'test-product-id',
+      productId: 'TestProduct',
       description: 'string',
       productName: 'akProduct',
-      productType: ProductType.ORTHOPHOTO,
+      productType: RasterProductTypes.ORTHOPHOTO,
       producerName: 'string',
       transparency: Transparency.TRANSPARENT,
       classification: '6',
@@ -41,11 +46,11 @@ export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
   domain: 'RASTER',
   isCleaned: false,
   priority: 1000,
-  expirationDate: '2024-07-21T10:59:23.510Z' as unknown as Date,
+  expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: '89bc4f63-8608-40bf-b845-3cbd4c0c4e03',
   producerName: 'string',
   productName: 'akProduct',
-  productType: ProductType.ORTHOPHOTO,
+  productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
   completedTasks: 0,
@@ -63,9 +68,9 @@ export const ingestionNewJobExtended: IJobResponse<IngestionNewExtendedJobParams
   parameters: {
     ...ingestionNewJob.parameters,
     metadata: {
-      catalogId: 'some-catalog-id',
-      displayPath: 'some-display-path',
-      layerRelativePath: 'some-layer-relative-path',
+      catalogId: '1844c1a5-d85d-4caf-9940-929eb6f818dc',
+      displayPath: 'c1791a62-d0a3-4600-8e48-088d2a2dd145',
+      layerRelativePath: '1844c1a5-d85d-4caf-9940-929eb6f818dc/c1791a62-d0a3-4600-8e48-088d2a2dd145',
       tileOutputFormat: TileOutputFormat.PNG,
       tileMimeType: 'image/png',
       grid: Grid.TWO_ON_ONE,
@@ -73,11 +78,12 @@ export const ingestionNewJobExtended: IJobResponse<IngestionNewExtendedJobParams
     },
     additionalParams: {
       polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      jobTrackerServiceURL: 'http://job-tracker-service',
     },
   },
 };
 
-export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown> = {
+export const ingestionUpdateJob: IJobResponse<IngestionUpdateFinalizeJobParams, unknown> = {
   id: 'd027b3aa-272b-4dc9-91d7-ba8343af5ed1',
   resourceId: 'another-product-id',
   version: '1.0',
@@ -119,11 +125,11 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
   domain: 'RASTER',
   isCleaned: false,
   priority: 1000,
-  expirationDate: '2024-07-21T10:59:23.510Z' as unknown as Date,
+  expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: 'a30e93fd-f1a7-480f-a395-47afc97f99b9',
   producerName: 'string',
   productName: 'akProduct',
-  productType: ProductType.ORTHOPHOTO,
+  productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
   completedTasks: 0,
@@ -136,7 +142,7 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown>
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionSwapUpdateJob: IJobResponse<IngestionUpdateJobParams, unknown> = {
+export const ingestionSwapUpdateJob: IJobResponse<IngestionSwapUpdateJobParams, unknown> = {
   id: 'c023b3ba-272b-4dc9-92d7-ba8343af5ed9',
   resourceId: 'another-product-id',
   version: '1.0',
@@ -174,11 +180,11 @@ export const ingestionSwapUpdateJob: IJobResponse<IngestionUpdateJobParams, unkn
   domain: 'RASTER',
   isCleaned: false,
   priority: 1000,
-  expirationDate: '2024-07-21T10:59:23.510Z' as unknown as Date,
+  expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: 'f3ceebf1-3791-43db-967a-317c22ac1897',
   producerName: 'string',
   productName: 'akProduct',
-  productType: ProductType.ORTHOPHOTO,
+  productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
   completedTasks: 0,
@@ -189,4 +195,17 @@ export const ingestionSwapUpdateJob: IJobResponse<IngestionUpdateJobParams, unkn
   abortedTasks: 0,
   created: '2024-07-21T10:59:23.510Z',
   updated: '2024-07-21T10:59:23.510Z',
+};
+
+export const ingestionSwapUpdateFinalizeJob: IJobResponse<IngestionSwapUpdateFinalizeJobParams, unknown> = {
+  ...ingestionSwapUpdateJob,
+  parameters: {
+    ...ingestionSwapUpdateJob.parameters,
+    additionalParams: {
+      ...ingestionSwapUpdateJob.parameters.additionalParams,
+      displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37',
+      footprint: {} as GeoJSON.Polygon,
+      polygonPartsEntityName: '',
+    },
+  },
 };

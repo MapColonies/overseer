@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { faker } from '@faker-js/faker';
 import { BBox, Polygon } from 'geojson';
-import { PolygonPart } from '@map-colonies/mc-model-types';
+import { PolygonPart } from '@map-colonies/raster-shared';
 import { PolygonFeature, PPFeatureCollection } from '../../../src/common/interfaces';
 
 export function createFakeBBox(): BBox {

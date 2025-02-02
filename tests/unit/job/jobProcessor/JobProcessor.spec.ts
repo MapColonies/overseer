@@ -166,10 +166,15 @@ describe('JobProcessor', () => {
 
         const jobAndTask = await jobProcessor['getJobAndTaskResponse']();
 
+        const receivedJobWithDateObject = {
+          ...jobAndTask?.job,
+          expirationDate: new Date(jobAndTask?.job.expirationDate ?? ''),
+        };
+
         expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
         expect(getJobSpy).toHaveBeenCalledWith(task.jobId);
         expect(jobAndTask?.task.type).toEqual(taskType);
-        expect(jobAndTask?.job).toEqual(job);
+        expect(receivedJobWithDateObject).toEqual(job);
 
         await queueClient.heartbeatClient.stop(task.id);
       }

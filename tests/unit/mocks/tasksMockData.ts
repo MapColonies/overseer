@@ -2,7 +2,7 @@ import {
   IngestionNewFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
-} from '@map-colonies/mc-model-types';
+} from '@map-colonies/raster-shared';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 
 //copied from Ingestion-Trigger, should be moved to a shared library (Mc-Models)

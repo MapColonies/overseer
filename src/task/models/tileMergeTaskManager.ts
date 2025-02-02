@@ -2,7 +2,7 @@ import { join } from 'path';
 import { Logger } from '@map-colonies/js-logger';
 import { context, Span, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
-import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
+import { InputFiles, PolygonPart } from '@map-colonies/raster-shared';
 import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
 import { bbox, buffer, truncate, featureCollection, polygon, Units, union } from '@turf/turf';

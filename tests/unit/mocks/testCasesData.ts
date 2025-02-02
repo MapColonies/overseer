@@ -1,5 +1,5 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { ingestionNewJob, ingestionUpdateJob } from '../mocks/jobsMockData';
+import { ingestionNewJob, ingestionNewJobExtended, ingestionUpdateJob } from '../mocks/jobsMockData';
 import {
   finalizeTaskForIngestionNew,
   finalizeTaskForIngestionSwapUpdate,
@@ -40,7 +40,7 @@ export const finalizeTestCases = [
   {
     jobType: ingestionNewJob.type,
     taskType: finalizeTaskForIngestionNew.type,
-    job: ingestionNewJob,
+    job: ingestionNewJobExtended,
     task: finalizeTaskForIngestionNew,
   },
   {

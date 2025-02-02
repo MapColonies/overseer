@@ -1,7 +1,7 @@
 import nock from 'nock';
 import jsLogger from '@map-colonies/js-logger';
 import { trace, Tracer } from '@opentelemetry/api';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { MapproxyApiClient } from '../../../src/httpClients/mapproxyClient';
 import { configMock, init as InitConfig, setValue } from '../mocks/configMock';
 import {

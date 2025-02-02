@@ -1,6 +1,6 @@
 import { Logger } from '@map-colonies/js-logger';
-import { IngestionUpdateJobParams, PolygonPart } from '@map-colonies/mc-model-types';
-import { ICreateJobBody, IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { PolygonPart } from '@map-colonies/raster-shared';
+import { ICreateJobBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { getUTCDate } from '@map-colonies/mc-utils';
 import { feature, featureCollection, union } from '@turf/turf';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
@@ -9,7 +9,8 @@ import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { internalIdSchema, swapUpdateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { internalIdSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { IngestionUpdateFinalizeJob } from '../../utils/zod/schemas/job.schema';
 
 @injectable()
 export class SeedingJobCreator {
@@ -121,11 +122,11 @@ export class SeedingJobCreator {
     };
   }
 
-  private calculateGeometryByMode(mode: SeedMode, job: IJobResponse<IngestionUpdateJobParams, unknown>): Footprint | undefined {
+  private calculateGeometryByMode(mode: SeedMode, job: IngestionUpdateFinalizeJob): Footprint | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN) {
-      const { footprint } = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
+      const footprint = job.parameters.additionalParams.footprint;
       return footprint;
     }
 
