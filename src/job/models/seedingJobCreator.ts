@@ -10,7 +10,7 @@ import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../utils/zod/schemas/jobParametersSchema';
-import { IngestionUpdateFinalizeJob } from '../../utils/zod/schemas/job.schema';
+import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../utils/zod/schemas/job.schema';
 
 @injectable()
 export class SeedingJobCreator {
@@ -122,7 +122,7 @@ export class SeedingJobCreator {
     };
   }
 
-  private calculateGeometryByMode(mode: SeedMode, job: IngestionUpdateFinalizeJob): Footprint | undefined {
+  private calculateGeometryByMode(mode: SeedMode, job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Footprint | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN) {

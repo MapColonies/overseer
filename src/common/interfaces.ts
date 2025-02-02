@@ -12,7 +12,7 @@ import {
 import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import { ITileRange } from '@map-colonies/mc-utils';
 import { Span } from '@opentelemetry/api';
-import { IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
+import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from '../utils/zod/schemas/additionalParams';
 import { extendedRasterLayerMetadataSchema, ingestionNewExtendedJobParamsSchema } from '../utils/zod/schemas/jobParametersSchema';
 import { LayerCacheType, SeedMode } from './constants';
@@ -254,7 +254,7 @@ export interface CatalogUpdateAdditionalParams {
 export interface SeedJobParams {
   mode: SeedMode;
   layerName: LayerName;
-  ingestionJob: IngestionUpdateFinalizeJob;
+  ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
 }
 export interface SeedTaskOptions {
   mode: SeedMode;

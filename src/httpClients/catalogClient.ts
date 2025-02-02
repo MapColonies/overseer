@@ -7,7 +7,7 @@ import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IngestionJobTypes } from '../utils/configUtil';
-import { IngestionNewFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
+import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
 import { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
@@ -62,7 +62,7 @@ export class CatalogClient extends HttpClient {
     });
   }
 
-  public async update(job: IngestionUpdateFinalizeJob): Promise<void> {
+  public async update(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.update.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const internalId = internalIdSchema.parse(job).internalId;
@@ -143,7 +143,7 @@ export class CatalogClient extends HttpClient {
     return this.linkBuilder.createLinks(linkBuildData);
   }
 
-  private async createUpdateReqBody(job: IngestionUpdateFinalizeJob): Promise<CatalogUpdateRequestBody> {
+  private async createUpdateReqBody(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Promise<CatalogUpdateRequestBody> {
     // eslint-disable-next-line @typescript-eslint/return-await
     return await context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.createUpdateReqBody.name}`)),
@@ -153,7 +153,7 @@ export class CatalogClient extends HttpClient {
         try {
           const { parameters, version } = job;
           const { metadata, additionalParams } = parameters;
-          const { displayPath, polygonPartsEntityName } = additionalParams;
+          const { polygonPartsEntityName, displayPath } = additionalParams;
 
           activeSpan?.addEvent('getAggregatedLayerMetadata.start', { polygonPartsEntityName });
           const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
@@ -165,7 +165,7 @@ export class CatalogClient extends HttpClient {
             metadata: {
               productVersion: version,
               classification: metadata.classification,
-              displayPath,
+              ...(displayPath != undefined && { displayPath }),
               ...aggregatedLayerMetadata,
             },
           };

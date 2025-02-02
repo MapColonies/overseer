@@ -2,9 +2,14 @@ import { polygonPartsEntityNameSchema, updateAdditionalParamsSchema, updateRaste
 
 export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema.merge(polygonPartsEntityNameSchema);
 
+export const swapUpdateFinalizeAdditionalParamsSchema = updateFinalizeAdditionalParamsSchema.extend({
+  displayPath: updateAdditionalParamsSchema.shape.displayPath.optional(),
+});
+
 export const ingestionUpdateFinalizeJobParamsSchema = updateRasterLayerRequestSchema.extend({
   additionalParams: updateFinalizeAdditionalParamsSchema,
 });
 
-export const ingestionSwapUpdateFinalizeJobParamsSchema = ingestionUpdateFinalizeJobParamsSchema;
-// ingestionUpdateFinalizeJobParamsSchema
+export const ingestionSwapUpdateFinalizeJobParamsSchema = updateRasterLayerRequestSchema.extend({
+  additionalParams: swapUpdateFinalizeAdditionalParamsSchema,
+});
