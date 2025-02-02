@@ -2,15 +2,11 @@ import {
   IngestionNewFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
+  TaskBlockDuplicationParam,
 } from '@map-colonies/raster-shared';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 
-//copied from Ingestion-Trigger, should be moved to a shared library (Mc-Models)
-export interface IPollingTaskParameters {
-  blockDuplication?: boolean;
-}
-
-export const initTaskForIngestionNew: ITaskResponse<IPollingTaskParameters> = {
+export const initTaskForIngestionNew: ITaskResponse<TaskBlockDuplicationParam> = {
   id: '4a5486bd-6269-4898-b9b1-647fe56d6ae2',
   type: 'init',
   description: '',
@@ -28,7 +24,7 @@ export const initTaskForIngestionNew: ITaskResponse<IPollingTaskParameters> = {
   updated: '2024-07-24T07:43:10.528Z',
 };
 
-export const initTaskForIngestionUpdate: ITaskResponse<IPollingTaskParameters> = {
+export const initTaskForIngestionUpdate: ITaskResponse<TaskBlockDuplicationParam> = {
   id: 'c3f42c71-8324-4103-86ca-8f043645fdb8',
   type: 'init',
   description: '',
@@ -46,7 +42,7 @@ export const initTaskForIngestionUpdate: ITaskResponse<IPollingTaskParameters> =
   updated: '2024-07-24T07:43:10.528Z',
 };
 
-export const initTaskForIngestionSwapUpdate: ITaskResponse<IPollingTaskParameters> = {
+export const initTaskForIngestionSwapUpdate: ITaskResponse<TaskBlockDuplicationParam> = {
   id: '018ccf1d-1adb-4c9e-8d80-1b311c6ad41f',
   type: 'init',
   description: '',
