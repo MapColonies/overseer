@@ -289,17 +289,15 @@ export class TileMergeTaskManager {
     const bufferOutFeature = buffer(feature.geometry, this.radiusBuffer, { units: this.radiusBufferUnits });
 
     if (bufferOutFeature === undefined) {
-      const errorMsg = 'Failed to buffer Out feature because the result is undefined';
-      logger.error({ errorMsg });
-      throw new Error(errorMsg);
+      logger.warn({ msg: 'Failed to buffer Out feature because the buffer result is undefined, returning original feature' });
+      return feature;
     }
 
     const bufferInFeature = buffer(bufferOutFeature.geometry, -this.radiusBuffer, { units: this.radiusBufferUnits });
 
     if (bufferInFeature === undefined) {
-      const errorMsg = 'Failed to buffer In feature because the result is undefined';
-      logger.error({ errorMsg });
-      throw new Error(errorMsg);
+      logger.warn({ msg: 'Failed to buffer In feature because the buffer result is undefined, returning original feature' });
+      return feature;
     }
 
     logger.debug({ msg: 'Successfully created buffered feature' });
