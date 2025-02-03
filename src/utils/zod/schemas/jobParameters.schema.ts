@@ -5,10 +5,11 @@ import {
   polygonPartsEntityNameSchema,
   TileOutputFormat,
   tilesMimeFormatSchema,
+  updateAdditionalParamsSchema,
+  updateRasterLayerRequestSchema,
 } from '@map-colonies/raster-shared';
 import { z } from 'zod';
 import { Grid } from '../../../common/interfaces';
-import { multiPolygonSchema, polygonSchema } from './geoSchema';
 
 export const extendedRasterLayerMetadataSchema = newRasterLayerMetadataSchema
   .extend({
@@ -33,23 +34,6 @@ export const ingestionNewExtendedJobParamsSchema = layerDataSchema.extend({
   additionalParams: newAdditionalParamsSchema.merge(polygonPartsEntityNameSchema),
 });
 
-export const displayPathSchema = z.string().uuid();
-
-export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend({
-  tileOutputFormat: z.nativeEnum(TileOutputFormat),
-  footprint: polygonSchema.or(multiPolygonSchema),
-});
-
-export const updateAdditionalParamsSchema = swapUpdateAdditionalParamsSchema.extend({
-  displayPath: displayPathSchema,
-});
-
-export const catalogSwapUpdateAdditionalParamsSchema = z
-  .object({
-    displayPath: displayPathSchema,
-  })
-  .merge(polygonPartsEntityNameSchema);
-
 export const layerNameSchema = z.object({
   resourceId: z.string(),
   productType: z.string(),
@@ -58,3 +42,20 @@ export const layerNameSchema = z.object({
 export const internalIdSchema = z.object({
   internalId: z.string().uuid(),
 });
+
+//#region AdditionalParams
+export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema.merge(polygonPartsEntityNameSchema);
+
+export const swapUpdateFinalizeAdditionalParamsSchema = updateFinalizeAdditionalParamsSchema.extend({
+  displayPath: updateAdditionalParamsSchema.shape.displayPath.optional(),
+});
+
+export const ingestionUpdateFinalizeJobParamsSchema = updateRasterLayerRequestSchema.extend({
+  additionalParams: updateFinalizeAdditionalParamsSchema,
+});
+
+export const ingestionSwapUpdateFinalizeJobParamsSchema = updateRasterLayerRequestSchema.extend({
+  additionalParams: swapUpdateFinalizeAdditionalParamsSchema,
+});
+
+//#endregion

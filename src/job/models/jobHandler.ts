@@ -2,7 +2,7 @@ import { ZodError } from 'zod';
 import { IJobResponse, ITaskResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import { Logger } from '@map-colonies/js-logger';
-import { layerNameSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { layerNameSchema } from '../../utils/zod/schemas/jobParameters.schema';
 import { FinalizeTaskParams, JobAndTaskTelemetry, LayerName } from '../../common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../common/constants';
 

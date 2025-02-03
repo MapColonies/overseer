@@ -13,8 +13,8 @@ import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson
 import { ITileRange } from '@map-colonies/mc-utils';
 import { Span } from '@opentelemetry/api';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
-import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from '../utils/zod/schemas/additionalParams';
-import { extendedRasterLayerMetadataSchema, ingestionNewExtendedJobParamsSchema } from '../utils/zod/schemas/jobParametersSchema';
+import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from '../utils/zod/schemas/jobParameters.schema';
+import { extendedRasterLayerMetadataSchema, ingestionNewExtendedJobParamsSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces

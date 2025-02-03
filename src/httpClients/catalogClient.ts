@@ -10,7 +10,7 @@ import { IngestionJobTypes } from '../utils/configUtil';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
 import { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
-import { internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
+import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';

@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
+import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
-import { updateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { COMPLETED_PERCENTAGE } from '../../../../src/common/constants';
 import { ingestionUpdateJob } from '../../mocks/jobsMockData';

@@ -9,7 +9,7 @@ import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
 import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { internalIdSchema } from '../../utils/zod/schemas/jobParametersSchema';
+import { internalIdSchema } from '../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../utils/zod/schemas/job.schema';
 
 @injectable()

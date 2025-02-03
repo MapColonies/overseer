@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
+import { swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { swapUpdateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, SeedJobParams, LayerName } from '../../../../src/common/interfaces';
-import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
+import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE, SeedMode } from '../../../../src/common/constants';
 import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
@@ -84,7 +84,7 @@ describe('swapJobHandler', () => {
       const layerName: LayerName = `${job.resourceId}-${job.productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
-        mode: 'clean',
+        mode: SeedMode.CLEAN,
         ingestionJob: job,
         layerName,
       };
