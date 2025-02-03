@@ -167,14 +167,23 @@ export class JobProcessor {
   }
   private validateTaskAndJob(jobAndTask: JobAndTaskResponse): void {
     const { job, task } = jobAndTask;
-    const validationKey: OperationValidationKey = `${job.type}_${task.type}` as OperationValidationKey;
+    const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
+    const validationKey = `${job.type}_${task.type}` as OperationValidationKey;
     const validationSchemas = jobTaskSchemaMap[validationKey];
+
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (validationSchemas === undefined) {
       throw new Error(`no validation schema found for job type ${job.type} and task type ${task.type}`);
     }
     const { jobSchema, taskSchema } = validationSchemas;
+
+    logger.info({ msg: 'validating job and task', jobSchema: jobSchema.description, taskSchema: taskSchema.description });
+
     jobSchema.parse(job);
+
+    logger.info({ msg: 'job validated successfully' });
+
     taskSchema.parse(task);
+    logger.info({ msg: 'task validated successfully' });
   }
 }
