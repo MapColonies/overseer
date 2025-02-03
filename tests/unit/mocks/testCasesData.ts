@@ -1,11 +1,18 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
-import { ingestionNewJob, ingestionNewJobExtended, ingestionUpdateJob } from '../mocks/jobsMockData';
+import {
+  ingestionNewJob,
+  ingestionNewJobExtended,
+  ingestionSwapUpdateFinalizeJob,
+  ingestionSwapUpdateJob,
+  ingestionUpdateJob,
+} from '../mocks/jobsMockData';
 import {
   finalizeTaskForIngestionNew,
   finalizeTaskForIngestionSwapUpdate,
   finalizeTaskForIngestionUpdate,
   initTaskForIngestionNew,
+  initTaskForIngestionSwapUpdate,
   initTaskForIngestionUpdate,
 } from '../mocks/tasksMockData';
 
@@ -30,10 +37,10 @@ export const initTestCases: IngestionTestCase[] = [
     task: initTaskForIngestionUpdate,
   },
   {
-    jobType: ingestionUpdateJob.type,
-    taskType: initTaskForIngestionNew.type,
-    job: ingestionUpdateJob,
-    task: initTaskForIngestionUpdate,
+    jobType: ingestionSwapUpdateJob.type,
+    taskType: initTaskForIngestionSwapUpdate.type,
+    job: ingestionSwapUpdateJob,
+    task: initTaskForIngestionSwapUpdate,
   },
 ];
 export const finalizeTestCases = [
@@ -50,9 +57,9 @@ export const finalizeTestCases = [
     task: finalizeTaskForIngestionUpdate,
   },
   {
-    jobType: ingestionUpdateJob.type,
+    jobType: ingestionSwapUpdateFinalizeJob.type,
     taskType: finalizeTaskForIngestionSwapUpdate.type,
-    job: ingestionUpdateJob,
+    job: ingestionSwapUpdateFinalizeJob,
     task: finalizeTaskForIngestionSwapUpdate,
   },
 ];

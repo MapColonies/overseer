@@ -204,8 +204,7 @@ export const ingestionSwapUpdateFinalizeJob: IJobResponse<IngestionSwapUpdateFin
     additionalParams: {
       ...ingestionSwapUpdateJob.parameters.additionalParams,
       displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37',
-      footprint: {} as GeoJSON.Polygon,
-      polygonPartsEntityName: '',
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
     },
   },
 };

@@ -81,10 +81,10 @@ describe('JobProcessor', () => {
 
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
-      expect(jobSchemaSpy).toHaveBeenCalledWith(job);
-      expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(() => jobSchema.parse(job)).not.toThrow();
       expect(() => taskSchema.parse(task)).not.toThrow();
+      expect(jobSchemaSpy).toHaveBeenCalledWith(job);
+      expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
       expect(mockHandler.handleJobInit).toHaveBeenCalledWith(job, task);
     });
@@ -116,10 +116,10 @@ describe('JobProcessor', () => {
 
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
-      expect(jobSchemaSpy).toHaveBeenCalledWith(job);
-      expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(() => jobSchema.parse(job)).not.toThrow();
       expect(() => taskSchema.parse(task)).not.toThrow();
+      expect(jobSchemaSpy).toHaveBeenCalledWith(job);
+      expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
       expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job, task);
     });
