@@ -13,45 +13,55 @@ import {
   taskBlockDuplicationParamSchema,
   TaskTypes,
 } from '@map-colonies/raster-shared';
-import { ingestionNewExtendedJobParamsSchema } from './jobParametersSchema';
-import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from './additionalParams';
+import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
+import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from './jobParameters.schema';
 
 //#region IngestionNew
 //init
-export const ingestionNewInitJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema);
+export const ingestionNewInitJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema).describe('IngestionNewInitJobSchema');
 export type IngestionNewInitJob = z.infer<typeof ingestionNewInitJobSchema>;
 
-export const ingestionInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema);
+export const ingestionInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('IngestionInitTaskSchema');
 export type IngestionInitTask = z.infer<typeof ingestionInitTaskSchema>;
 
 //finalize
-export const ingestionNewFinalizeJobSchema = createJobResponseSchema(ingestionNewExtendedJobParamsSchema);
+export const ingestionNewFinalizeJobSchema = createJobResponseSchema(ingestionNewExtendedJobParamsSchema).describe('IngestionNewFinalizeJobSchema');
 export type IngestionNewFinalizeJob = z.infer<typeof ingestionNewFinalizeJobSchema>;
-export const ingestionNewFinalizeTaskSchema = createTaskResponseSchema(ingestionNewFinalizeTaskParamsSchema);
+export const ingestionNewFinalizeTaskSchema =
+  createTaskResponseSchema(ingestionNewFinalizeTaskParamsSchema).describe('IngestionNewFinalizeTaskSchema');
 export type IngestionNewFinalizeTask = z.infer<typeof ingestionNewFinalizeTaskSchema>;
 //#endregion
 
 //#region IngestionUpdate
 //init
-export const ingestionUpdateInitJobSchema = createJobResponseSchema(ingestionUpdateJobParamsSchema);
+export const ingestionUpdateInitJobSchema = createJobResponseSchema(ingestionUpdateJobParamsSchema).describe('IngestionUpdateInitJobSchema');
 export type IngestionUpdateInitJob = z.infer<typeof ingestionUpdateInitJobSchema>;
 
 //finalize
-export const ingestionUpdateFinalizeJobSchema = createJobResponseSchema(ingestionUpdateFinalizeJobParamsSchema);
+export const ingestionUpdateFinalizeJobSchema = createJobResponseSchema(ingestionUpdateFinalizeJobParamsSchema).describe(
+  'IngestionUpdateFinalizeJobSchema'
+);
 export type IngestionUpdateFinalizeJob = z.infer<typeof ingestionUpdateFinalizeJobSchema>;
-export const ingestionUpdateFinalizeTaskSchema = createTaskResponseSchema(ingestionUpdateFinalizeTaskParamsSchema);
+export const ingestionUpdateFinalizeTaskSchema = createTaskResponseSchema(ingestionUpdateFinalizeTaskParamsSchema).describe(
+  'IngestionUpdateFinalizeTaskSchema'
+);
 export type IngestionUpdateFinalizeTask = z.infer<typeof ingestionUpdateFinalizeTaskSchema>;
 //endregion
 
 //#region IngestionSwapUpdate
 //init
-export const ingestionSwapUpdateInitJobSchema = createJobResponseSchema(ingestionSwapUpdateJobParamsSchema);
+export const ingestionSwapUpdateInitJobSchema =
+  createJobResponseSchema(ingestionSwapUpdateJobParamsSchema).describe('IngestionSwapUpdateInitJobSchema');
 export type IngestionSwapUpdateInitJob = z.infer<typeof ingestionSwapUpdateInitJobSchema>;
 
 //finalize
-export const ingestionSwapUpdateFinalizeJobSchema = createJobResponseSchema(ingestionSwapUpdateFinalizeJobParamsSchema);
+export const ingestionSwapUpdateFinalizeJobSchema = createJobResponseSchema(ingestionSwapUpdateFinalizeJobParamsSchema).describe(
+  'IngestionSwapUpdateFinalizeJobSchema'
+);
 export type IngestionSwapUpdateFinalizeJob = z.infer<typeof ingestionSwapUpdateFinalizeJobSchema>;
-export const ingestionSwapUpdateFinalizeTaskSchema = createTaskResponseSchema(ingestionSwapUpdateTaskParamsSchema);
+export const ingestionSwapUpdateFinalizeTaskSchema = createTaskResponseSchema(ingestionSwapUpdateTaskParamsSchema).describe(
+  'IngestionSwapUpdateFinalizeTaskSchema'
+);
 export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdateFinalizeTaskSchema>;
 //#endregion
 
