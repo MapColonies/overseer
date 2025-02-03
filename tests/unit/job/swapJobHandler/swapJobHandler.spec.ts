@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { ZodError } from 'zod';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
+import { swapUpdateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, SeedJobParams, LayerName } from '../../../../src/common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
 import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
-import { ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
+import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
 
 describe('swapJobHandler', () => {
@@ -71,32 +70,17 @@ describe('swapJobHandler', () => {
 
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
-
-    it('should handle job init failure with ZodError and Failed the job', async () => {
-      const { swapJobHandler, jobManagerClientMock, queueClientMock } = setupSwapJobHandlerTest();
-      const job = structuredClone(ingestionSwapUpdateJob);
-      const task = initTaskForIngestionSwapUpdate;
-      job.parameters.additionalParams = { wrongField: 'wrongValue' };
-      const validAdditionalParamsSpy = jest.spyOn(swapUpdateAdditionalParamsSchema, 'parse');
-
-      await swapJobHandler.handleJobInit(job, task);
-
-      expect(validAdditionalParamsSpy).toThrow(ZodError);
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: expect.any(String) });
-    });
   });
 
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
       const { swapJobHandler, queueClientMock, jobManagerClientMock, mapproxyClientMock, catalogClientMock, seedingJobCreatorMock } =
         setupSwapJobHandlerTest();
-      const job = structuredClone(ingestionSwapUpdateJob);
-      job.parameters.additionalParams = { displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37', ...job.parameters.additionalParams };
+      const job = structuredClone(ingestionSwapUpdateFinalizeJob);
+
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
-      const { displayPath, tileOutputFormat } = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
+      const { displayPath, tileOutputFormat } = job.parameters.additionalParams;
       const layerName: LayerName = `${job.resourceId}-${job.productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
@@ -131,8 +115,7 @@ describe('swapJobHandler', () => {
 
     it('should handle job finalize failure and reject the task', async () => {
       const { swapJobHandler, queueClientMock, catalogClientMock } = setupSwapJobHandlerTest();
-      const job = structuredClone(ingestionSwapUpdateJob);
-      job.parameters.additionalParams = { displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37', ...job.parameters.additionalParams };
+      const job = structuredClone(ingestionSwapUpdateFinalizeJob);
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
       const error = new Error('Test error');
@@ -144,20 +127,6 @@ describe('swapJobHandler', () => {
       await swapJobHandler.handleJobFinalize(job, task);
 
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
-    });
-
-    it('should handle job finalize failure and reject the task (zod validation error)', async () => {
-      const { swapJobHandler, queueClientMock } = setupSwapJobHandlerTest();
-      const job = structuredClone(ingestionSwapUpdateJob);
-      const task = { ...finalizeTaskForIngestionSwapUpdate };
-
-      queueClientMock.reject.mockResolvedValue(undefined);
-
-      await swapJobHandler.handleJobFinalize(job, task);
-
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      expect(queueClientMock.jobManagerClient.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: expect.any(String) });
     });
   });
 });

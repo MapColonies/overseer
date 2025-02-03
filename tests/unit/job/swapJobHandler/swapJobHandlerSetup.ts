@@ -7,6 +7,7 @@ import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { SwapJobHandler } from '../../../../src/job/models/swapJobHandler';
 import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
+import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
@@ -23,17 +24,6 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
     buildTasks: jest.fn(),
     pushTasks: jest.fn(),
   } as unknown as jest.Mocked<TileMergeTaskManager>;
-
-  const jobManagerClientMock = {
-    updateJob: jest.fn(),
-    updateTask: jest.fn(),
-  } as unknown as jest.Mocked<JobManagerClient>;
-
-  const queueClientMock = {
-    jobManagerClient: jobManagerClientMock,
-    ack: jest.fn(),
-    reject: jest.fn(),
-  } as unknown as jest.Mocked<QueueClient>;
 
   const mapproxyClientMock = { update: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
   const catalogClientMock = { update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;

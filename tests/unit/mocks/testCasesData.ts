@@ -1,19 +1,19 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { ingestionNewJob, ingestionUpdateJob } from '../mocks/jobsMockData';
+import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
+import { ingestionNewJob, ingestionNewJobExtended, ingestionUpdateJob } from '../mocks/jobsMockData';
 import {
   finalizeTaskForIngestionNew,
   finalizeTaskForIngestionSwapUpdate,
   finalizeTaskForIngestionUpdate,
   initTaskForIngestionNew,
   initTaskForIngestionUpdate,
-  IPollingTaskParameters,
 } from '../mocks/tasksMockData';
 
 interface IngestionTestCase {
   jobType: string;
   taskType: string;
   job: IJobResponse<unknown, unknown>;
-  task: ITaskResponse<IPollingTaskParameters>;
+  task: ITaskResponse<TaskBlockDuplicationParam>;
 }
 
 export const initTestCases: IngestionTestCase[] = [
@@ -40,7 +40,7 @@ export const finalizeTestCases = [
   {
     jobType: ingestionNewJob.type,
     taskType: finalizeTaskForIngestionNew.type,
-    job: ingestionNewJob,
+    job: ingestionNewJobExtended,
     task: finalizeTaskForIngestionNew,
   },
   {

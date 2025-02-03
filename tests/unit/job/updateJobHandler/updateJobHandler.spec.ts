@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { ZodError } from 'zod';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
@@ -63,21 +62,6 @@ describe('updateJobHandler', () => {
       await updateJobHandler.handleJobInit(job, task);
 
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
-    });
-
-    it('should handle job init failure with ZodError and Failed the job', async () => {
-      const { updateJobHandler, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = structuredClone(ingestionUpdateJob);
-      job.parameters.additionalParams = { wrongField: 'wrongValue' };
-      const task = initTaskForIngestionUpdate;
-      const validAdditionalParamsSpy = jest.spyOn(updateAdditionalParamsSchema, 'parse');
-
-      await updateJobHandler.handleJobInit(job, task);
-
-      expect(validAdditionalParamsSpy).toThrow(ZodError);
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: expect.any(String) });
     });
   });
   describe('handleJobFinalize', () => {

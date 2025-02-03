@@ -7,6 +7,7 @@ import { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { NewJobHandler } from '../../../../src/job/models/newJobHandler';
 import { taskMetricsMock } from '../../mocks/metricsMock';
+import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
@@ -23,17 +24,6 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
     buildTasks: jest.fn(),
     pushTasks: jest.fn(),
   } as unknown as jest.Mocked<TileMergeTaskManager>;
-
-  const jobManagerClientMock = {
-    updateJob: jest.fn(),
-    updateTask: jest.fn(),
-  } as unknown as jest.Mocked<JobManagerClient>;
-
-  const queueClientMock = {
-    jobManagerClient: jobManagerClientMock,
-    ack: jest.fn(),
-    reject: jest.fn(),
-  } as unknown as jest.Mocked<QueueClient>;
 
   const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
   const geoserverClientMock = { publish: jest.fn() } as unknown as jest.Mocked<GeoserverClient>;

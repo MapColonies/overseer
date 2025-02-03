@@ -1,6 +1,6 @@
 import { IConfig } from 'config';
 import { Logger } from '@map-colonies/js-logger';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';

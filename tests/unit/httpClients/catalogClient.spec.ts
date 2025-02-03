@@ -1,7 +1,7 @@
 import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
-import { ingestionNewJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateJob } from '../mocks/jobsMockData';
+import { ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogClientSetup';
 
 describe('CatalogClient', () => {
@@ -82,22 +82,23 @@ describe('CatalogClient', () => {
       expect(nock.isDone()).toBe(true);
     });
 
-    it('should throw an Error when update mode is invalid', async () => {
-      const { catalogClient } = setupCatalogClientTest();
-      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
-      const recordId = ingestionNewJob.internalId;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200);
-
-      const action = catalogClient.update(ingestionNewJob);
-
-      await expect(action).rejects.toThrow();
-    });
-
-    it('should throw an PublishLayerError when the catalog returns an error', async () => {
+    it('should throw an UpdateLayerError when the catalog returns an error', async () => {
       const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = ingestionUpdateJob.internalId;
       nock(baseUrl).put(`/records/${recordId}`).reply(500);
+
+      const action = catalogClient.update(ingestionUpdateJob);
+
+      await expect(action).rejects.toThrow(UpdateLayerError);
+    });
+
+    it('should throw an UpdateLayerError when getting aggregation layer metadata failed', async () => {
+      const { catalogClient, polygonPartsManagerClientMock } = setupCatalogClientTest();
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const polygonPartsEntityName = 'some_polygon_parts_entity_name_orthophoto';
+      nock(baseUrl).get(`/aggregation/${polygonPartsEntityName}`).reply(500);
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockRejectedValue(new Error('Failed to get aggregation layer metadata'));
 
       const action = catalogClient.update(ingestionUpdateJob);
 

@@ -2,7 +2,7 @@
 import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { bbox } from '@turf/turf';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';

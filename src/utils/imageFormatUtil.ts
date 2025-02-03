@@ -1,4 +1,4 @@
-import { TileOutputFormat, Transparency } from '@map-colonies/mc-model-types';
+import { TileOutputFormat, Transparency } from '@map-colonies/raster-shared';
 import { UnsupportedTransparencyError } from '../common/errors';
 
 export const getTileOutputFormat = (transparency: Transparency): TileOutputFormat => {

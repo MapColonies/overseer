@@ -1,12 +1,39 @@
-import { polygonPartsEntityNameSchema, TileOutputFormat } from '@map-colonies/mc-model-types';
+import {
+  layerDataSchema,
+  newAdditionalParamsSchema,
+  newRasterLayerMetadataSchema,
+  polygonPartsEntityNameSchema,
+  TileOutputFormat,
+  tilesMimeFormatSchema,
+} from '@map-colonies/raster-shared';
 import { z } from 'zod';
+import { Grid } from '../../../common/interfaces';
 import { multiPolygonSchema, polygonSchema } from './geoSchema';
 
-export const displayPathSchema = z.string().uuid();
+export const extendedRasterLayerMetadataSchema = newRasterLayerMetadataSchema
+  .extend({
+    catalogId: z.string().uuid(),
+    displayPath: z.string().uuid(),
+    layerRelativePath: z.string(),
+    tileOutputFormat: z.nativeEnum(TileOutputFormat),
+    tileMimeType: tilesMimeFormatSchema,
+    grid: z.nativeEnum(Grid),
+  })
+  .refine(
+    (data) => {
+      const [catalogId, displayPath] = data.layerRelativePath.split('/');
+      return catalogId === data.catalogId && displayPath === data.displayPath;
+    },
+    { message: 'layerRelativePath must be in the format of {catalogId}/{displayPath}' }
+  )
+  .describe('extendedRasterLayerMetadataSchema');
 
-export const newAdditionalParamsSchema = z.object({
-  jobTrackerServiceURL: z.string().url(),
+export const ingestionNewExtendedJobParamsSchema = layerDataSchema.extend({
+  metadata: extendedRasterLayerMetadataSchema,
+  additionalParams: newAdditionalParamsSchema.merge(polygonPartsEntityNameSchema),
 });
+
+export const displayPathSchema = z.string().uuid();
 
 export const swapUpdateAdditionalParamsSchema = newAdditionalParamsSchema.extend({
   tileOutputFormat: z.nativeEnum(TileOutputFormat),
