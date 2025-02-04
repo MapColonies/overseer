@@ -1,7 +1,7 @@
-import z from 'zod';
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { LayerMetadata } from '@map-colonies/mc-model-types';
-import {
+import { z } from 'zod';
+import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import type { LayerMetadata } from '@map-colonies/mc-model-types';
+import type {
   InputFiles,
   PolygonPart,
   IngestionNewFinalizeTaskParams,
@@ -9,10 +9,10 @@ import {
   IngestionSwapUpdateFinalizeTaskParams,
   TileOutputFormat,
 } from '@map-colonies/raster-shared';
-import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
-import { ITileRange } from '@map-colonies/mc-utils';
-import { Span } from '@opentelemetry/api';
-import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
+import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
+import type { ITileRange } from '@map-colonies/mc-utils';
+import type { Span } from '@opentelemetry/api';
+import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { extendedRasterLayerMetadataSchema, ingestionNewExtendedJobParamsSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';

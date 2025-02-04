@@ -1,5 +1,6 @@
 import { Tracing } from '@map-colonies/telemetry';
-import { context, Span, trace } from '@opentelemetry/api';
+import type { Span } from '@opentelemetry/api';
+import { context, trace } from '@opentelemetry/api';
 import { IGNORED_INCOMING_TRACE_ROUTES, IGNORED_OUTGOING_TRACE_ROUTES, SERVICE_NAME } from './constants';
 
 /* eslint-disable @typescript-eslint/naming-convention */

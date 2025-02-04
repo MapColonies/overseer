@@ -1,10 +1,12 @@
-import { IConfig } from 'config';
-import { Logger } from '@map-colonies/js-logger';
-import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
+import type { IConfig } from 'config';
+import type { Logger } from '@map-colonies/js-logger';
+import { HttpClient } from '@map-colonies/mc-utils';
+import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { context, SpanStatusCode, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
-import { InsertGeoserverRequest, LayerNameFormats } from '../common/interfaces';
+import type { InsertGeoserverRequest, LayerNameFormats } from '../common/interfaces';
 import { PublishLayerError } from '../common/errors';
 
 @injectable()

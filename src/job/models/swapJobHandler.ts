@@ -1,11 +1,13 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
-import { context, trace, Tracer } from '@opentelemetry/api';
+import type { Logger } from '@map-colonies/js-logger';
+import { context, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
-import { Grid, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
-import {
+import type { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
+import type { IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import { Grid } from '../../common/interfaces';
+import type {
   IngestionInitTask,
   IngestionSwapUpdateFinalizeJob,
   IngestionSwapUpdateFinalizeTask,

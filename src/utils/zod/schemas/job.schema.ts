@@ -9,10 +9,9 @@ import {
   ingestionSwapUpdateTaskParamsSchema,
   ingestionUpdateFinalizeTaskParamsSchema,
   ingestionUpdateJobParamsSchema,
-  JobTypes,
   taskBlockDuplicationParamSchema,
-  TaskTypes,
 } from '@map-colonies/raster-shared';
+import type { JobTypes, TaskTypes } from '@map-colonies/raster-shared';
 import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
 import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from './jobParameters.schema';
 

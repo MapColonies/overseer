@@ -2,9 +2,9 @@ import express from 'express';
 import type { Registry } from 'prom-client';
 import { collectMetricsExpressMiddleware } from '@map-colonies/telemetry/prom-metrics';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
+import type { Logger } from '@map-colonies/js-logger';
 import { SERVICES } from './common/constants';
-import { IConfig } from './common/interfaces';
+import type { IConfig } from './common/interfaces';
 
 @injectable()
 export class ServerBuilder {

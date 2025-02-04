@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { Link } from '@map-colonies/mc-model-types';
 import { inject, injectable } from 'tsyringe';
-import { IConfig } from 'config';
+import type { IConfig } from 'config';
 import { compile } from 'handlebars';
 import { SERVICES } from '../common/constants';
 

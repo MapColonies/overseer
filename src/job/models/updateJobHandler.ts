@@ -1,8 +1,9 @@
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
+import type { Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { context, trace, Tracer } from '@opentelemetry/api';
-import { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
+import { context, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
+import type { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
 import {
   IngestionInitTask,
   IngestionUpdateFinalizeJob,
@@ -10,7 +11,8 @@ import {
   IngestionUpdateInitJob,
 } from '../../utils/zod/schemas/job.schema';
 import { CatalogClient } from '../../httpClients/catalogClient';
-import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import { Grid } from '../../common/interfaces';
 import { SeedMode, SERVICES } from '../../common/constants';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';

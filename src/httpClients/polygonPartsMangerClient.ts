@@ -1,7 +1,8 @@
-import { IConfig } from 'config';
-import { Logger } from '@map-colonies/js-logger';
-import { AggregationLayerMetadata } from '@map-colonies/raster-shared';
-import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
+import type { IConfig } from 'config';
+import type { Logger } from '@map-colonies/js-logger';
+import type { AggregationLayerMetadata } from '@map-colonies/raster-shared';
+import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
 

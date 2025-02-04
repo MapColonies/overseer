@@ -2,7 +2,7 @@ import { inject, singleton } from 'tsyringe';
 import { Counter, Gauge, Histogram, Registry } from 'prom-client';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { SERVICES } from '../../common/constants';
-import { IConfig, TaskProcessingTracker } from '../../common/interfaces';
+import type { IConfig, TaskProcessingTracker } from '../../common/interfaces';
 
 @singleton()
 export class TaskMetrics {

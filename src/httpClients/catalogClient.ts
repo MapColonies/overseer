@@ -1,18 +1,21 @@
-import { IConfig } from 'config';
-import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse } from '@map-colonies/mc-priority-queue';
-import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { IRasterCatalogUpsertRequestBody, LayerMetadata, Link } from '@map-colonies/mc-model-types';
+import type { IConfig } from 'config';
+import type { Logger } from '@map-colonies/js-logger';
+import type { IJobResponse } from '@map-colonies/mc-priority-queue';
+import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { HttpClient } from '@map-colonies/mc-utils';
+import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
+import { LayerMetadata, Link } from '@map-colonies/mc-model-types';
 import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
-import { IngestionJobTypes } from '../utils/configUtil';
+import type { IngestionJobTypes } from '../utils/configUtil';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
+import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
-import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
+import { LinkBuilder } from '../utils/linkBuilder';
+import { ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
 @injectable()
