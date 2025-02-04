@@ -1,6 +1,6 @@
 import { ZodError } from 'zod';
 import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { layerNameSchema } from '@map-colonies/raster-shared';
+import { rasterProductTypeSchema } from '@map-colonies/raster-shared';
 import type { LayerName } from '@map-colonies/raster-shared';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
@@ -12,10 +12,10 @@ export class JobHandler {
   public constructor(protected readonly logger: Logger, protected readonly queueClient: QueueClient) {}
 
   protected validateAndGenerateLayerName(job: IJobResponse<unknown, unknown>): LayerName {
-    const layerName = layerNameSchema.parse(job);
-    const { resourceId, productType } = layerName;
-    this.logger.debug({ msg: 'layer name validation passed', resourceId, productType });
-    return `${resourceId}-${productType}`;
+    const { resourceId, productType } = job;
+    const validProductType = rasterProductTypeSchema.parse(productType);
+    this.logger.debug({ msg: 'productType validation passed', resourceId, productType: validProductType });
+    return `${resourceId}-${validProductType}`;
   }
 
   protected async markFinalizeStepAsCompleted<T extends FinalizeTaskParams>(
