@@ -6,9 +6,9 @@ import type { Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { lookup as mimeLookup } from '@map-colonies/types';
 import type { TilesMimeFormat } from '@map-colonies/types';
-import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata } from '@map-colonies/raster-shared';
+import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata, LayerNameFormats } from '@map-colonies/raster-shared';
 import { Grid } from '../../common/interfaces';
-import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, LayerNameFormats } from '../../common/interfaces';
+import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../common/constants';
 import type { IngestionInitTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask, IngestionNewInitJob } from '../../utils/zod/schemas/job.schema';
@@ -102,9 +102,9 @@ export class NewJobHandler
         const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
         const layerName = this.validateAndGenerateLayerName(job);
         activeSpan?.addEvent('layerNames.valid', { layerName });
-        const nativeName = job.parameters.additionalParams.polygonPartsEntityName;
+        const polygonPartsEntityName = job.parameters.additionalParams.polygonPartsEntityName;
 
-        const layerNameFormats: LayerNameFormats = { layerName, nativeName };
+        const layerNameFormats: LayerNameFormats = { layerName, polygonPartsEntityName };
 
         if (!insertedToMapproxy) {
           logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });

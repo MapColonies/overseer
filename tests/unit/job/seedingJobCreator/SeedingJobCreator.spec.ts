@@ -7,7 +7,7 @@ import { SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig 
 import { multiPartData } from '../../mocks/partsMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { LayerCacheNotFoundError } from '../../../../src/common/errors';
-import { ingestionUpdateJob } from '../../mocks/jobsMockData';
+import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { SeedingJobCreatorTestContext, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
 
 describe('SeedingJobCreator', () => {
@@ -42,8 +42,8 @@ describe('SeedingJobCreator', () => {
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.CLEAN,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
+        layerName: 'layer-Orthophoto',
+        ingestionJob: ingestionUpdateFinalizeJob,
       };
 
       const seedTaskOptions: SeedTaskOptions = {
@@ -118,8 +118,8 @@ describe('SeedingJobCreator', () => {
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
+        layerName: 'layer-Orthophoto',
+        ingestionJob: ingestionUpdateFinalizeJob,
       };
 
       const seedTaskOptions: SeedTaskOptions = {
@@ -196,8 +196,8 @@ describe('SeedingJobCreator', () => {
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
+        layerName: 'layer-Orthophoto',
+        ingestionJob: ingestionUpdateFinalizeJob,
       };
 
       const seedTaskOptions: SeedTaskOptions = {
@@ -256,8 +256,8 @@ describe('SeedingJobCreator', () => {
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
+        layerName: 'layer-Orthophoto',
+        ingestionJob: ingestionUpdateFinalizeJob,
       };
 
       await seedingJobCreator.create(seedJobParams);
@@ -272,8 +272,8 @@ describe('SeedingJobCreator', () => {
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
+        layerName: 'layer-Orthophoto',
+        ingestionJob: ingestionUpdateFinalizeJob,
       };
 
       jest.spyOn(seedingJobCreator as unknown as { calculateGeometryByMode: jest.Func }, 'calculateGeometryByMode').mockReturnValue(undefined);

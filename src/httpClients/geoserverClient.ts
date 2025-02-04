@@ -1,12 +1,13 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
+import type { LayerNameFormats } from '@map-colonies/raster-shared';
 import { HttpClient } from '@map-colonies/mc-utils';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
-import type { InsertGeoserverRequest, LayerNameFormats } from '../common/interfaces';
+import type { InsertGeoserverRequest } from '../common/interfaces';
 import { PublishLayerError } from '../common/errors';
 
 @injectable()
@@ -31,13 +32,13 @@ export class GeoserverClient extends HttpClient {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${GeoserverClient.name}.${this.publish.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
-      const { nativeName, layerName } = layerNames;
-      activeSpan?.setAttributes({ nativeName, layerName });
+      const { polygonPartsEntityName, layerName } = layerNames;
+      activeSpan?.setAttributes({ polygonPartsEntityName, layerName });
 
       try {
         const url = `/featureTypes/${this.workspace}/${this.dataStore}`;
         const publishReq: InsertGeoserverRequest = {
-          nativeName,
+          nativeName: polygonPartsEntityName,
           name: layerName,
         };
 

@@ -5,7 +5,7 @@ import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { COMPLETED_PERCENTAGE } from '../../../../src/common/constants';
-import { ingestionUpdateJob } from '../../mocks/jobsMockData';
+import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
@@ -67,7 +67,7 @@ describe('updateJobHandler', () => {
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
       const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = structuredClone(ingestionUpdateJob);
+      const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
 
       catalogClientMock.update.mockResolvedValue(undefined);
@@ -87,7 +87,7 @@ describe('updateJobHandler', () => {
 
     it('should handle job finalize failure and reject the task', async () => {
       const { updateJobHandler, queueClientMock, catalogClientMock } = setupUpdateJobHandlerTest();
-      const job = structuredClone(ingestionUpdateJob);
+      const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
 
       const error = new Error('Test error');

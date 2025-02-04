@@ -1,10 +1,11 @@
 import { ZodError } from 'zod';
 import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { layerNameSchema } from '@map-colonies/raster-shared';
+import type { LayerName } from '@map-colonies/raster-shared';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
-import { layerNameSchema } from '../../utils/zod/schemas/jobParameters.schema';
-import type { FinalizeTaskParams, JobAndTaskTelemetry, LayerName } from '../../common/interfaces';
+import type { FinalizeTaskParams, JobAndTaskTelemetry } from '../../common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../common/constants';
 
 export class JobHandler {

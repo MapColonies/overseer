@@ -8,6 +8,7 @@ import type {
   IngestionUpdateFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
   TileOutputFormat,
+  LayerName,
 } from '@map-colonies/raster-shared';
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
@@ -186,14 +187,6 @@ export interface MergeTilesMetadata {
 }
 
 //#endregion task
-
-//#region finalize task
-export type LayerName = `${string}-${string}`;
-export interface LayerNameFormats {
-  nativeName: string;
-  layerName: LayerName;
-}
-//#endregion finalize task
 
 //#region mapproxyApi
 export interface PublishMapLayerRequest {

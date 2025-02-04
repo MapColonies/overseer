@@ -1,18 +1,20 @@
-import { IngestionNewJobParams, IngestionSwapUpdateJobParams, Transparency, TileOutputFormat, RasterProductTypes } from '@map-colonies/raster-shared';
-import { IJobResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { Transparency, TileOutputFormat, RasterProductTypes } from '@map-colonies/raster-shared';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import {
-  IngestionNewExtendedJobParams,
-  Grid,
-  IngestionUpdateFinalizeJobParams,
-  IngestionSwapUpdateFinalizeJobParams,
-} from '../../../src/common/interfaces';
+  IngestionNewFinalizeJob,
+  IngestionNewInitJob,
+  IngestionSwapUpdateFinalizeJob,
+  IngestionUpdateFinalizeJob,
+  IngestionUpdateInitJob,
+} from '../../../src/utils/zod/schemas/job.schema';
+import { Grid } from '../../../src/common/interfaces';
 import { partsData } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
-export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
+export const ingestionNewJob: IngestionNewInitJob = {
   id: 'de57d743-3155-4a28-86c8-9c181faabd94',
-  resourceId: 'some-product-id',
+  resourceId: 'some_product',
   version: '1.0',
   type: 'Ingestion_New',
   description: '',
@@ -63,7 +65,7 @@ export const ingestionNewJob: IJobResponse<IngestionNewJobParams, unknown> = {
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionNewJobExtended: IJobResponse<IngestionNewExtendedJobParams, unknown> = {
+export const ingestionNewJobExtended: IngestionNewFinalizeJob = {
   ...ingestionNewJob,
   parameters: {
     ...ingestionNewJob.parameters,
@@ -83,9 +85,9 @@ export const ingestionNewJobExtended: IJobResponse<IngestionNewExtendedJobParams
   },
 };
 
-export const ingestionUpdateJob: IJobResponse<IngestionUpdateFinalizeJobParams, unknown> = {
+export const ingestionUpdateJob: IngestionUpdateInitJob = {
   id: 'd027b3aa-272b-4dc9-91d7-ba8343af5ed1',
-  resourceId: 'another-product-id',
+  resourceId: 'some_product',
   version: '1.0',
   type: 'Ingestion_Update',
   description: '',
@@ -102,7 +104,6 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateFinalizeJobParams, 
       jobTrackerServiceURL: 'http://job-tracker-service',
       displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
       tileOutputFormat: TileOutputFormat.PNG,
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       footprint: {
         type: 'Polygon',
         coordinates: [
@@ -142,9 +143,9 @@ export const ingestionUpdateJob: IJobResponse<IngestionUpdateFinalizeJobParams, 
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionSwapUpdateJob: IJobResponse<IngestionSwapUpdateJobParams, unknown> = {
+export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   id: 'c023b3ba-272b-4dc9-92d7-ba8343af5ed9',
-  resourceId: 'another-product-id',
+  resourceId: 'some_product',
   version: '1.0',
   type: 'Ingestion_Swap_Update',
   description: '',
@@ -158,6 +159,7 @@ export const ingestionSwapUpdateJob: IJobResponse<IngestionSwapUpdateJobParams, 
       originDirectory: 'tests',
     },
     additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       jobTrackerServiceURL: 'http://job-tracker-service',
       tileOutputFormat: TileOutputFormat.PNG,
       footprint: {
@@ -197,7 +199,18 @@ export const ingestionSwapUpdateJob: IJobResponse<IngestionSwapUpdateJobParams, 
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const ingestionSwapUpdateFinalizeJob: IJobResponse<IngestionSwapUpdateFinalizeJobParams, unknown> = {
+export const ingestionUpdateFinalizeJob: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
+};
+
+export const ingestionSwapUpdateFinalizeJob: IngestionSwapUpdateFinalizeJob = {
   ...ingestionSwapUpdateJob,
   parameters: {
     ...ingestionSwapUpdateJob.parameters,

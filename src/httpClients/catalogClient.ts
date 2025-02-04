@@ -1,6 +1,7 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import type { IJobResponse } from '@map-colonies/mc-priority-queue';
+import type { LayerName } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
@@ -11,7 +12,7 @@ import { inject, injectable } from 'tsyringe';
 import type { IngestionJobTypes } from '../utils/configUtil';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName } from '../common/interfaces';
+import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder } from '../utils/linkBuilder';

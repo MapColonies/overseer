@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
+import { LayerName, RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { registerDefaultConfig } from '../../mocks/configMock';
-import { Grid, MergeTaskParameters, SeedJobParams, LayerName } from '../../../../src/common/interfaces';
+import { Grid, MergeTaskParameters, SeedJobParams } from '../../../../src/common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE, SeedMode } from '../../../../src/common/constants';
 import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
@@ -81,7 +81,8 @@ describe('swapJobHandler', () => {
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
       const { displayPath, tileOutputFormat } = job.parameters.additionalParams;
-      const layerName: LayerName = `${job.resourceId}-${job.productType}`;
+      const productType = job.productType as RasterProductTypes;
+      const layerName: LayerName = `${job.resourceId}-${productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
         mode: SeedMode.CLEAN,

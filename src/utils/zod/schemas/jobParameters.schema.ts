@@ -34,11 +34,6 @@ export const ingestionNewExtendedJobParamsSchema = layerDataSchema.extend({
   additionalParams: newAdditionalParamsSchema.merge(polygonPartsEntityNameSchema),
 });
 
-export const layerNameSchema = z.object({
-  resourceId: z.string(),
-  productType: z.string(),
-});
-
 export const internalIdSchema = z.object({
   internalId: z.string().uuid(),
 });

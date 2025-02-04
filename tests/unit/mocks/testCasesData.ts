@@ -5,6 +5,7 @@ import {
   ingestionNewJobExtended,
   ingestionSwapUpdateFinalizeJob,
   ingestionSwapUpdateJob,
+  ingestionUpdateFinalizeJob,
   ingestionUpdateJob,
 } from '../mocks/jobsMockData';
 import {
@@ -51,9 +52,9 @@ export const finalizeTestCases = [
     task: finalizeTaskForIngestionNew,
   },
   {
-    jobType: ingestionUpdateJob.type,
+    jobType: ingestionUpdateFinalizeJob.type,
     taskType: finalizeTaskForIngestionUpdate.type,
-    job: ingestionUpdateJob,
+    job: ingestionUpdateFinalizeJob,
     task: finalizeTaskForIngestionUpdate,
   },
   {
