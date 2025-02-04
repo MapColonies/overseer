@@ -6,7 +6,7 @@ import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import { Grid, MergeTaskParameters, MergeTilesTaskParams } from '../../../../src/common/interfaces';
+import { Grid, MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
 import { createTaskGenerator, MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
@@ -82,6 +82,40 @@ describe('tileMergeTaskManager', () => {
 
       expect(result.extent).toEqual(bbox(result.footprint.geometry));
       expect(result.footprint).not.toBeNull();
+    });
+  });
+
+  describe('createBufferedFeature', () => {
+    it('should return original feature when buffer out of bounds', () => {
+      const { tileMergeTaskManager } = testContext;
+
+      const partsData: PPFeatureCollection = {
+        features: [
+          {
+            type: 'Feature',
+            properties: {
+              maxZoom: 1,
+            },
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [-180, -90],
+                  [-180, 90],
+                  [180, 90],
+                  [180, -90],
+                  [-180, -90],
+                ],
+              ],
+            },
+          },
+        ],
+        type: 'FeatureCollection',
+      };
+
+      const result = tileMergeTaskManager['createBufferedFeature'](partsData.features[0]);
+
+      expect(result).toEqual(partsData.features[0]);
     });
   });
 
