@@ -1,6 +1,6 @@
 import { Transparency, TileOutputFormat, RasterProductTypes } from '@map-colonies/raster-shared';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import {
+import type {
   IngestionNewFinalizeJob,
   IngestionNewInitJob,
   IngestionSwapUpdateFinalizeJob,

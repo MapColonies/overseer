@@ -6,8 +6,9 @@ import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import { Grid, MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
-import { createTaskGenerator, MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
+import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
+import { Grid } from '../../../../src/common/interfaces';
+import { createTaskGenerator, type MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
   let testContext: MergeTilesTaskBuilderContext;

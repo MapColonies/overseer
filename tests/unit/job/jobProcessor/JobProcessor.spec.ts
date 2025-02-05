@@ -1,6 +1,6 @@
 import nock from 'nock';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { jobTaskSchemaMap, OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
+import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { IJobHandler, IngestionConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';

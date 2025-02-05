@@ -11,7 +11,7 @@ import type { InputFiles, PolygonPart } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
-import { SERVICES, TilesStorageProvider } from '../../common/constants';
+import { SERVICES, type TilesStorageProvider } from '../../common/constants';
 import { fileExtensionExtractor } from '../../utils/fileutils';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';

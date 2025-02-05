@@ -5,7 +5,7 @@ import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { ZodError } from 'zod';
 import { getAvailableJobTypes } from '../../utils/configUtil';
-import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
+import { jobTaskSchemaMap, type OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { SERVICES } from '../../common/constants';
 import { IConfig, IngestionConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';

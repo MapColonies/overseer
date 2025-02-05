@@ -14,8 +14,12 @@ import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'ge
 import type { ITileRange } from '@map-colonies/mc-utils';
 import type { Span } from '@opentelemetry/api';
 import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
-import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from '../utils/zod/schemas/jobParameters.schema';
-import { extendedRasterLayerMetadataSchema, ingestionNewExtendedJobParamsSchema } from '../utils/zod/schemas/jobParameters.schema';
+import {
+  ingestionSwapUpdateFinalizeJobParamsSchema,
+  ingestionUpdateFinalizeJobParamsSchema,
+  extendedRasterLayerMetadataSchema,
+  ingestionNewExtendedJobParamsSchema,
+} from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces

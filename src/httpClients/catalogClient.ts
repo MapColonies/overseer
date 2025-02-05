@@ -15,8 +15,7 @@ import { INJECTION_VALUES, SERVICES } from '../common/constants';
 import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
-import { LinkBuilder } from '../utils/linkBuilder';
-import { ILinkBuilderData } from '../utils/linkBuilder';
+import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
 @injectable()

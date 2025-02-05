@@ -1,7 +1,7 @@
 import nock from 'nock';
 import type { LayerName } from '@map-colonies/raster-shared';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
-import { IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
+import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
 import { PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
 import { ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogClientSetup';

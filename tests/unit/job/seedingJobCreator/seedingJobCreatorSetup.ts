@@ -4,6 +4,9 @@ import { trace } from '@opentelemetry/api';
 import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
+import { SeedJobParams } from '../../../../src/common/interfaces';
+import { SeedMode } from '../../../../src/common/constants';
+import { ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 
 export interface SeedingJobCreatorTestContext {
   seedingJobCreator: SeedingJobCreator;
@@ -34,4 +37,10 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
     mapproxyClientMock,
     configMock,
   };
+};
+
+export const seedJobParameters: SeedJobParams = {
+  mode: SeedMode.SEED,
+  layerName: 'layer-Orthophoto',
+  ingestionJob: ingestionUpdateFinalizeJob,
 };

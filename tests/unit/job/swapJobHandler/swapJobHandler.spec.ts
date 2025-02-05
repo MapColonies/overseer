@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { LayerName, RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
+import { type LayerName, type RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, SeedJobParams } from '../../../../src/common/interfaces';
