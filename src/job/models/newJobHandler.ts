@@ -1,15 +1,17 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
-import { context, trace, Tracer } from '@opentelemetry/api';
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { TilesMimeFormat, lookup as mimeLookup } from '@map-colonies/types';
-import { IngestionNewFinalizeTaskParams, IngestionNewJobParams, NewRasterLayerMetadata } from '@map-colonies/mc-model-types';
+import type { Logger } from '@map-colonies/js-logger';
+import { context, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { newAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
-import { Grid, IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IngestionNewExtendedJobParams } from '../../common/interfaces';
+import { lookup as mimeLookup } from '@map-colonies/types';
+import type { TilesMimeFormat } from '@map-colonies/types';
+import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata, LayerNameFormats } from '@map-colonies/raster-shared';
+import { Grid } from '../../common/interfaces';
+import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../common/constants';
+import type { IngestionInitTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask, IngestionNewInitJob } from '../../utils/zod/schemas/job.schema';
 import { getTileOutputFormat } from '../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
@@ -21,7 +23,7 @@ import { JobHandler } from './jobHandler';
 /* eslint-disable @typescript-eslint/brace-style */
 export class NewJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionNewJobParams, unknown, IngestionNewExtendedJobParams, IngestionNewFinalizeTaskParams>
+  implements IJobHandler<IngestionNewInitJob, IngestionInitTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -37,17 +39,16 @@ export class NewJobHandler
     super(logger, queueClient);
   }
 
-  public async handleJobInit(job: IJobResponse<IngestionNewJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
+  public async handleJobInit(job: IngestionNewInitJob, task: IngestionInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });
       const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
       try {
-        logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
+        logger.info({ msg: `handling ${job.type} job with ${job.type} task` });
 
         const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
 
-        const validAdditionalParams = this.validateAdditionalParams(additionalParams, newAdditionalParamsSchema);
         activeSpan?.addEvent('validateAdditionalParams.valid');
 
         const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
@@ -72,7 +73,7 @@ export class NewJobHandler
         logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
         await this.queueClient.jobManagerClient.updateJob(job.id, {
           internalId: extendedLayerMetadata.catalogId,
-          parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams: validAdditionalParams },
+          parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams },
         });
         activeSpan?.addEvent('updateJob.completed', { ...extendedLayerMetadata });
 
@@ -85,10 +86,7 @@ export class NewJobHandler
     });
   }
 
-  public async handleJobFinalize(
-    job: IJobResponse<IngestionNewExtendedJobParams, unknown>,
-    task: ITaskResponse<IngestionNewFinalizeTaskParams>
-  ): Promise<void> {
+  public async handleJobFinalize(job: IngestionNewFinalizeJob, task: IngestionNewFinalizeTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobFinalize.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -97,16 +95,18 @@ export class NewJobHandler
 
       try {
         logger.info({ msg: `handling ${job.type} job with ${task.type}` });
-
         let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
         activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
+
         const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
         const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
-        const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
-        activeSpan?.addEvent('layerNameFormats.valid', { ...layerNameFormats });
+        const layerName = this.validateAndGenerateLayerName(job);
+        activeSpan?.addEvent('layerNames.valid', { layerName });
+        const polygonPartsEntityName = job.parameters.additionalParams.polygonPartsEntityName;
+
+        const layerNameFormats: LayerNameFormats = { layerName, polygonPartsEntityName };
 
         if (!insertedToMapproxy) {
-          const layerName = layerNameFormats.layerName;
           logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
           await this.mapproxyClient.publish(layerName, layerRelativePath, tileOutputFormat);
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToMapproxy');

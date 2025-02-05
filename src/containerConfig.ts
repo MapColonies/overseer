@@ -2,12 +2,14 @@
 import config from 'config';
 import { getOtelMixin } from '@map-colonies/telemetry';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IHttpRetryConfig, TileRanger } from '@map-colonies/mc-utils';
+import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { TileRanger } from '@map-colonies/mc-utils';
 import { trace } from '@opentelemetry/api';
 import { Registry } from 'prom-client';
 import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
-import { DependencyContainer } from 'tsyringe/dist/typings/types';
-import jsLogger, { Logger, LoggerOptions } from '@map-colonies/js-logger';
+import type { DependencyContainer } from 'tsyringe/dist/typings/types';
+import type { Logger, LoggerOptions } from '@map-colonies/js-logger';
+import jsLogger from '@map-colonies/js-logger';
 import { INJECTION_VALUES, SERVICES, SERVICE_NAME, SERVICE_VERSION } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';

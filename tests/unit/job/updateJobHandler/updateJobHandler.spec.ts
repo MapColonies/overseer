@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { ZodError } from 'zod';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
+import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
-import { updateAdditionalParamsSchema } from '../../../../src/utils/zod/schemas/jobParametersSchema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { COMPLETED_PERCENTAGE } from '../../../../src/common/constants';
-import { ingestionUpdateJob } from '../../mocks/jobsMockData';
+import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
@@ -64,26 +63,11 @@ describe('updateJobHandler', () => {
 
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
-
-    it('should handle job init failure with ZodError and Failed the job', async () => {
-      const { updateJobHandler, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = structuredClone(ingestionUpdateJob);
-      job.parameters.additionalParams = { wrongField: 'wrongValue' };
-      const task = initTaskForIngestionUpdate;
-      const validAdditionalParamsSpy = jest.spyOn(updateAdditionalParamsSchema, 'parse');
-
-      await updateJobHandler.handleJobInit(job, task);
-
-      expect(validAdditionalParamsSpy).toThrow(ZodError);
-      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: expect.any(String) });
-    });
   });
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
       const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
-      const job = structuredClone(ingestionUpdateJob);
+      const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
 
       catalogClientMock.update.mockResolvedValue(undefined);
@@ -103,7 +87,7 @@ describe('updateJobHandler', () => {
 
     it('should handle job finalize failure and reject the task', async () => {
       const { updateJobHandler, queueClientMock, catalogClientMock } = setupUpdateJobHandlerTest();
-      const job = structuredClone(ingestionUpdateJob);
+      const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
 
       const error = new Error('Test error');

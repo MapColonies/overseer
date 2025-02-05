@@ -1,6 +1,6 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
 import { trace } from '@opentelemetry/api';

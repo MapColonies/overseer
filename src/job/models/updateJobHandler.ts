@@ -1,13 +1,20 @@
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
-import { TaskHandler as QueueClient, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { context, trace, Tracer } from '@opentelemetry/api';
-import { IngestionUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
+import type { Logger } from '@map-colonies/js-logger';
+import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { context, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
+import type { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
+import {
+  IngestionInitTask,
+  IngestionUpdateFinalizeJob,
+  IngestionUpdateFinalizeTask,
+  IngestionUpdateInitJob,
+} from '../../utils/zod/schemas/job.schema';
 import { CatalogClient } from '../../httpClients/catalogClient';
-import { Grid, IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import { Grid } from '../../common/interfaces';
 import { SeedMode, SERVICES } from '../../common/constants';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { JobHandler } from './jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
@@ -16,7 +23,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateJobParams, unknown, IngestionUpdateJobParams, IngestionUpdateFinalizeTaskParams>
+  implements IJobHandler<IngestionUpdateInitJob, IngestionInitTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -32,7 +39,7 @@ export class UpdateJobHandler
     super(logger, queueClient);
   }
 
-  public async handleJobInit(job: IJobResponse<IngestionUpdateJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
+  public async handleJobInit(job: IngestionUpdateInitJob, task: IngestionInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${UpdateJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -40,20 +47,17 @@ export class UpdateJobHandler
       const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
       try {
-        logger.info({ msg: `handling ${job.type} job with "init" task` });
         const { inputFiles, partsData, additionalParams, metadata } = job.parameters;
 
         activeSpan?.setAttributes({ ...metadata });
-
-        const validAdditionalParams = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
 
         activeSpan?.addEvent('validateAdditionalParams.success');
 
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
           taskMetadata: {
-            layerRelativePath: `${job.internalId}/${validAdditionalParams.displayPath}`,
-            tileOutputFormat: validAdditionalParams.tileOutputFormat,
+            layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
+            tileOutputFormat: additionalParams.tileOutputFormat,
             isNewTarget: false,
             grid: Grid.TWO_ON_ONE,
           },
@@ -74,10 +78,7 @@ export class UpdateJobHandler
     });
   }
 
-  public async handleJobFinalize(
-    job: IJobResponse<IngestionUpdateJobParams, unknown>,
-    task: ITaskResponse<IngestionUpdateFinalizeTaskParams>
-  ): Promise<void> {
+  public async handleJobFinalize(job: IngestionUpdateFinalizeJob, task: IngestionUpdateFinalizeTask): Promise<void> {
     await context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${UpdateJobHandler.name}.${this.handleJobFinalize.name}`)),
       async () => {
@@ -91,7 +92,7 @@ export class UpdateJobHandler
           activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
 
           const { updatedInCatalog } = finalizeTaskParams;
-          const { layerName } = this.validateAndGenerateLayerNameFormats(job);
+          const layerName = this.validateAndGenerateLayerName(job);
           activeSpan?.addEvent('layerNameFormat.valid', { layerName });
 
           if (!updatedInCatalog) {

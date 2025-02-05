@@ -1,7 +1,7 @@
 import nock from 'nock';
 import jsLogger from '@map-colonies/js-logger';
 import { trace, Tracer } from '@opentelemetry/api';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
+import { LayerName, TileOutputFormat } from '@map-colonies/raster-shared';
 import { MapproxyApiClient } from '../../../src/httpClients/mapproxyClient';
 import { configMock, init as InitConfig, setValue } from '../mocks/configMock';
 import {
@@ -120,7 +120,7 @@ describe('mapproxyClient', () => {
     it('should get cache name from mapproxy', async () => {
       mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
-      const layerName = 'test-layer';
+      const layerName: LayerName = 'test-Orthophoto';
       const cacheType = LayerCacheType.REDIS;
       const cacheName = 'cacheName';
 
@@ -138,7 +138,7 @@ describe('mapproxyClient', () => {
     it('should throw an error for unsupported layer cache type', async () => {
       mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
-      const layerName = 'test-layer';
+      const layerName: LayerName = 'test-Orthophoto';
       const cacheType = LayerCacheType.FS;
       const cacheName = 'cacheName';
 
@@ -156,7 +156,7 @@ describe('mapproxyClient', () => {
 
       mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
-      const layerName = 'not-found-layer';
+      const layerName: LayerName = 'not_found-Orthophoto';
       const cacheType = LayerCacheType.REDIS;
 
       nock(baseUrl).get(`/layer/${layerName}/${cacheType}`).reply(404);

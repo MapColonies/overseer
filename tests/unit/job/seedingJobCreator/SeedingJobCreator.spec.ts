@@ -7,8 +7,8 @@ import { SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig 
 import { multiPartData } from '../../mocks/partsMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { LayerCacheNotFoundError } from '../../../../src/common/errors';
-import { ingestionUpdateJob } from '../../mocks/jobsMockData';
-import { SeedingJobCreatorTestContext, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
+import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
+import { SeedingJobCreatorTestContext, seedJobParameters, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
 
 describe('SeedingJobCreator', () => {
   let seedingJobCreatorContext: SeedingJobCreatorTestContext;
@@ -42,8 +42,8 @@ describe('SeedingJobCreator', () => {
 
       const seedJobParams: SeedJobParams = {
         mode: SeedMode.CLEAN,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
+        layerName: 'layer-Orthophoto',
+        ingestionJob: ingestionUpdateFinalizeJob,
       };
 
       const seedTaskOptions: SeedTaskOptions = {
@@ -117,9 +117,8 @@ describe('SeedingJobCreator', () => {
       } as GeoJSON.Polygon;
 
       const seedJobParams: SeedJobParams = {
+        ...seedJobParameters,
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
       };
 
       const seedTaskOptions: SeedTaskOptions = {
@@ -195,9 +194,8 @@ describe('SeedingJobCreator', () => {
       ingestionUpdateJob.parameters.partsData = multiPartData;
 
       const seedJobParams: SeedJobParams = {
+        ...seedJobParameters,
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
       };
 
       const seedTaskOptions: SeedTaskOptions = {
@@ -255,9 +253,8 @@ describe('SeedingJobCreator', () => {
       mapproxyClientMock.getCacheName.mockRejectedValue(new LayerCacheNotFoundError(layerCacheName, LayerCacheType.REDIS));
 
       const seedJobParams: SeedJobParams = {
+        ...seedJobParameters,
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
       };
 
       await seedingJobCreator.create(seedJobParams);
@@ -271,9 +268,8 @@ describe('SeedingJobCreator', () => {
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
 
       const seedJobParams: SeedJobParams = {
+        ...seedJobParameters,
         mode: SeedMode.SEED,
-        layerName: 'layer-Name',
-        ingestionJob: ingestionUpdateJob,
       };
 
       jest.spyOn(seedingJobCreator as unknown as { calculateGeometryByMode: jest.Func }, 'calculateGeometryByMode').mockReturnValue(undefined);

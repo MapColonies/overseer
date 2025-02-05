@@ -1,10 +1,10 @@
 import nock from 'nock';
 import jsLogger from '@map-colonies/js-logger';
+import type { LayerNameFormats } from '@map-colonies/raster-shared';
 import { trace } from '@opentelemetry/api';
 import { GeoserverClient } from '../../../src/httpClients/geoserverClient';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError } from '../../../src/common/errors';
-import { LayerNameFormats } from '../../../src/common/interfaces';
 
 describe('GeoserverClient', () => {
   let geoServerClient: GeoserverClient;
@@ -24,8 +24,8 @@ describe('GeoserverClient', () => {
       const workspace = configMock.get<string>('geoserver.workspace');
       const dataStore = configMock.get<string>('geoserver.dataStore');
       const layersName: LayerNameFormats = {
-        layerName: 'test-layer',
-        nativeName: 'test_layer',
+        layerName: 'test-Orthophoto',
+        polygonPartsEntityName: 'test_orthophoto',
       };
 
       nock(baseUrl).post(`/featureTypes/${workspace}/${dataStore}`).reply(201);
@@ -42,8 +42,8 @@ describe('GeoserverClient', () => {
     const workspace = configMock.get<string>('geoserver.workspace');
     const dataStore = configMock.get<string>('geoserver.dataStore');
     const layersName: LayerNameFormats = {
-      layerName: 'error-Test-Layer',
-      nativeName: 'error_test_layer',
+      layerName: 'error_test-Orthophoto',
+      polygonPartsEntityName: 'error_test_orthophoto',
     };
 
     nock(baseUrl).post(`/featureTypes/${workspace}/${dataStore}`).reply(500);

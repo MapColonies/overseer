@@ -1,19 +1,27 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { ingestionNewJob, ingestionUpdateJob } from '../mocks/jobsMockData';
+import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
+import {
+  ingestionNewJob,
+  ingestionNewJobExtended,
+  ingestionSwapUpdateFinalizeJob,
+  ingestionSwapUpdateJob,
+  ingestionUpdateFinalizeJob,
+  ingestionUpdateJob,
+} from '../mocks/jobsMockData';
 import {
   finalizeTaskForIngestionNew,
   finalizeTaskForIngestionSwapUpdate,
   finalizeTaskForIngestionUpdate,
   initTaskForIngestionNew,
+  initTaskForIngestionSwapUpdate,
   initTaskForIngestionUpdate,
-  IPollingTaskParameters,
 } from '../mocks/tasksMockData';
 
 interface IngestionTestCase {
   jobType: string;
   taskType: string;
   job: IJobResponse<unknown, unknown>;
-  task: ITaskResponse<IPollingTaskParameters>;
+  task: ITaskResponse<TaskBlockDuplicationParam>;
 }
 
 export const initTestCases: IngestionTestCase[] = [
@@ -30,29 +38,29 @@ export const initTestCases: IngestionTestCase[] = [
     task: initTaskForIngestionUpdate,
   },
   {
-    jobType: ingestionUpdateJob.type,
-    taskType: initTaskForIngestionNew.type,
-    job: ingestionUpdateJob,
-    task: initTaskForIngestionUpdate,
+    jobType: ingestionSwapUpdateJob.type,
+    taskType: initTaskForIngestionSwapUpdate.type,
+    job: ingestionSwapUpdateJob,
+    task: initTaskForIngestionSwapUpdate,
   },
 ];
 export const finalizeTestCases = [
   {
     jobType: ingestionNewJob.type,
     taskType: finalizeTaskForIngestionNew.type,
-    job: ingestionNewJob,
+    job: ingestionNewJobExtended,
     task: finalizeTaskForIngestionNew,
   },
   {
-    jobType: ingestionUpdateJob.type,
+    jobType: ingestionUpdateFinalizeJob.type,
     taskType: finalizeTaskForIngestionUpdate.type,
-    job: ingestionUpdateJob,
+    job: ingestionUpdateFinalizeJob,
     task: finalizeTaskForIngestionUpdate,
   },
   {
-    jobType: ingestionUpdateJob.type,
+    jobType: ingestionSwapUpdateFinalizeJob.type,
     taskType: finalizeTaskForIngestionSwapUpdate.type,
-    job: ingestionUpdateJob,
+    job: ingestionSwapUpdateFinalizeJob,
     task: finalizeTaskForIngestionSwapUpdate,
   },
 ];

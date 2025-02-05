@@ -3,7 +3,9 @@ import { Logger } from '@map-colonies/js-logger';
 import { SpanStatusCode, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { ZodError } from 'zod';
 import { getAvailableJobTypes } from '../../utils/configUtil';
+import { jobTaskSchemaMap, type OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { SERVICES } from '../../common/constants';
 import { IConfig, IngestionConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
@@ -50,13 +52,18 @@ export class JobProcessor {
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
+      this.validateTaskAndJob(jobAndTask);
 
       await this.processJob(jobAndTask);
     } catch (error) {
       if (error instanceof Error && jobAndTask) {
+        const isRecoverable = !(error instanceof ZodError);
         const { job, task } = jobAndTask;
         this.logger.error({ msg: 'rejecting task', error, jobId: job.id, taskId: task.id });
-        await this.queueClient.reject(job.id, task.id, true, error.message);
+        await this.queueClient.reject(job.id, task.id, isRecoverable, error.message);
+        if (!isRecoverable) {
+          await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: error.message });
+        }
       }
       this.logger.debug({ msg: 'waiting for next dequeue', dequeueIntervalMs: this.dequeueIntervalMs });
       await setTimeoutPromise(this.dequeueIntervalMs);
@@ -157,5 +164,26 @@ export class JobProcessor {
     }
     logger.info({ msg: `dequeued task ${task.id} successfully` });
     return { task, shouldSkipTask: false };
+  }
+  private validateTaskAndJob(jobAndTask: JobAndTaskResponse): void {
+    const { job, task } = jobAndTask;
+    const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
+    const validationKey = `${job.type}_${task.type}` as OperationValidationKey;
+    const validationSchemas = jobTaskSchemaMap[validationKey];
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (validationSchemas === undefined) {
+      throw new Error(`no validation schema found for job type ${job.type} and task type ${task.type}`);
+    }
+    const { jobSchema, taskSchema } = validationSchemas;
+
+    logger.info({ msg: 'validating job and task', jobSchema: jobSchema.description, taskSchema: taskSchema.description });
+
+    jobSchema.parse(job);
+
+    logger.info({ msg: 'job validated successfully' });
+
+    taskSchema.parse(task);
+    logger.info({ msg: 'task validated successfully' });
   }
 }

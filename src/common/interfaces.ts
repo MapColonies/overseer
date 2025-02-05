@@ -1,20 +1,25 @@
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import {
+import { z } from 'zod';
+import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import type { LayerMetadata } from '@map-colonies/mc-model-types';
+import type {
   InputFiles,
-  NewRasterLayerMetadata,
   PolygonPart,
-  TileOutputFormat,
-  LayerData,
-  LayerMetadata,
   IngestionNewFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
-  IngestionUpdateJobParams,
-} from '@map-colonies/mc-model-types';
-import { TilesMimeFormat } from '@map-colonies/types';
-import { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
-import { ITileRange } from '@map-colonies/mc-utils';
-import { Span } from '@opentelemetry/api';
+  TileOutputFormat,
+  LayerName,
+} from '@map-colonies/raster-shared';
+import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
+import type { ITileRange } from '@map-colonies/mc-utils';
+import type { Span } from '@opentelemetry/api';
+import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
+import {
+  ingestionSwapUpdateFinalizeJobParamsSchema,
+  ingestionUpdateFinalizeJobParamsSchema,
+  extendedRasterLayerMetadataSchema,
+  ingestionNewExtendedJobParamsSchema,
+} from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
 //#region config interfaces
@@ -74,9 +79,9 @@ export interface TilesSeedingTaskConfig {
 //#endregion config
 
 //#region job/task interfaces
-export interface IJobHandler<TInitJobParams = unknown, TInitTaskParams = unknown, TFinalizeJobParams = unknown, TFinalizeTaskParam = unknown> {
-  handleJobInit: (job: IJobResponse<TInitJobParams, TInitTaskParams>, task: ITaskResponse<TInitTaskParams>) => Promise<void>;
-  handleJobFinalize: (job: IJobResponse<TFinalizeJobParams, TFinalizeTaskParam>, task: ITaskResponse<TFinalizeTaskParam>) => Promise<void>;
+export interface IJobHandler<TInitJob = unknown, TInitTask = unknown, TFinalizeJob = unknown, TFinalizeTask = unknown> {
+  handleJobInit: (job: TInitJob, task: TInitTask) => Promise<void>;
+  handleJobFinalize: (job: TFinalizeJob, task: TFinalizeTask) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {
@@ -86,16 +91,13 @@ export interface JobAndTaskResponse {
 
 export type TaskResponse<T> = { task: ITaskResponse<T>; shouldSkipTask: false } | { task: null; shouldSkipTask: true };
 
-export interface ExtendedRasterLayerMetadata extends NewRasterLayerMetadata {
-  catalogId: string;
-  displayPath: string;
-  layerRelativePath: string;
-  tileOutputFormat: TileOutputFormat;
-  tileMimeType: TilesMimeFormat | undefined;
-  grid: Grid;
-}
+export type ExtendedRasterLayerMetadata = z.infer<typeof extendedRasterLayerMetadataSchema>;
 
-export type IngestionNewExtendedJobParams = { metadata: ExtendedRasterLayerMetadata; additionalParams: Record<string, unknown> } & LayerData;
+export type IngestionUpdateFinalizeJobParams = z.infer<typeof ingestionUpdateFinalizeJobParamsSchema>;
+
+export type IngestionSwapUpdateFinalizeJobParams = z.infer<typeof ingestionSwapUpdateFinalizeJobParamsSchema>;
+
+export type IngestionNewExtendedJobParams = z.infer<typeof ingestionNewExtendedJobParamsSchema>;
 
 export type FinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
 
@@ -190,16 +192,6 @@ export interface MergeTilesMetadata {
 
 //#endregion task
 
-//#region finalize task
-export type NativeName = `${string}_${string}`;
-export type LayerName = `${string}-${string}`;
-
-export interface LayerNameFormats {
-  nativeName: NativeName;
-  layerName: LayerName;
-}
-//#endregion finalize task
-
 //#region mapproxyApi
 export interface PublishMapLayerRequest {
   name: string;
@@ -222,7 +214,7 @@ export interface GetMapproxyCacheResponse {
 //#region geoserverApi
 export interface InsertGeoserverRequest {
   name: LayerName;
-  nativeName: NativeName;
+  nativeName: string;
 }
 //#endregion geoserverApi
 
@@ -259,7 +251,7 @@ export interface CatalogUpdateAdditionalParams {
 export interface SeedJobParams {
   mode: SeedMode;
   layerName: LayerName;
-  ingestionJob: IJobResponse<IngestionUpdateJobParams, unknown>;
+  ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
 }
 export interface SeedTaskOptions {
   mode: SeedMode;

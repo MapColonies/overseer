@@ -1,5 +1,6 @@
 import nock from 'nock';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { IJobHandler, IngestionConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
@@ -57,6 +58,12 @@ describe('JobProcessor', () => {
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
 
+      const validationKey = `${job.type}_${task.type}` as OperationValidationKey;
+      const { jobSchema, taskSchema } = jobTaskSchemaMap[validationKey];
+
+      const jobSchemaSpy = jest.spyOn(jobSchema, 'parse');
+      const taskSchemaSpy = jest.spyOn(taskSchema, 'parse');
+
       const mockHandler: jest.Mocked<IJobHandler> = {
         handleJobInit: jest.fn().mockResolvedValue(undefined),
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
@@ -74,6 +81,10 @@ describe('JobProcessor', () => {
 
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
+      expect(() => jobSchema.parse(job)).not.toThrow();
+      expect(() => taskSchema.parse(task)).not.toThrow();
+      expect(jobSchemaSpy).toHaveBeenCalledWith(job);
+      expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
       expect(mockHandler.handleJobInit).toHaveBeenCalledWith(job, task);
     });
@@ -83,6 +94,12 @@ describe('JobProcessor', () => {
       const { jobProcessor, mockDequeue, mockGetJob, mockJobHandlerFactory, configMock, mockUpdateJob } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
 
+      const validationKey = `${job.type}_${task.type}` as OperationValidationKey;
+      const { jobSchema, taskSchema } = jobTaskSchemaMap[validationKey];
+
+      const jobSchemaSpy = jest.spyOn(jobSchema, 'parse');
+      const taskSchemaSpy = jest.spyOn(taskSchema, 'parse');
+
       const mockHandler: jest.Mocked<IJobHandler> = {
         handleJobInit: jest.fn().mockResolvedValue(undefined),
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
@@ -99,6 +116,10 @@ describe('JobProcessor', () => {
 
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
+      expect(() => jobSchema.parse(job)).not.toThrow();
+      expect(() => taskSchema.parse(task)).not.toThrow();
+      expect(jobSchemaSpy).toHaveBeenCalledWith(job);
+      expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
       expect(mockHandler.handleJobFinalize).toHaveBeenCalledWith(job, task);
     });
@@ -166,10 +187,15 @@ describe('JobProcessor', () => {
 
         const jobAndTask = await jobProcessor['getJobAndTaskResponse']();
 
+        const receivedJobWithDateObject = {
+          ...jobAndTask?.job,
+          expirationDate: new Date(jobAndTask?.job.expirationDate ?? ''),
+        };
+
         expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
         expect(getJobSpy).toHaveBeenCalledWith(task.jobId);
         expect(jobAndTask?.task.type).toEqual(taskType);
-        expect(jobAndTask?.job).toEqual(job);
+        expect(receivedJobWithDateObject).toEqual(job);
 
         await queueClient.heartbeatClient.stop(task.id);
       }

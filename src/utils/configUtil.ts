@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { IngestionPollingJobs } from '../common/interfaces';
+import type { IngestionPollingJobs } from '../common/interfaces';
 import { MissingConfigError } from '../common/errors';
 
 function isStringEmpty(str: string): boolean {

@@ -1,15 +1,22 @@
 import { randomUUID } from 'crypto';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
-import { context, trace, Tracer } from '@opentelemetry/api';
-import { IJobResponse, ITaskResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IngestionSwapUpdateFinalizeTaskParams, IngestionUpdateJobParams } from '@map-colonies/mc-model-types';
-import { Grid, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import type { Logger } from '@map-colonies/js-logger';
+import { context, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
+import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
+import type { IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
+import { Grid } from '../../common/interfaces';
+import type {
+  IngestionInitTask,
+  IngestionSwapUpdateFinalizeJob,
+  IngestionSwapUpdateFinalizeTask,
+  IngestionSwapUpdateInitJob,
+} from '../../utils/zod/schemas/job.schema';
 import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
 import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
 import { CatalogClient } from '../../httpClients/catalogClient';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { swapUpdateAdditionalParamsSchema, updateAdditionalParamsSchema } from '../../utils/zod/schemas/jobParametersSchema';
 import { SeedMode, SERVICES } from '../../common/constants';
 import { JobHandler } from './jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
@@ -18,7 +25,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class SwapJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateJobParams, unknown, IngestionUpdateJobParams, IngestionSwapUpdateFinalizeTaskParams>
+  implements IJobHandler<IngestionSwapUpdateInitJob, IngestionInitTask, IngestionSwapUpdateFinalizeJob, IngestionSwapUpdateFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -34,7 +41,7 @@ export class SwapJobHandler
     super(logger, queueClient);
   }
 
-  public async handleJobInit(job: IJobResponse<IngestionUpdateJobParams, unknown>, task: ITaskResponse<unknown>): Promise<void> {
+  public async handleJobInit(job: IngestionSwapUpdateInitJob, task: IngestionInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SwapJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -47,7 +54,6 @@ export class SwapJobHandler
 
         activeSpan?.setAttributes({ ...metadata });
 
-        const validAdditionalParams = this.validateAdditionalParams(additionalParams, swapUpdateAdditionalParamsSchema);
         activeSpan?.addEvent('validateAdditionalParams.success');
 
         const displayPath = randomUUID();
@@ -58,7 +64,7 @@ export class SwapJobHandler
           inputFiles,
           partsData,
           taskMetadata: {
-            tileOutputFormat: validAdditionalParams.tileOutputFormat,
+            tileOutputFormat: additionalParams.tileOutputFormat,
             isNewTarget: true,
             layerRelativePath: `${job.internalId}/${displayPath}`,
             grid: Grid.TWO_ON_ONE,
@@ -82,10 +88,7 @@ export class SwapJobHandler
     });
   }
 
-  public async handleJobFinalize(
-    job: IJobResponse<IngestionUpdateJobParams, unknown>,
-    task: ITaskResponse<IngestionSwapUpdateFinalizeTaskParams>
-  ): Promise<void> {
+  public async handleJobFinalize(job: IngestionSwapUpdateFinalizeJob, task: IngestionSwapUpdateFinalizeTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SwapJobHandler.name}.${this.handleJobFinalize.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
@@ -97,12 +100,10 @@ export class SwapJobHandler
         activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
 
         const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
-        const { layerName } = this.validateAndGenerateLayerNameFormats(job);
+        const layerName = this.validateAndGenerateLayerName(job);
         activeSpan?.addEvent('layerNameFormat.valid', { layerName });
 
-        const { additionalParams } = job.parameters;
-        const { tileOutputFormat, displayPath } = this.validateAdditionalParams(additionalParams, updateAdditionalParamsSchema);
-        activeSpan?.addEvent('additionalParams.valid', { tileOutputFormat, displayPath });
+        const { tileOutputFormat, displayPath } = job.parameters.additionalParams;
 
         if (!updatedInMapproxy) {
           const layerRelativePath = `${job.internalId}/${displayPath}`;
@@ -135,7 +136,7 @@ export class SwapJobHandler
   }
 
   private async updateJobAdditionalParams(
-    job: IJobResponse<IngestionUpdateJobParams, unknown>,
+    job: IngestionSwapUpdateInitJob,
     additionalParams: Record<string, unknown>,
     displayPath: string
   ): Promise<void> {

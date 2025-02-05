@@ -1,6 +1,6 @@
-import { Logger } from '@map-colonies/js-logger';
-import { DependencyContainer } from 'tsyringe';
-import { IJobHandler } from '../../common/interfaces';
+import type { Logger } from '@map-colonies/js-logger';
+import type { DependencyContainer } from 'tsyringe';
+import type { IJobHandler } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
 import { JobHandlerNotFoundError } from '../../common/errors';
 

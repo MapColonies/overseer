@@ -1,16 +1,21 @@
 import { join } from 'path';
-import { Logger } from '@map-colonies/js-logger';
-import { context, Span, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
-import { Feature, MultiPolygon, Polygon } from 'geojson';
-import { InputFiles, PolygonPart } from '@map-colonies/mc-model-types';
-import { ICreateTaskBody, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { context, SpanStatusCode, trace } from '@opentelemetry/api';
+import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, buffer, truncate, featureCollection, polygon, Units, union } from '@turf/turf';
+import { bbox, buffer, truncate, featureCollection, polygon, union } from '@turf/turf';
+import type { Units } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
-import { SERVICES, TilesStorageProvider } from '../../common/constants';
-import {
-  Grid,
-  IConfig,
+import type { Logger } from '@map-colonies/js-logger';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import type { InputFiles, PolygonPart } from '@map-colonies/raster-shared';
+import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
+import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { IConfig } from 'config';
+import { SERVICES, type TilesStorageProvider } from '../../common/constants';
+import { fileExtensionExtractor } from '../../utils/fileutils';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
+import { createChildSpan } from '../../common/tracing';
+import type {
   MergeParameters,
   MergeSources,
   MergeTaskParameters,
@@ -22,9 +27,7 @@ import {
   MergeTilesMetadata,
   PPFeatureCollection,
 } from '../../common/interfaces';
-import { fileExtensionExtractor } from '../../utils/fileutils';
-import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { createChildSpan } from '../../common/tracing';
+import { Grid } from '../../common/interfaces';
 
 @injectable()
 export class TileMergeTaskManager {
@@ -289,17 +292,15 @@ export class TileMergeTaskManager {
     const bufferOutFeature = buffer(feature.geometry, this.radiusBuffer, { units: this.radiusBufferUnits });
 
     if (bufferOutFeature === undefined) {
-      const errorMsg = 'Failed to buffer Out feature because the result is undefined';
-      logger.error({ errorMsg });
-      throw new Error(errorMsg);
+      logger.warn({ msg: 'Failed to buffer Out feature because the buffer result is undefined, returning original feature' });
+      return feature;
     }
 
     const bufferInFeature = buffer(bufferOutFeature.geometry, -this.radiusBuffer, { units: this.radiusBufferUnits });
 
     if (bufferInFeature === undefined) {
-      const errorMsg = 'Failed to buffer In feature because the result is undefined';
-      logger.error({ errorMsg });
-      throw new Error(errorMsg);
+      logger.warn({ msg: 'Failed to buffer In feature because the buffer result is undefined, returning original feature' });
+      return feature;
     }
 
     logger.debug({ msg: 'Successfully created buffered feature' });

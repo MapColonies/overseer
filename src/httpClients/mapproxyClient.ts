@@ -1,12 +1,14 @@
-import { IConfig } from 'config';
-import { Logger } from '@map-colonies/js-logger';
-import { TileOutputFormat } from '@map-colonies/mc-model-types';
-import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
-import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
+import type { IConfig } from 'config';
+import type { Logger } from '@map-colonies/js-logger';
+import type { TileOutputFormat } from '@map-colonies/raster-shared';
+import { context, SpanStatusCode, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
+import { HttpClient } from '@map-colonies/mc-utils';
+import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { NotFoundError } from '@map-colonies/error-types';
+import type { GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
 import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, TilesStorageProvider } from '../common/constants';
-import { GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
 import {
   LayerCacheNotFoundError,
   PublishLayerError,

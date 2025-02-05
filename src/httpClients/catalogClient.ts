@@ -1,23 +1,21 @@
-import { IConfig } from 'config';
-import { Logger } from '@map-colonies/js-logger';
-import { IJobResponse } from '@map-colonies/mc-priority-queue';
-import { HttpClient, IHttpRetryConfig } from '@map-colonies/mc-utils';
-import {
-  IngestionUpdateJobParams,
-  IRasterCatalogUpsertRequestBody,
-  LayerMetadata,
-  Link,
-  polygonPartsEntityNameSchema,
-  RecordType,
-} from '@map-colonies/mc-model-types';
+import type { IConfig } from 'config';
+import type { Logger } from '@map-colonies/js-logger';
+import type { IJobResponse } from '@map-colonies/mc-priority-queue';
+import type { LayerName } from '@map-colonies/raster-shared';
+import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { HttpClient } from '@map-colonies/mc-utils';
+import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
+import { LayerMetadata, Link } from '@map-colonies/mc-model-types';
+import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
-import { IngestionJobTypes } from '../utils/configUtil';
+import type { IngestionJobTypes } from '../utils/configUtil';
+import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, LayerName, CatalogUpdateAdditionalParams } from '../common/interfaces';
-import { catalogSwapUpdateAdditionalParamsSchema, internalIdSchema } from '../utils/zod/schemas/jobParametersSchema';
+import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody } from '../common/interfaces';
+import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { PublishLayerError, UpdateLayerError } from '../common/errors';
-import { ILinkBuilderData, LinkBuilder } from '../utils/linkBuilder';
+import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
 @injectable()
@@ -67,7 +65,7 @@ export class CatalogClient extends HttpClient {
     });
   }
 
-  public async update(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<void> {
+  public async update(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.update.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const internalId = internalIdSchema.parse(job).internalId;
@@ -107,13 +105,10 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private async mapToPublishCatalogRecordMetadata(job: IJobResponse<IngestionNewExtendedJobParams, unknown>): Promise<LayerMetadata> {
+  private async mapToPublishCatalogRecordMetadata(job: IngestionNewFinalizeJob): Promise<LayerMetadata> {
     const { parameters, version } = job;
     const { metadata, additionalParams } = parameters;
-
-    const validAdditionalParams = polygonPartsEntityNameSchema.parse(additionalParams);
-
-    const { polygonPartsEntityName } = validAdditionalParams;
+    const { polygonPartsEntityName } = additionalParams;
 
     const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
@@ -136,10 +131,7 @@ export class CatalogClient extends HttpClient {
       tileMimeFormat: metadata.tileMimeType,
       tileOutputFormat: metadata.tileOutputFormat,
       productVersion: version,
-      updateDateUTC: undefined,
-      creationDateUTC: undefined,
       rms: undefined,
-      ingestionDate: undefined,
       ...aggregatedLayerMetadata,
     };
   }
@@ -154,7 +146,7 @@ export class CatalogClient extends HttpClient {
     return this.linkBuilder.createLinks(linkBuildData);
   }
 
-  private async createUpdateReqBody(job: IJobResponse<IngestionUpdateJobParams, unknown>): Promise<CatalogUpdateRequestBody> {
+  private async createUpdateReqBody(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Promise<CatalogUpdateRequestBody> {
     // eslint-disable-next-line @typescript-eslint/return-await
     return await context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.createUpdateReqBody.name}`)),
@@ -164,9 +156,7 @@ export class CatalogClient extends HttpClient {
         try {
           const { parameters, version } = job;
           const { metadata, additionalParams } = parameters;
-
-          const { displayPath, polygonPartsEntityName } = this.validateAdditionalParamsByUpdateMode(additionalParams, job.type);
-          activeSpan?.addEvent('validateAdditionalParams.success', { displayPath, polygonPartsEntityName });
+          const { polygonPartsEntityName, displayPath } = additionalParams;
 
           activeSpan?.addEvent('getAggregatedLayerMetadata.start', { polygonPartsEntityName });
           const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
@@ -178,7 +168,7 @@ export class CatalogClient extends HttpClient {
             metadata: {
               productVersion: version,
               classification: metadata.classification,
-              ...(displayPath !== undefined && { displayPath }),
+              ...(displayPath != undefined && { displayPath }),
               ...aggregatedLayerMetadata,
             },
           };
@@ -193,21 +183,5 @@ export class CatalogClient extends HttpClient {
         }
       }
     );
-  }
-
-  private validateAdditionalParamsByUpdateMode(additionalParams: Record<string, unknown>, updateMode: string): CatalogUpdateAdditionalParams {
-    let validParams;
-    switch (updateMode) {
-      case this.jobTypes.Ingestion_Update:
-        validParams = polygonPartsEntityNameSchema.parse(additionalParams);
-        break;
-      case this.jobTypes.Ingestion_Swap_Update:
-        validParams = catalogSwapUpdateAdditionalParamsSchema.parse(additionalParams);
-        break;
-      default:
-        throw new Error(`Invalid update mode: ${updateMode}`);
-    }
-
-    return validParams;
   }
 }
