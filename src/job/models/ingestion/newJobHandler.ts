@@ -7,17 +7,22 @@ import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { lookup as mimeLookup } from '@map-colonies/types';
 import type { TilesMimeFormat } from '@map-colonies/types';
 import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata, LayerNameFormats } from '@map-colonies/raster-shared';
-import { Grid } from '../../common/interfaces';
-import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../common/interfaces';
-import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { SERVICES } from '../../common/constants';
-import type { IngestionInitTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask, IngestionNewInitJob } from '../../utils/zod/schemas/job.schema';
-import { getTileOutputFormat } from '../../utils/imageFormatUtil';
-import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
-import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { GeoserverClient } from '../../httpClients/geoserverClient';
-import { CatalogClient } from '../../httpClients/catalogClient';
-import { JobHandler } from './jobHandler';
+import { Grid } from '../../../common/interfaces';
+import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../../common/interfaces';
+import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
+import { SERVICES } from '../../../common/constants';
+import type {
+  IngestionInitTask,
+  IngestionNewFinalizeJob,
+  IngestionNewFinalizeTask,
+  IngestionNewInitJob,
+} from '../../../utils/zod/schemas/job.schema';
+import { getTileOutputFormat } from '../../../utils/imageFormatUtil';
+import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
+import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
+import { GeoserverClient } from '../../../httpClients/geoserverClient';
+import { CatalogClient } from '../../../httpClients/catalogClient';
+import { JobHandler } from '../jobHandler';
 
 @injectable()
 /* eslint-disable @typescript-eslint/brace-style */

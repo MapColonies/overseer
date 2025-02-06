@@ -15,6 +15,7 @@ import type { JobTypes, TaskTypes } from '@map-colonies/raster-shared';
 import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
 import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from './jobParameters.schema';
 
+//#region Ingestion
 //#region IngestionNew
 //init
 export const ingestionNewInitJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema).describe('IngestionNewInitJobSchema');
@@ -45,7 +46,7 @@ export const ingestionUpdateFinalizeTaskSchema = createTaskResponseSchema(ingest
   'IngestionUpdateFinalizeTaskSchema'
 );
 export type IngestionUpdateFinalizeTask = z.infer<typeof ingestionUpdateFinalizeTaskSchema>;
-//endregion
+//#endregion
 
 //#region IngestionSwapUpdate
 //init
@@ -62,6 +63,11 @@ export const ingestionSwapUpdateFinalizeTaskSchema = createTaskResponseSchema(in
   'IngestionSwapUpdateFinalizeTaskSchema'
 );
 export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdateFinalizeTaskSchema>;
+//#endregion
+//#endregion
+
+//#region Export
+
 //#endregion
 
 export type OperationValidationKey = `${JobTypes}_${TaskTypes}`;

@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import type { IngestionPollingJobs } from '../common/interfaces';
+import type { PollingJobs } from '../common/interfaces';
 import { MissingConfigError } from '../common/errors';
 
 function isStringEmpty(str: string): boolean {
   return typeof str === 'string' && str.trim().length === 0;
 }
 
-export const getAvailableJobTypes = (ingestionConfig: IngestionPollingJobs): string[] => {
+export const getAvailableJobTypes = (ingestionConfig: PollingJobs): string[] => {
   const jobTypes: string[] = [];
   for (const jobKey in ingestionConfig) {
     if (Object.prototype.hasOwnProperty.call(ingestionConfig, jobKey)) {
@@ -21,8 +21,8 @@ export const getAvailableJobTypes = (ingestionConfig: IngestionPollingJobs): str
 };
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-export const validateAndGetHandlersTokens = (ingestionConfig: IngestionPollingJobs) => {
-  const { new: newJob, update: updateJob, swapUpdate: swapUpdateJob } = ingestionConfig;
+export const validateAndGetHandlersTokens = (pollingConfig: PollingJobs) => {
+  const { new: newJob, update: updateJob, swapUpdate: swapUpdateJob, export: exportJob } = pollingConfig;
 
   if (newJob?.type === undefined || isStringEmpty(newJob.type)) {
     throw new MissingConfigError('Missing "new-job" type configuration');
@@ -33,11 +33,15 @@ export const validateAndGetHandlersTokens = (ingestionConfig: IngestionPollingJo
   if (swapUpdateJob?.type === undefined || isStringEmpty(swapUpdateJob.type)) {
     throw new MissingConfigError('Missing "swap-update-job" type configuration');
   }
+  if (exportJob?.type === undefined || isStringEmpty(exportJob.type)) {
+    throw new MissingConfigError('Missing "export-job" type configuration');
+  }
 
   return {
     Ingestion_New: newJob.type,
     Ingestion_Update: updateJob.type,
     Ingestion_Swap_Update: swapUpdateJob.type,
+    Raster_Tiles_Exporter: exportJob.type,
   } as const satisfies Record<string, string>;
 };
 

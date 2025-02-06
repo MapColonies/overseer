@@ -51,11 +51,12 @@ export interface IngestionJobs {
   seed: JobConfig | undefined;
 }
 
-export interface IngestionPollingJobs {
+export interface PollingJobs {
   [key: string]: JobConfig | undefined;
   new: JobConfig | undefined;
   update: JobConfig | undefined;
   swapUpdate: JobConfig | undefined;
+  export: JobConfig | undefined;
 }
 
 export interface PollingTasks {
@@ -63,10 +64,9 @@ export interface PollingTasks {
   finalize: string;
 }
 
-export interface IngestionConfig {
-  pollingTasks: PollingTasks;
-  pollingJobs: IngestionPollingJobs;
-  jobs: IngestionJobs;
+export interface PollingConfig {
+  tasks: PollingTasks;
+  jobs: PollingJobs;
   maxTaskAttempts: number;
 }
 
