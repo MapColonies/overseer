@@ -103,13 +103,13 @@ const registerDefaultConfig = (): void => {
         },
         dequeueIntervalMs: 3000,
       },
-      ingestion: {
+      polling: {
         maxTaskAttempts: 3,
-        pollingTasks: {
+        tasks: {
           init: 'init',
           finalize: 'finalize',
         },
-        pollingJobs: {
+        jobs: {
           new: {
             type: 'Ingestion_New',
           },
@@ -119,7 +119,12 @@ const registerDefaultConfig = (): void => {
           swapUpdate: {
             type: 'Ingestion_Swap_Update',
           },
+          export: {
+            type: 'Raster_Tiles_Exporter',
+          },
         },
+      },
+      ingestion: {
         jobs: {
           seed: {
             type: 'Ingestion_Seed',

@@ -5,8 +5,8 @@ import { configMock } from '../../mocks/configMock';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
-import { UpdateJobHandler } from '../../../../src/job/models/updateJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
+import { UpdateJobHandler } from '../../../../src/job/models/ingestion/updateJobHandler';
+import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 

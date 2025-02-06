@@ -9,14 +9,14 @@ import {
   IngestionUpdateFinalizeJob,
   IngestionUpdateFinalizeTask,
   IngestionUpdateInitJob,
-} from '../../utils/zod/schemas/job.schema';
-import { CatalogClient } from '../../httpClients/catalogClient';
-import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
-import { Grid } from '../../common/interfaces';
-import { SeedMode, SERVICES } from '../../common/constants';
-import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
-import { JobHandler } from './jobHandler';
+} from '../../../utils/zod/schemas/job.schema';
+import { CatalogClient } from '../../../httpClients/catalogClient';
+import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
+import { Grid } from '../../../common/interfaces';
+import { SeedMode, SERVICES } from '../../../common/constants';
+import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
+import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
+import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()

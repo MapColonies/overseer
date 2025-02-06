@@ -36,6 +36,7 @@ data:
   HEARTBEAT_BASE_URL: {{ $serviceUrls.heartbeatManager | quote}}
   HEARTBEAT_INTERVAL_MS: {{ $jobDefinitions.config.heartBeat.intervalMs | quote }}
   DEQUEUE_INTERVAL_MS: {{ $jobDefinitions.config.dequeueIntervalMs | quote }}
+  MAX_TASK_ATTEMPTS: {{ $jobDefinitions.config.maxTaskAttempts | quote }}
   TILES_STORAGE_PROVIDER: {{ $storage.tilesStorageProvider | quote }}
   INGESTION_POLLING_INIT_TASK: {{ $jobDefinitions.tasks.init.type | quote }}
   INGESTION_POLLING_FINALIZE_TASK: {{ $jobDefinitions.tasks.finalize.type | quote }}

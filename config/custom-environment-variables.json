@@ -78,12 +78,16 @@
       "workspace": "GEOSERVER_WORKSPACE",
       "datastore": "GEOSERVER_DATASTORE"
     },
-    "ingestion": {
-      "pollingTasks": {
-        "init": "INGESTION_POLLING_INIT_TASK",
-        "finalize": "INGESTION_POLLING_FINALIZE_TASK"
+    "polling": {
+      "maxTaskAttempts": {
+        "__name": "MAX_TASK_ATTEMPTS",
+        "__format": "number"
       },
-      "pollingJobs": {
+      "tasks": {
+        "init": "POLLING_INIT_TASK",
+        "finalize": "POLLING_FINALIZE_TASK"
+      },
+      "jobs": {
         "new": {
           "type": "INGESTION_NEW_JOB_TYPE"
         },
@@ -92,8 +96,13 @@
         },
         "swapUpdate": {
           "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
+        },
+        "export": {
+          "type": "EXPORT_JOB_TYPE"
         }
-      },
+      }
+    },
+    "ingestion": {
       "jobs": {
         "seed": {
           "type": "INGESTION_SEED_JOB_TYPE"
