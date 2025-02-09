@@ -15,7 +15,7 @@ const jobTypes: IngestionJobTypes = {
   Ingestion_New: 'Ingestion_New',
   Ingestion_Update: 'Ingestion_Update',
   Ingestion_Swap_Update: 'Ingestion_Swap_Update',
-  Raster_Tiles_Exporter: 'Raster_Tiles_Exporter',
+  Export: 'Export',
 };
 
 export type MockCreateLinks = jest.MockedFunction<(data: ILinkBuilderData) => Link[]>;

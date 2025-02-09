@@ -120,7 +120,7 @@ const registerDefaultConfig = (): void => {
             type: 'Ingestion_Swap_Update',
           },
           export: {
-            type: 'Raster_Tiles_Exporter',
+            type: 'Export',
           },
         },
       },

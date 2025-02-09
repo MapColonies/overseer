@@ -6,9 +6,10 @@ import { SERVICES } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { IJobHandler } from '../../../common/interfaces';
+import { ExportInitJob, ExportInitTask } from '../../../utils/zod/schemas/job.schema';
 
 @injectable()
-export class ExportJobHandler extends JobHandler implements IJobHandler {
+export class ExportJobHandler extends JobHandler implements IJobHandler<ExportInitJob, ExportInitTask> {
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
@@ -17,7 +18,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler {
   ) {
     super(logger, queueClient);
   }
-  public async handleJobInit(job: unknown, task: unknown): Promise<void> {
+  public async handleJobInit(job: ExportInitJob, task: ExportInitTask): Promise<void> {
     await Promise.resolve();
   }
   public async handleJobFinalize(job: unknown, task: unknown): Promise<void> {
