@@ -107,4 +107,8 @@ export const jobTaskSchemaMap = {
     jobSchema: exportInitJobSchema,
     taskSchema: exportInitTaskSchema,
   },
+  Export_finalize: {
+    jobSchema: exportInitJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
+    taskSchema: exportInitTaskSchema,
+  },
 };
