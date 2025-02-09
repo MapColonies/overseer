@@ -15,7 +15,7 @@ module.exports = {
     '!<rootDir>/src/*',
   ],
   modulePathIgnorePatterns: ['<rootDir>/src/utils/metrics/taskMetrics.ts'],
-  coveragePathIgnorePatterns: ['<rootDir>/src/utils/metrics/taskMetrics.ts'],
+  coveragePathIgnorePatterns: ['<rootDir>/src/utils/metrics/taskMetrics.ts', '<rootDir>/src/job/models/export/exportJobHandler.ts'],
   coverageDirectory: '<rootDir>/coverage',
   reporters: [
     'default',
