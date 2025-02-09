@@ -15,7 +15,7 @@ describe('configUtil', () => {
         new: { type: 'Ingestion_New' },
         update: { type: 'Ingestion_Update' },
         swapUpdate: { type: 'Ingestion_Swap_Update' },
-        export: { type: 'Raster_Tiles_Exporter' },
+        export: { type: 'Export' },
       };
 
       const result = validateAndGetHandlersTokens(ingestionConfig);
@@ -24,7 +24,7 @@ describe('configUtil', () => {
         Ingestion_New: ingestionConfig.new?.type,
         Ingestion_Update: ingestionConfig.update?.type,
         Ingestion_Swap_Update: ingestionConfig.swapUpdate?.type,
-        Raster_Tiles_Exporter: ingestionConfig.export?.type,
+        Export: ingestionConfig.export?.type,
       });
     });
 

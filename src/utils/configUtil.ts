@@ -41,7 +41,7 @@ export const validateAndGetHandlersTokens = (pollingConfig: PollingJobs) => {
     Ingestion_New: newJob.type,
     Ingestion_Update: updateJob.type,
     Ingestion_Swap_Update: swapUpdateJob.type,
-    Raster_Tiles_Exporter: exportJob.type,
+    Export: exportJob.type,
   } as const satisfies Record<string, string>;
 };
 

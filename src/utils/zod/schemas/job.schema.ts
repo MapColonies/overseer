@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   createJobResponseSchema,
   createTaskResponseSchema,
+  exportJobParametersSchema,
   ingestionNewFinalizeTaskParamsSchema,
   ingestionNewJobParamsSchema,
   ingestionSwapUpdateJobParamsSchema,
@@ -67,7 +68,12 @@ export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdate
 //#endregion
 
 //#region Export
+//init
+export const exportInitJobSchema = createJobResponseSchema(exportJobParametersSchema);
+export type ExportInitJob = z.infer<typeof exportInitJobSchema>;
 
+export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema);
+export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
 //#endregion
 
 export type OperationValidationKey = `${JobTypes}_${TaskTypes}`;
@@ -96,5 +102,9 @@ export const jobTaskSchemaMap = {
   Ingestion_Swap_Update_finalize: {
     jobSchema: ingestionSwapUpdateFinalizeJobSchema,
     taskSchema: ingestionSwapUpdateFinalizeTaskSchema,
+  },
+  Export_init: {
+    jobSchema: exportInitJobSchema,
+    taskSchema: exportInitTaskSchema,
   },
 };
