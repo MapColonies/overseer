@@ -69,10 +69,10 @@ export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdate
 
 //#region Export
 //init
-export const exportInitJobSchema = createJobResponseSchema(exportJobParametersSchema);
+export const exportInitJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportInitJobSchema');
 export type ExportInitJob = z.infer<typeof exportInitJobSchema>;
 
-export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema);
+export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('ExportInitTaskSchema');
 export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
 //#endregion
 

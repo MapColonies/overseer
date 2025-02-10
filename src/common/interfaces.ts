@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import type { LayerMetadata } from '@map-colonies/mc-model-types';
+import type { IRasterCatalogUpsertRequestBody, LayerMetadata } from '@map-colonies/mc-model-types';
 import type {
   InputFiles,
   PolygonPart,
@@ -9,6 +9,7 @@ import type {
   IngestionSwapUpdateFinalizeTaskParams,
   TileOutputFormat,
   LayerName,
+  RasterLayerMetadata,
 } from '@map-colonies/raster-shared';
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
@@ -238,12 +239,11 @@ export interface CatalogUpdateRequestBody {
   metadata: CatalogUpdateMetadata;
 }
 
+export type FindLayerBody = Pick<RasterLayerMetadata, 'id'>;
+export type FindLayerResponse = Required<IRasterCatalogUpsertRequestBody>;
+
 export type CatalogUpdateMetadata = Partial<LayerMetadata>;
 
-export interface CatalogUpdateAdditionalParams {
-  displayPath?: string;
-  polygonPartsEntityName: string;
-}
 //#endregion catalogClient
 
 //#region seedingJobCreator
