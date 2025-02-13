@@ -7,15 +7,15 @@ import { SERVICES } from '../../src/common/constants';
 import { queueClientFactory } from '../../src/containerConfig';
 import { IngestionPollingJobs } from '../../src/common/interfaces';
 import { validateAndGetHandlersTokens } from '../../src/utils/configUtil';
-import { NewJobHandler } from '../../src/job/models/newJobHandler';
-import { UpdateJobHandler } from '../../src/job/models/updateJobHandler';
-import { SwapJobHandler } from '../../src/job/models/swapJobHandler';
+import { NewJobHandler } from '../../src/job/models/ingestion/newJobHandler';
+import { UpdateJobHandler } from '../../src/job/models/ingestion/updateJobHandler';
+import { SwapJobHandler } from '../../src/job/models/ingestion/swapJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from '../../src/job/models/jobHandlerFactory';
 
 function getTestContainerConfig(): InjectionObject<unknown>[] {
   registerDefaultConfig();
 
-  const ingestionConfig = configMock.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
+  const ingestionConfig = configMock.get<IngestionPollingJobs>('jobManagement.polling.jobs');
 
   const handlersTokens = validateAndGetHandlersTokens(ingestionConfig);
 

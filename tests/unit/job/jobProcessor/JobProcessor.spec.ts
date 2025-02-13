@@ -2,7 +2,7 @@ import nock from 'nock';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
-import { IJobHandler, IngestionConfig } from '../../../../src/common/interfaces';
+import { IJobHandler, PollingConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
 import { JobProcessorTestContext, setupJobProcessorTest } from './jobProcessorSetup';
 
@@ -36,11 +36,11 @@ describe('JobProcessor', () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
 
       const { jobProcessor, mockDequeue, configMock } = testContext;
-      const ingestionConfig = configMock.get<IngestionConfig>('jobManagement.ingestion');
+      const pollingConfig = configMock.get<PollingConfig>('jobManagement.polling');
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
-      const { pollingJobs, pollingTasks } = ingestionConfig;
-      const jobTypesAmount = Object.keys(pollingJobs).length;
-      const pollingTasksTypesAmount = Object.keys(pollingTasks).length;
+      const { jobs, tasks } = pollingConfig;
+      const jobTypesAmount = Object.keys(jobs).length;
+      const pollingTasksTypesAmount = Object.keys(tasks).length;
       const totalDequeueCalls = jobTypesAmount * pollingTasksTypesAmount;
 
       const processPromise = jobProcessor.start();
@@ -205,7 +205,7 @@ describe('JobProcessor', () => {
       jest.useRealTimers();
 
       testContext = setupJobProcessorTest({ useMockQueueClient: false });
-      setValue('jobManagement.ingestion.maxTaskAttempts', 3);
+      setValue('jobManagement.polling.maxTaskAttempts', 3);
 
       const { jobProcessor, configMock, queueClient } = testContext;
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
@@ -304,7 +304,7 @@ describe('JobProcessor', () => {
 
     it('should return null if task reached max attempts', async () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
-      setValue('jobManagement.ingestion.maxTaskAttempts', 3);
+      setValue('jobManagement.polling.maxTaskAttempts', 3);
 
       const { jobProcessor, mockDequeue, mockReject, mockUpdateJob } = testContext;
       const jobType = initTestCases[0].jobType;

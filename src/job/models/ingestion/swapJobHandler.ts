@@ -5,20 +5,20 @@ import { context, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
-import type { IJobHandler, MergeTilesTaskParams } from '../../common/interfaces';
-import { Grid } from '../../common/interfaces';
+import type { IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
+import { Grid } from '../../../common/interfaces';
 import type {
   IngestionInitTask,
   IngestionSwapUpdateFinalizeJob,
   IngestionSwapUpdateFinalizeTask,
   IngestionSwapUpdateInitJob,
-} from '../../utils/zod/schemas/job.schema';
-import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { TileMergeTaskManager } from '../../task/models/tileMergeTaskManager';
-import { CatalogClient } from '../../httpClients/catalogClient';
-import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { SeedMode, SERVICES } from '../../common/constants';
-import { JobHandler } from './jobHandler';
+} from '../../../utils/zod/schemas/job.schema';
+import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
+import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
+import { CatalogClient } from '../../../httpClients/catalogClient';
+import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
+import { SeedMode, SERVICES } from '../../../common/constants';
+import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()

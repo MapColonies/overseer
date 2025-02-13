@@ -4,8 +4,8 @@ import { trace } from '@opentelemetry/api';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
-import { SwapJobHandler } from '../../../../src/job/models/swapJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
+import { SwapJobHandler } from '../../../../src/job/models/ingestion/swapJobHandler';
+import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 

@@ -5,7 +5,7 @@ import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskM
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
-import { NewJobHandler } from '../../../../src/job/models/newJobHandler';
+import { NewJobHandler } from '../../../../src/job/models/ingestion/newJobHandler';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 
