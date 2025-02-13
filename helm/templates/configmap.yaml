@@ -55,6 +55,7 @@ data:
   TILES_SEEDING_GRID : {{ $jobDefinitions.tasks.seed.grid | quote }}
   TILES_SEEDING_MAX_ZOOM : {{ $jobDefinitions.tasks.seed.maxZoom | quote }}
   TILES_SEEDING_SKIP_UNCACHED : {{ $jobDefinitions.tasks.seed.skipUncached | quote }}
+  TILES_EXPORTING_TASK_TYPE: {{ $jobDefinitions.tasks.export.type | quote }}
   MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
   GEOSERVER_API_URL: {{ $serviceUrls.geoserverApiUrl | quote }}
   GEOSERVER_DNS: {{ $serviceUrls.geoserverUrl | quote }}

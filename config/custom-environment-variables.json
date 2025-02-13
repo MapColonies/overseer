@@ -146,6 +146,13 @@
           }
         }
       }
+    },
+    "export": {
+      "tasks": {
+        "tilesExporting": {
+          "type": "TILES_EXPORTING_TASK_TYPE"
+        }
+      }
     }
   }
 }

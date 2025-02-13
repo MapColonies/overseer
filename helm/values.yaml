@@ -133,9 +133,11 @@ jobDefinitions:
         type: ""
         grid: "WorldCRS84"
         maxZoom: 21
-        skipUncached: true 
+        skipUncached: true
+      export: 
+        type: ""   
 
-    config:
+    config: 
       dequeueIntervalMs: 3000
       heartBeat:
         intervalMs: 3000 

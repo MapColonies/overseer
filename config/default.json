@@ -103,6 +103,13 @@
           "skipUncached": true
         }
       }
+    },
+    "export": {
+      "tasks": {
+        "tilesExporting": {
+          "type": "tilesExporting"
+        }
+      }
     }
   }
 }

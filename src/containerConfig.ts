@@ -19,6 +19,7 @@ import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobH
 import { validateAndGetHandlersTokens } from './utils/configUtil';
 import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
 import { IConfig, JobManagerConfig, PollingJobs } from './common/interfaces';
+import { ExportJobHandler } from './job/models/export/exportJobHandler';
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
@@ -65,6 +66,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
     { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
     { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
+    { token: handlersTokens.Export, provider: { useClass: ExportJobHandler } },
     { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
     { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
     {
