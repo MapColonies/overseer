@@ -17,7 +17,7 @@ import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import type {
   MergeParameters,
-  MergeSources,
+  TaskSources,
   MergeTaskParameters,
   MergeTilesTaskParams,
   PolygonFeature,
@@ -336,13 +336,13 @@ export class TileMergeTaskManager {
     span.end();
   }
 
-  private createPartSources(part: UnifiedPart, grid: Grid, destPath: string): MergeSources[] {
+  private createPartSources(part: UnifiedPart, grid: Grid, destPath: string): TaskSources[] {
     this.logger.debug({ msg: 'Creating source layers' });
 
-    const sourceEntry: MergeSources = { type: this.tilesStorageProvider, path: destPath };
+    const sourceEntry: TaskSources = { type: this.tilesStorageProvider, path: destPath };
     const fileExtension = fileExtensionExtractor(part.fileName);
 
-    const source: MergeSources = {
+    const source: TaskSources = {
       type: fileExtension.toUpperCase(),
       path: part.tilesPath,
       grid,

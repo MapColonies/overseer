@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import type { IRasterCatalogUpsertRequestBody, LayerMetadata } from '@map-colonies/mc-model-types';
 import type {
   InputFiles,
@@ -10,10 +10,11 @@ import type {
   TileOutputFormat,
   LayerName,
   RasterLayerMetadata,
+  TileFormatStrategy,
 } from '@map-colonies/raster-shared';
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
-import type { Span } from '@opentelemetry/api';
+import type { Span, SpanContext } from '@opentelemetry/api';
 import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import {
   ingestionSwapUpdateFinalizeJobParamsSchema,
@@ -154,7 +155,7 @@ export interface MergeParameters {
   tilesSource: TilesSource;
 }
 
-export interface MergeSources {
+export interface TaskSources {
   type: string;
   path: string;
   grid?: Grid;
@@ -164,7 +165,7 @@ export interface MergeSources {
 export interface MergeTaskParameters {
   targetFormat: TileOutputFormat;
   isNewTarget: boolean;
-  sources: MergeSources[];
+  sources: TaskSources[];
   batches: ITileRange[];
 }
 
@@ -192,6 +193,34 @@ export interface MergeTilesMetadata {
 }
 
 //#endregion task
+
+//#region exportTask
+
+export interface BoundingBox {
+  minLon: number;
+  minLat: number;
+  maxLon: number;
+  maxLat: number;
+}
+
+export interface ZoomBoundsParameters {
+  minZoom: number;
+  maxZoom: number;
+  bbox: BBox | null;
+}
+
+export interface ExportTaskParameters {
+  isNewTarget: boolean;
+  targetFormat?: TileOutputFormat;
+  outputFormatStrategy: TileFormatStrategy;
+  batches: ITileRange[];
+  sources: TaskSources[];
+  traceParentContext?: SpanContext;
+}
+
+export type ExportTask = ICreateTaskBody<ExportTaskParameters>;
+
+//#endregion exportTask
 
 //#region mapproxyApi
 export interface PublishMapLayerRequest {

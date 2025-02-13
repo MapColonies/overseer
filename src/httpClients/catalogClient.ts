@@ -91,7 +91,7 @@ export class CatalogClient extends HttpClient {
     });
   }
 
-  public async findLayer(id: string): Promise<FindLayerResponse | undefined> {
+  public async findLayer(id: string): Promise<FindLayerResponse> {
     // eslint-disable-next-line @typescript-eslint/return-await
     return await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.findLayer.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
@@ -107,14 +107,13 @@ export class CatalogClient extends HttpClient {
         if (records.length === 0) {
           throw new LayerNotFoundError(id);
         }
-
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer found successfully' });
         return records[0];
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
-          throw err;
         }
+        throw err;
       } finally {
         activeSpan?.end();
       }
