@@ -1,9 +1,18 @@
+import { randomUUID } from 'crypto';
 import nock from 'nock';
 import type { LayerName } from '@map-colonies/raster-shared';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
-import { PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
-import { ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
+import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
+import {
+  exportInitJob,
+  ingestionNewJobExtended,
+  ingestionSwapUpdateJob,
+  ingestionUpdateFinalizeJob,
+  ingestionUpdateJob,
+} from '../mocks/jobsMockData';
+import { FindLayerResponse } from '../../../src/common/interfaces';
+import { layerRecord } from '../mocks/catalogClientMockData';
 import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogClientSetup';
 
 describe('CatalogClient', () => {
@@ -76,7 +85,7 @@ describe('CatalogClient', () => {
         },
       };
       const recordId = swapUpdateJob.internalId;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200);
+      nock(baseUrl).put(`/records/${recordId}`).reply(200, swapUpdateJob);
 
       const action = catalogClient.update(swapUpdateJob);
 
@@ -105,6 +114,38 @@ describe('CatalogClient', () => {
       const action = catalogClient.update(ingestionUpdateFinalizeJob);
 
       await expect(action).rejects.toThrow(UpdateLayerError);
+    });
+  });
+
+  describe('findLayer', () => {
+    it('should return layer', async () => {
+      const { catalogClient } = setupCatalogClientTest();
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const recordId = exportInitJob.internalId as string;
+      const reqBody = { id: recordId };
+      const layer: FindLayerResponse = layerRecord;
+      nock(baseUrl)
+        .post(`/records/find`, reqBody)
+        .reply(200, () => [layer]);
+
+      const layerResponse = await catalogClient.findLayer(recordId);
+
+      //use stringify to compare objects to handle the dates comparison
+      expect(JSON.stringify(layerResponse)).toBe(JSON.stringify(layer));
+    });
+
+    it('should throw LayerNotFoundError when layer not found', async () => {
+      const { catalogClient } = setupCatalogClientTest();
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const nonExistingRecordId = randomUUID();
+      const reqBody = { id: nonExistingRecordId };
+      nock(baseUrl)
+        .post(`/records/find`, reqBody)
+        .reply(200, () => []);
+
+      const action = catalogClient.findLayer(nonExistingRecordId);
+
+      await expect(action).rejects.toThrow(LayerNotFoundError);
     });
   });
 });

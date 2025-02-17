@@ -5,6 +5,7 @@ import {
   TaskBlockDuplicationParam,
 } from '@map-colonies/raster-shared';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { ExportInitTask } from '../../../src/utils/zod/schemas/job.schema';
 
 export const initTaskForIngestionNew: ITaskResponse<TaskBlockDuplicationParam> = {
   id: '4a5486bd-6269-4898-b9b1-647fe56d6ae2',
@@ -58,6 +59,23 @@ export const initTaskForIngestionSwapUpdate: ITaskResponse<TaskBlockDuplicationP
   // eslint-disable-next-line @typescript-eslint/naming-convention
   created: '2024-07-21T10:59:23.510Z',
   updated: '2024-07-24T07:43:10.528Z',
+};
+
+export const initTaskForExport: ExportInitTask = {
+  id: 'f336287d-7c9f-4237-b864-c96cf7b28aa0',
+  type: 'init',
+  description: '',
+  parameters: {
+    blockDuplication: true,
+  },
+  status: OperationStatus.IN_PROGRESS,
+  percentage: 0,
+  reason: '',
+  attempts: 0,
+  jobId: 'd78516d4-d815-4e0b-a8bd-88e0c434c928',
+  resettable: true,
+  created: '2025-02-13T09:38:26.043Z',
+  updated: '2025-02-13T11:31:52.154Z',
 };
 
 export const finalizeTaskForIngestionNew: ITaskResponse<IngestionNewFinalizeTaskParams> = {

@@ -42,6 +42,13 @@ export class UpdateLayerError extends Error {
   }
 }
 
+export class LayerNotFoundError extends Error {
+  public constructor(id: string) {
+    super(`Record with id ${id} not found`);
+    this.name = LayerNotFoundError.name;
+  }
+}
+
 export class UnsupportedLayerCacheError extends Error {
   public constructor(layerName: string, cacheType: string) {
     super(`Unsupported cache type(${cacheType}) for layer ${layerName} (redis only)`);
