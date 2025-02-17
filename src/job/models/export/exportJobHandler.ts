@@ -48,7 +48,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
         activeSpan?.addEvent('findLayer.success');
 
         const exportTask = this.createExportTask(job, metadata);
-        activeSpan?.addEvent('exportTask.created');
+        activeSpan?.addEvent('exportTask.created', { exportTask: JSON.stringify(exportTask) });
 
         await this.queueClient.jobManagerClient.createTaskForJob(job.id, exportTask);
         this.taskMetrics.trackTasksEnqueue(job.type, this.exportTaskType, exportTask.parameters.batches.length);
@@ -62,6 +62,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
       }
     });
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async handleJobFinalize(job: unknown, task: unknown): Promise<void> {
     await Promise.resolve();
     throw new Error('Method not implemented.');
