@@ -144,6 +144,13 @@ const registerDefaultConfig = (): void => {
           skipUncached: true,
         },
       },
+      export: {
+        tasks: {
+          tilesExporting: {
+            type: 'tilesExporting',
+          },
+        },
+      },
     },
   };
 

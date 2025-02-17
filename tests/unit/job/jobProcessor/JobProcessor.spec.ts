@@ -1,8 +1,8 @@
 import nock from 'nock';
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
 import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
-import { IJobHandler, PollingConfig } from '../../../../src/common/interfaces';
+import { IJobHandler, JobAndTaskResponse, PollingConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
 import { JobProcessorTestContext, setupJobProcessorTest } from './jobProcessorSetup';
 
@@ -147,6 +147,30 @@ describe('JobProcessor', () => {
       expect(mockUpdateJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(rejectSpy).toHaveBeenCalledWith(job.id, task.id, true, error.message);
+    });
+
+    it('Should set job status to failed if an Zod error occurred during processing', async () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient } = testContext;
+      const job = { ...initTestCases[0].job, id: 'invalidJobId' };
+      const task = { ...initTestCases[0].task, id: 'invalidTaskId' };
+
+      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockUpdateJob.mockResolvedValue(undefined);
+      mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
+
+      queueClient.reject = jest.fn().mockResolvedValue(undefined);
+
+      const rejectSpy = jest.spyOn(queueClient, 'reject');
+
+      await jobProcessor['consumeAndProcess']();
+
+      expect(rejectSpy).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(queueClient.jobManagerClient.updateJob).toHaveBeenCalledWith(job.id, {
+        status: OperationStatus.FAILED,
+        reason: expect.any(String) as string,
+      });
     });
   });
 
@@ -332,6 +356,22 @@ describe('JobProcessor', () => {
       mockDequeue.mockRejectedValueOnce(error);
 
       await expect(jobProcessor['getTask'](jobType, taskType)).rejects.toThrow(error);
+    });
+  });
+
+  describe('validateTaskAndJob', () => {
+    it('should throw an error if no validation schemas exist for the job and task types', () => {
+      testContext = setupJobProcessorTest({ useMockQueueClient: true });
+      const { jobProcessor } = testContext;
+      const job = { ...initTestCases[0].job, type: 'nonExistingJobType' };
+      const task = { ...initTestCases[0].task, type: 'nonExistingTaskType' };
+
+      const action = () => {
+        jobProcessor['validateTaskAndJob'](jobAndTask);
+      };
+      const jobAndTask: JobAndTaskResponse = { job, task };
+
+      expect(action).toThrow();
     });
   });
 });
