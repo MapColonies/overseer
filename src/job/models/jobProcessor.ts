@@ -173,7 +173,7 @@ export class JobProcessor {
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (validationSchemas === undefined) {
-      throw new Error(`no validation schema found for job type ${job.type} and task type ${task.type}`);
+      throw new Error(`No validation schema found for job type ${job.type} and task type ${task.type}`);
     }
     const { jobSchema, taskSchema } = validationSchemas;
 

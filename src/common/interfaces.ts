@@ -196,17 +196,10 @@ export interface MergeTilesMetadata {
 
 //#region exportTask
 
-export interface BoundingBox {
-  minLon: number;
-  minLat: number;
-  maxLon: number;
-  maxLat: number;
-}
-
 export interface ZoomBoundsParameters {
   minZoom: number;
   maxZoom: number;
-  bbox: BBox | null;
+  bbox: BBox;
 }
 
 export interface ExportTaskParameters {
