@@ -1,6 +1,7 @@
-import { Transparency, TileOutputFormat, RasterProductTypes } from '@map-colonies/raster-shared';
+import { Transparency, TileOutputFormat, RasterProductTypes, RASTER_DOMAIN } from '@map-colonies/raster-shared';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import type {
+  ExportInitJob,
   IngestionNewFinalizeJob,
   IngestionNewInitJob,
   IngestionSwapUpdateFinalizeJob,
@@ -45,7 +46,7 @@ export const ingestionNewJob: IngestionNewInitJob = {
   status: OperationStatus.PENDING,
   percentage: 0,
   reason: '',
-  domain: 'RASTER',
+  domain: RASTER_DOMAIN,
   isCleaned: false,
   priority: 1000,
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
@@ -123,7 +124,7 @@ export const ingestionUpdateJob: IngestionUpdateInitJob = {
   status: OperationStatus.PENDING,
   percentage: 0,
   reason: '',
-  domain: 'RASTER',
+  domain: RASTER_DOMAIN,
   isCleaned: false,
   priority: 1000,
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
@@ -179,7 +180,7 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   status: OperationStatus.PENDING,
   percentage: 0,
   reason: '',
-  domain: 'RASTER',
+  domain: RASTER_DOMAIN,
   isCleaned: false,
   priority: 1000,
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
@@ -197,6 +198,84 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   abortedTasks: 0,
   created: '2024-07-21T10:59:23.510Z',
   updated: '2024-07-21T10:59:23.510Z',
+};
+
+export const exportInitJob: ExportInitJob = {
+  id: 'd78516d4-d815-4e0b-a8bd-88e0c434c928',
+  resourceId: 'raster_shared_test_swap',
+  version: '2.0',
+  type: 'Export',
+  description: 'This is roi exporting example',
+  parameters: {
+    additionalParams: {
+      targetFormat: 'PNG',
+      gpkgEstimatedSize: 2662500,
+      fileNamesTemplates: {
+        dataURI: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
+        metadataURI: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.json',
+      },
+      packageRelativePath: '04c2a753-4af3-41a5-a16d-1e9c3bec87b6/RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
+      outputFormatStrategy: 'mixed',
+      relativeDirectoryPath: '04c2a753-4af3-41a5-a16d-1e9c3bec87b6',
+    },
+    exportInputParams: {
+      crs: 'EPSG:4326',
+      roi: {
+        type: 'FeatureCollection',
+        features: [
+          {
+            bbox: [34.487134401539606, 31.52988565182776, 34.489134659773285, 31.531576751138154],
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [
+                [
+                  [34.487134401539606, 31.52988565182776],
+                  [34.489134659773285, 31.52988565182776],
+                  [34.489134659773285, 31.531576751138154],
+                  [34.487134401539606, 31.531576751138154],
+                  [34.487134401539606, 31.52988565182776],
+                ],
+              ],
+            },
+            properties: {
+              maxResolutionDeg: 6.70552253723145e-7,
+              minResolutionDeg: 0.703125,
+            },
+          },
+        ],
+      },
+      callbackUrls: [
+        {
+          url: 'http://example.getmap.com/callback',
+        },
+        {
+          url: 'http://example.getmap.com/callback2',
+        },
+      ],
+    },
+  },
+  status: OperationStatus.IN_PROGRESS,
+  percentage: 0,
+  reason: '',
+  domain: RASTER_DOMAIN,
+  isCleaned: false,
+  priority: 0,
+  expirationDate: new Date('2024-07-21T10:59:23.510Z'),
+  internalId: '0b1e6b92-3587-4287-a4b7-6744c60f5add',
+  producerName: 'string',
+  productName: 'raster_shared_test_swap',
+  productType: 'RasterVectorBest',
+  additionalIdentifiers: '04c2a753-4af3-41a5-a16d-1e9c3bec87b6',
+  taskCount: 0,
+  completedTasks: 1,
+  failedTasks: 1,
+  expiredTasks: 0,
+  pendingTasks: 0,
+  inProgressTasks: 1,
+  abortedTasks: 0,
+  created: '2025-02-13T09:38:26.043Z',
+  updated: '2025-02-13T11:34:15.878Z',
 };
 
 export const ingestionUpdateFinalizeJob: IngestionUpdateFinalizeJob = {
