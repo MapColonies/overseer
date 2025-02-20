@@ -3,11 +3,11 @@ import jsLogger from '@map-colonies/js-logger';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
-import { trace } from '@opentelemetry/api';
 import { configMock } from '../../mocks/configMock';
 import { JobManagerConfig, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
+import { tracerMock } from '../../mocks/tracerMock';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -43,7 +43,6 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const tracerMock = trace.getTracer('test');
   const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, tracerMock, configMock, new TileRanger(), queueClient, taskMetricsMock);
   return {
     tileMergeTaskManager,

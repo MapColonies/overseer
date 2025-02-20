@@ -1,16 +1,15 @@
 import nock from 'nock';
 import jsLogger from '@map-colonies/js-logger';
 import type { LayerNameFormats } from '@map-colonies/raster-shared';
-import { trace } from '@opentelemetry/api';
 import { GeoserverClient } from '../../../src/httpClients/geoserverClient';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError } from '../../../src/common/errors';
+import { tracerMock } from '../mocks/tracerMock';
 
 describe('GeoserverClient', () => {
   let geoServerClient: GeoserverClient;
   beforeEach(() => {
     registerDefaultConfig();
-    const tracerMock = trace.getTracer('test');
     geoServerClient = new GeoserverClient(configMock, jsLogger({ enabled: false }), tracerMock);
   });
 
