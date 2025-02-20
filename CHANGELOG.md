@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.7.4](https://github.com/MapColonies/overseer/compare/v1.7.3...v1.7.4) (2025-02-20)
+
+
+### Bug Fixes
+
+* remove -max_old_space_size from Dockerfile ([#44](https://github.com/MapColonies/overseer/issues/44)) ([e4e902c](https://github.com/MapColonies/overseer/commit/e4e902cc04b4f08e98a4a55dd484b99d1e2b73c6))
+
 ### [1.7.3](https://github.com/MapColonies/overseer/compare/v1.7.2...v1.7.3) (2025-02-05)
 
 ### [1.7.2](https://github.com/MapColonies/overseer/compare/v1.7.1...v1.7.2) (2025-02-05)
