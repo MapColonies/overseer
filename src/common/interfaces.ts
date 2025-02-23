@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import type { IRasterCatalogUpsertRequestBody, LayerMetadata } from '@map-colonies/mc-model-types';
 import type {
   InputFiles,
   PolygonPart,
@@ -262,9 +261,12 @@ export interface CatalogUpdateRequestBody {
 }
 
 export type FindLayerBody = Pick<RasterLayerMetadata, 'id'>;
-export type FindLayerResponse = Required<IRasterCatalogUpsertRequestBody>;
 
-export type CatalogUpdateMetadata = Partial<LayerMetadata>;
+export interface FindLayerResponse {
+  metadata: RasterLayerMetadata;
+}
+
+export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
 
 //#endregion catalogClient
 

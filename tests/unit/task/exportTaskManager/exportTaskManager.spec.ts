@@ -1,8 +1,7 @@
-import { BBox } from 'geojson';
+import { sep } from 'path';
 import { ZodError } from 'zod';
 import jsLogger from '@map-colonies/js-logger';
-import { SourceType } from '@map-colonies/raster-shared';
-import { LayerMetadata } from '@map-colonies/mc-model-types';
+import { RasterLayerMetadata, SourceType } from '@map-colonies/raster-shared';
 import { extentSchema, tileRangeArraySchema } from '../../utils/schemas/export.schema';
 import {} from '@turf/turf';
 import { configMock, init, registerDefaultConfig, setValue } from '../../mocks/configMock';
@@ -42,7 +41,7 @@ describe('exportTaskManager', () => {
 
       const invalidLayerMetadata = { ...metadata, footprint: { type: 'Invalid' } };
 
-      const action = () => exportTaskManager.generateTileRangeBatches(mockRoi, invalidLayerMetadata as LayerMetadata);
+      const action = () => exportTaskManager.generateTileRangeBatches(mockRoi, invalidLayerMetadata as RasterLayerMetadata);
 
       expect(action).toThrow(ZodError);
     });
@@ -62,7 +61,7 @@ describe('exportTaskManager', () => {
       const { exportTaskManager } = setupExportTaskBuilderTest();
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const tilesStorageProvider = configMock.get<string>('tilesStorageProvider');
-      const expectedPath = `${layerRecord.metadata.id}${tilesStorageProvider === TilesStorageProvider.S3 ? '/' : '\\'}${
+      const expectedPath = `${layerRecord.metadata.id}${tilesStorageProvider === TilesStorageProvider.S3 ? '/' : sep}${
         layerRecord.metadata.displayPath
       }`;
       const job = exportInitJob;
@@ -95,23 +94,6 @@ describe('exportTaskManager', () => {
   });
 
   describe('private methods', () => {
-    const { exportTaskManager } = setupExportTaskBuilderTest();
-
-    describe('snapBBoxToTileGrid', () => {
-      it('should return world bounds for zoom level 0', () => {
-        const bbox: BBox = [0, 0, 1, 1];
-        const result = exportTaskManager['snapBBoxToTileGrid'](bbox, 0);
-        expect(result).toEqual([-180, -90, 180, 90]);
-      });
-
-      it('should snap bbox to tile grid for non-zero zoom level', () => {
-        const bbox: BBox = [0.1, 0.1, 1.1, 1.1];
-        const result = exportTaskManager['snapBBoxToTileGrid'](bbox, 1);
-        expect(result).toBeDefined();
-        expect(result).toHaveLength(4);
-      });
-    });
-
     describe('getSeparator', () => {
       const mockLogger = jsLogger({ enabled: false });
 
@@ -123,12 +105,12 @@ describe('exportTaskManager', () => {
         expect(result).toBe('/');
       });
 
-      it('should return \\ for FS storage provider', () => {
+      it(`should return sep operator(${sep}) for FS storage provider`, () => {
         setValue('tilesStorageProvider', 'FS');
         init();
         const exportTaskManager = new ExportTaskManager(mockLogger, configMock, tracerMock);
         const result = exportTaskManager['getSeparator']();
-        expect(result).toBe('\\');
+        expect(result).toBe(sep);
       });
     });
   });

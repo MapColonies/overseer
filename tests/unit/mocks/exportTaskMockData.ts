@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-import { type RoiFeatureCollection } from '@map-colonies/raster-shared';
-import { LayerMetadata } from '@map-colonies/mc-model-types';
+import { RasterLayerMetadata, type RoiFeatureCollection } from '@map-colonies/raster-shared';
 import { ITileRange } from '@map-colonies/mc-utils';
 import { TaskSources } from '../../../src/common/interfaces';
 import { layerRecord } from './catalogClientMockData';
@@ -30,7 +29,7 @@ export const mockRoi: RoiFeatureCollection = {
   ],
 };
 
-export const nonIntersectingRoiCase: { roi: RoiFeatureCollection; targetLayerMetadata: LayerMetadata } = {
+export const nonIntersectingRoiCase: { roi: RoiFeatureCollection; targetLayerMetadata: RasterLayerMetadata } = {
   roi: {
     type: 'FeatureCollection',
     features: [

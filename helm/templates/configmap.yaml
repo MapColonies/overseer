@@ -38,8 +38,8 @@ data:
   DEQUEUE_INTERVAL_MS: {{ $jobDefinitions.config.dequeueIntervalMs | quote }}
   MAX_TASK_ATTEMPTS: {{ $jobDefinitions.config.maxTaskAttempts | quote }}
   TILES_STORAGE_PROVIDER: {{ $storage.tilesStorageProvider | quote }}
-  INGESTION_POLLING_INIT_TASK: {{ $jobDefinitions.tasks.init.type | quote }}
-  INGESTION_POLLING_FINALIZE_TASK: {{ $jobDefinitions.tasks.finalize.type | quote }}
+  POLLING_INIT_TASK: {{ $jobDefinitions.tasks.init.type | quote }}
+  POLLING_FINALIZE_TASK: {{ $jobDefinitions.tasks.finalize.type | quote }}
   INGESTION_NEW_JOB_TYPE: {{ $jobDefinitions.jobs.new.type | quote }}
   INGESTION_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.update.type | quote }}
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}

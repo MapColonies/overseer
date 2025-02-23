@@ -112,6 +112,7 @@ export class CatalogClient extends HttpClient {
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
         }
         throw err;
       } finally {

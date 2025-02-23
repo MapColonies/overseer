@@ -114,8 +114,8 @@ jobDefinitions:
        type: ""
      seed: 
         type: ""
-     export: 
-      type: ""          
+     export:
+      type: ""
     tasks:
       init:
         type: ""
@@ -135,9 +135,9 @@ jobDefinitions:
         maxZoom: 21
         skipUncached: true
       export: 
-        type: ""   
+        type: ""
 
-    config: 
+    config:
       dequeueIntervalMs: 3000
       heartBeat:
         intervalMs: 3000 

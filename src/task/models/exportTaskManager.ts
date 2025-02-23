@@ -1,12 +1,20 @@
+import { sep } from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { feature, featureCollection, intersect } from '@turf/turf';
 import PolygonBbox from '@turf/bbox';
 import { Logger } from '@map-colonies/js-logger';
-import { bboxSchema, multiPolygonSchema, polygonSchema, SourceType, type RoiFeature, type RoiFeatureCollection } from '@map-colonies/raster-shared';
-import { LayerMetadata } from '@map-colonies/mc-model-types';
-import { bboxToTileRange, degreesPerPixelToZoomLevel, degreesPerTile, type ITileRange } from '@map-colonies/mc-utils';
+import {
+  bboxSchema,
+  multiPolygonSchema,
+  polygonSchema,
+  RasterLayerMetadata,
+  SourceType,
+  type RoiFeature,
+  type RoiFeatureCollection,
+} from '@map-colonies/raster-shared';
+import { bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import { IConfig, type TaskSources, type ZoomBoundsParameters } from '../../common/interfaces';
@@ -27,7 +35,7 @@ export class ExportTaskManager {
     this.allWorldBounds = [-180, -90, 180, 90];
   }
 
-  public generateTileRangeBatches(roi: RoiFeatureCollection, layerMetadata: LayerMetadata): ITileRange[] {
+  public generateTileRangeBatches(roi: RoiFeatureCollection, layerMetadata: RasterLayerMetadata): ITileRange[] {
     return context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${ExportTaskManager.name}.${this.generateTileRangeBatches.name}`)),
       () => {
@@ -77,7 +85,7 @@ export class ExportTaskManager {
     );
   }
 
-  public generateSources(job: ExportInitJob, layerMetadata: LayerMetadata): TaskSources[] {
+  public generateSources(job: ExportInitJob, layerMetadata: RasterLayerMetadata): TaskSources[] {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportTaskManager.name}.${this.generateSources.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ layerId: layerMetadata.id, jobId: job.id });
@@ -129,7 +137,7 @@ export class ExportTaskManager {
   }
 
   private getSeparator(): string {
-    return this.tilesProvider === TilesStorageProvider.S3 ? '/' : '\\';
+    return this.tilesProvider === TilesStorageProvider.S3 ? '/' : sep;
   }
 
   private calculateZoomLevelsAndBbox(roiFeature: RoiFeature, targetFeature: Feature<Polygon | MultiPolygon>): ZoomBoundsParameters {
@@ -166,65 +174,11 @@ export class ExportTaskManager {
       const bbox = bboxSchema.parse(PolygonBbox(intersection));
       this.logger.debug({ msg: 'bbox calculated and validated', bbox });
 
-      const sanitizedBbox = this.snapBBoxToTileGrid(bbox, zoom);
-      this.logger.debug({ msg: 'bbox sanitized and validated', sanitizedBbox });
-      return sanitizedBbox;
+      return bbox;
     } catch (err) {
       const error = err instanceof Error ? err : new Error(JSON.stringify(err));
       error.message = `Error occurred while trying to sanitized bbox: ${error.message}`;
       throw error;
     }
-  }
-
-  private snapBBoxToTileGrid(bbox: BBox, zoomLevel: number): BBox {
-    this.logger.debug({ msg: `Starting bbox snapping for zoom level ${zoomLevel} ` });
-    if (zoomLevel === 0) {
-      this.logger.debug({ msg: 'Zoom level is 0, returning world bounds' });
-      return this.allWorldBounds;
-    }
-
-    const tileDegrees = degreesPerTile(zoomLevel);
-    this.logger.debug({ msg: `Tile resolution at zoom ${zoomLevel}: ${tileDegrees}` });
-
-    const snappedBounds = this.snapBounds(bbox, tileDegrees);
-
-    return snappedBounds;
-  }
-
-  private snapBounds(bbox: BBox, tileDegrees: number): BBox {
-    const coordinates = [
-      { coord: bbox[0], isMax: false }, // minLon
-      { coord: bbox[1], isMax: false }, // minLat
-      { coord: bbox[2], isMax: true }, // maxLon
-      { coord: bbox[3], isMax: true }, // maxLat
-    ];
-    this.logger.debug({ msg: 'Starting bounds snapping', coordinates });
-
-    const snappedBounds = coordinates.map(({ coord, isMax }) => this.snapCoordinateToGrid(coord, tileDegrees, isMax));
-
-    this.logger.debug({
-      msg: 'Snapped bounds calculated',
-      minLon: { original: bbox[0], snapped: snappedBounds[0] },
-      maxLon: { original: bbox[1], snapped: snappedBounds[1] },
-      minLat: { original: bbox[2], snapped: snappedBounds[2] },
-      maxLat: { original: bbox[3], snapped: snappedBounds[3] },
-    });
-
-    return bboxSchema.parse(snappedBounds);
-  }
-
-  private snapCoordinateToGrid(cord: number, tileDegrees: number, isMaxBoundary: boolean): number {
-    this.logger.debug({ msg: 'Starting coordinate snapping', cord, tileDegrees, isMaxBoundary });
-    const snappedCord = Math.floor(cord / tileDegrees) * tileDegrees;
-
-    // Expand bounds if original coordinates weren't exactly on grid lines
-    if (isMaxBoundary && snappedCord !== cord) {
-      const expandedCord = snappedCord + tileDegrees;
-      this.logger.debug({ msg: 'Expanding snapped coordinate', snappedCord, expandedCord });
-      return expandedCord;
-    }
-
-    this.logger.debug({ msg: 'Coordinate snapped', snappedCord });
-    return snappedCord;
   }
 }

@@ -1,4 +1,4 @@
-import { LayerMetadata } from '@map-colonies/mc-model-types';
+import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
@@ -48,6 +48,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
         activeSpan?.addEvent('findLayer.success');
 
         const exportTask = this.createExportTask(job, metadata);
+        logger.debug({ msg: 'export task created', exportTask });
+
         activeSpan?.addEvent('exportTask.created', { exportTask: JSON.stringify(exportTask) });
 
         await this.queueClient.jobManagerClient.createTaskForJob(job.id, exportTask);
@@ -68,12 +70,17 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
     throw new Error('Method not implemented.');
   }
 
-  private createExportTask(job: ExportInitJob, metadata: LayerMetadata): ExportTask {
+  private createExportTask(job: ExportInitJob, metadata: RasterLayerMetadata): ExportTask {
+    const logger = this.logger.child({ jobId: job.id, jobType: job.type, layerId: metadata.id });
     const activeSpan = trace.getActiveSpan();
     const { exportInputParams, additionalParams } = job.parameters;
     const { targetFormat, outputFormatStrategy } = additionalParams;
+
     const batches = this.exportTaskManager.generateTileRangeBatches(exportInputParams.roi, metadata);
+    logger.info({ msg: 'tile range batches generated', batchesCount: batches.length });
+
     const sources = this.exportTaskManager.generateSources(job, metadata);
+    logger.info({ msg: 'sources generated', sources });
 
     const params: ExportTaskParameters = {
       isNewTarget: true,
@@ -84,9 +91,13 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
       traceParentContext: activeSpan?.spanContext(),
     };
 
-    return {
+    const exportTask: ExportTask = {
       type: this.exportTaskType,
       parameters: params,
     };
+
+    logger.info({ msg: 'export task created', exportTaskType: exportTask.type });
+
+    return exportTask;
   }
 }

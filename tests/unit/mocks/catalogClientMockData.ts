@@ -3,38 +3,6 @@ import { FindLayerResponse } from '../../../src/common/interfaces';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 export const layerRecord: FindLayerResponse = {
-  links: [
-    {
-      name: 'raster_shared_test_swap-RasterVectorBest',
-      protocol: 'WMS',
-      url: 'https://tiles-dev.mapcolonies.net/api/raster/v1/service?REQUEST=GetCapabilities',
-    },
-    {
-      name: 'raster_shared_test_swap-RasterVectorBest',
-      protocol: 'WMS_BASE',
-      url: 'https://tiles-dev.mapcolonies.net/api/raster/v1/wms',
-    },
-    {
-      name: 'raster_shared_test_swap-RasterVectorBest',
-      protocol: 'WMTS',
-      url: 'https://tiles-dev.mapcolonies.net/api/raster/v1/wmts/1.0.0/WMTSCapabilities.xml',
-    },
-    {
-      name: 'raster_shared_test_swap-RasterVectorBest',
-      protocol: 'WMTS_KVP',
-      url: 'https://tiles-dev.mapcolonies.net/api/raster/v1/service?REQUEST=GetCapabilities&SERVICE=WMTS',
-    },
-    {
-      name: 'raster_shared_test_swap-RasterVectorBest',
-      protocol: 'WMTS_BASE',
-      url: 'https://tiles-dev.mapcolonies.net/api/raster/v1/wmts',
-    },
-    {
-      name: 'raster_shared_test_swap-RasterVectorBest',
-      protocol: 'WFS',
-      url: 'https://polygon-parts-dev.mapcolonies.net/api/raster/v1/wfs?request=GetCapabilities',
-    },
-  ],
   metadata: {
     id: '0b1e6b92-3587-4287-a4b7-6744c60f5add',
     type: RecordType.RECORD_RASTER,
