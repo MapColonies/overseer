@@ -61,9 +61,8 @@ describe('exportTaskManager', () => {
       const { exportTaskManager } = setupExportTaskBuilderTest();
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const tilesStorageProvider = configMock.get<string>('tilesStorageProvider');
-      const expectedPath = `${layerRecord.metadata.id}${tilesStorageProvider === TilesStorageProvider.S3 ? '/' : sep}${
-        layerRecord.metadata.displayPath
-      }`;
+      const separator = tilesStorageProvider === TilesStorageProvider.S3 ? '/' : sep;
+      const expectedPath = `${layerRecord.metadata.id}${separator}${layerRecord.metadata.displayPath}`;
       const job = exportInitJob;
       const { metadata } = layerRecord;
 
