@@ -1,13 +1,13 @@
 import jsLogger from '@map-colonies/js-logger';
-import { trace } from '@opentelemetry/api';
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
-import { NewJobHandler } from '../../../../src/job/models/newJobHandler';
+import { NewJobHandler } from '../../../../src/job/models/ingestion/newJobHandler';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
+import { tracerMock } from '../../mocks/tracerMock';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
@@ -28,7 +28,6 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
   const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
   const geoserverClientMock = { publish: jest.fn() } as unknown as jest.Mocked<GeoserverClient>;
   const catalogClientMock = { publish: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
-  const tracerMock = trace.getTracer('test');
 
   const newJobHandler = new NewJobHandler(
     jsLogger({ enabled: false }),

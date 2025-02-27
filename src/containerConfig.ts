@@ -13,12 +13,13 @@ import jsLogger from '@map-colonies/js-logger';
 import { INJECTION_VALUES, SERVICES, SERVICE_NAME, SERVICE_VERSION } from './common/constants';
 import { tracing } from './common/tracing';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
-import { NewJobHandler } from './job/models/newJobHandler';
-import { UpdateJobHandler } from './job/models/updateJobHandler';
+import { NewJobHandler } from './job/models/ingestion/newJobHandler';
+import { UpdateJobHandler } from './job/models/ingestion/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { validateAndGetHandlersTokens } from './utils/configUtil';
-import { SwapJobHandler } from './job/models/swapJobHandler';
-import { IConfig, JobManagerConfig, IngestionPollingJobs } from './common/interfaces';
+import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
+import { IConfig, JobManagerConfig, PollingJobs } from './common/interfaces';
+import { ExportJobHandler } from './job/models/export/exportJobHandler';
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
@@ -52,9 +53,9 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
   const metricsRegistry = new Registry();
   const tracer = trace.getTracer(SERVICE_NAME, SERVICE_VERSION);
 
-  const ingestionConfig = config.get<IngestionPollingJobs>('jobManagement.ingestion.pollingJobs');
+  const pollingJobs = config.get<PollingJobs>('jobManagement.polling.jobs');
 
-  const handlersTokens = validateAndGetHandlersTokens(ingestionConfig);
+  const handlersTokens = validateAndGetHandlersTokens(pollingJobs);
 
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: config } },
@@ -65,6 +66,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
     { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
     { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
+    { token: handlersTokens.Export, provider: { useClass: ExportJobHandler } },
     { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
     { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
     {

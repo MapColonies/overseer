@@ -1,13 +1,13 @@
 import jsLogger from '@map-colonies/js-logger';
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { trace } from '@opentelemetry/api';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
-import { SwapJobHandler } from '../../../../src/job/models/swapJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/seedingJobCreator';
+import { SwapJobHandler } from '../../../../src/job/models/ingestion/swapJobHandler';
+import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
+import { tracerMock } from '../../mocks/tracerMock';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
@@ -28,7 +28,6 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
   const mapproxyClientMock = { update: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
   const catalogClientMock = { update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
   const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
-  const tracerMock = trace.getTracer('test');
 
   const swapJobHandler = new SwapJobHandler(
     jsLogger({ enabled: false }),

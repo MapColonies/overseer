@@ -12,9 +12,9 @@ import { inject, injectable } from 'tsyringe';
 import type { IngestionJobTypes } from '../utils/configUtil';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { INJECTION_VALUES, SERVICES } from '../common/constants';
-import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody } from '../common/interfaces';
+import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
-import { PublishLayerError, UpdateLayerError } from '../common/errors';
+import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
@@ -39,7 +39,7 @@ export class CatalogClient extends HttpClient {
     this.geoserverDns = config.get<string>('servicesUrl.geoserverDns');
   }
 
-  public async publish(job: IJobResponse<IngestionNewExtendedJobParams, unknown>, layerName: LayerName): Promise<void> {
+  public async publish(job: IngestionNewFinalizeJob, layerName: LayerName): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.publish.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttribute('layerName', layerName);
@@ -85,6 +85,36 @@ export class CatalogClient extends HttpClient {
           activeSpan?.recordException(err);
           throw new UpdateLayerError(this.targetService, internalId, err);
         }
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
+
+  public async findLayer(id: string): Promise<FindLayerResponse> {
+    // eslint-disable-next-line @typescript-eslint/return-await
+    return await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.findLayer.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      try {
+        const url = `/records/find`;
+        const requestBody: FindLayerBody = { id };
+        activeSpan?.setAttributes({ url, requestBody: JSON.stringify(requestBody) });
+
+        activeSpan?.addEvent('findLayer.request');
+        const records = await this.post<FindLayerResponse[]>(url, requestBody);
+        activeSpan?.addEvent('findLayer.response', { records: JSON.stringify(records) });
+
+        if (records.length === 0) {
+          throw new LayerNotFoundError(id);
+        }
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer found successfully' });
+        return records[0];
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+        }
+        throw err;
       } finally {
         activeSpan?.end();
       }

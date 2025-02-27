@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   createJobResponseSchema,
   createTaskResponseSchema,
+  exportJobParametersSchema,
   ingestionNewFinalizeTaskParamsSchema,
   ingestionNewJobParamsSchema,
   ingestionSwapUpdateJobParamsSchema,
@@ -15,6 +16,7 @@ import type { JobTypes, TaskTypes } from '@map-colonies/raster-shared';
 import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
 import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobParamsSchema } from './jobParameters.schema';
 
+//#region Ingestion
 //#region IngestionNew
 //init
 export const ingestionNewInitJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema).describe('IngestionNewInitJobSchema');
@@ -45,7 +47,7 @@ export const ingestionUpdateFinalizeTaskSchema = createTaskResponseSchema(ingest
   'IngestionUpdateFinalizeTaskSchema'
 );
 export type IngestionUpdateFinalizeTask = z.infer<typeof ingestionUpdateFinalizeTaskSchema>;
-//endregion
+//#endregion
 
 //#region IngestionSwapUpdate
 //init
@@ -62,6 +64,16 @@ export const ingestionSwapUpdateFinalizeTaskSchema = createTaskResponseSchema(in
   'IngestionSwapUpdateFinalizeTaskSchema'
 );
 export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdateFinalizeTaskSchema>;
+//#endregion
+//#endregion
+
+//#region Export
+//init
+export const exportInitJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportInitJobSchema');
+export type ExportInitJob = z.infer<typeof exportInitJobSchema>;
+
+export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('ExportInitTaskSchema');
+export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
 //#endregion
 
 export type OperationValidationKey = `${JobTypes}_${TaskTypes}`;
@@ -90,5 +102,13 @@ export const jobTaskSchemaMap = {
   Ingestion_Swap_Update_finalize: {
     jobSchema: ingestionSwapUpdateFinalizeJobSchema,
     taskSchema: ingestionSwapUpdateFinalizeTaskSchema,
+  },
+  Export_init: {
+    jobSchema: exportInitJobSchema,
+    taskSchema: exportInitTaskSchema,
+  },
+  Export_finalize: {
+    jobSchema: exportInitJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
+    taskSchema: exportInitTaskSchema,
   },
 };

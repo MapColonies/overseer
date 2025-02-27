@@ -114,6 +114,8 @@ jobDefinitions:
        type: ""
      seed: 
         type: ""
+     export:
+      type: ""
     tasks:
       init:
         type: ""
@@ -131,12 +133,15 @@ jobDefinitions:
         type: ""
         grid: "WorldCRS84"
         maxZoom: 21
-        skipUncached: true 
+        skipUncached: true
+      export: 
+        type: ""
 
     config:
       dequeueIntervalMs: 3000
       heartBeat:
-        intervalMs: 3000  
+        intervalMs: 3000 
+      maxTaskAttempts: 3   
 
 env:
   port: 8080

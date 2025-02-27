@@ -6,11 +6,11 @@ import { feature, featureCollection, union } from '@turf/turf';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { inject, injectable } from 'tsyringe';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
-import { LayerCacheType, SeedMode, SERVICES } from '../../common/constants';
-import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../common/interfaces';
-import { MapproxyApiClient } from '../../httpClients/mapproxyClient';
-import { internalIdSchema } from '../../utils/zod/schemas/jobParameters.schema';
-import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../utils/zod/schemas/job.schema';
+import { LayerCacheType, SeedMode, SERVICES } from '../../../common/constants';
+import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../common/interfaces';
+import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
+import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
+import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
 
 @injectable()
 export class SeedingJobCreator {

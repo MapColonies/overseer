@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import type { LayerMetadata } from '@map-colonies/mc-model-types';
+import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import type {
   InputFiles,
   PolygonPart,
@@ -9,10 +8,12 @@ import type {
   IngestionSwapUpdateFinalizeTaskParams,
   TileOutputFormat,
   LayerName,
+  RasterLayerMetadata,
+  TileFormatStrategy,
 } from '@map-colonies/raster-shared';
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
-import type { Span } from '@opentelemetry/api';
+import type { Span, SpanContext } from '@opentelemetry/api';
 import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import {
   ingestionSwapUpdateFinalizeJobParamsSchema,
@@ -51,11 +52,12 @@ export interface IngestionJobs {
   seed: JobConfig | undefined;
 }
 
-export interface IngestionPollingJobs {
+export interface PollingJobs {
   [key: string]: JobConfig | undefined;
   new: JobConfig | undefined;
   update: JobConfig | undefined;
   swapUpdate: JobConfig | undefined;
+  export: JobConfig | undefined;
 }
 
 export interface PollingTasks {
@@ -63,10 +65,9 @@ export interface PollingTasks {
   finalize: string;
 }
 
-export interface IngestionConfig {
-  pollingTasks: PollingTasks;
-  pollingJobs: IngestionPollingJobs;
-  jobs: IngestionJobs;
+export interface PollingConfig {
+  tasks: PollingTasks;
+  jobs: PollingJobs;
   maxTaskAttempts: number;
 }
 
@@ -153,7 +154,7 @@ export interface MergeParameters {
   tilesSource: TilesSource;
 }
 
-export interface MergeSources {
+export interface TaskSources {
   type: string;
   path: string;
   grid?: Grid;
@@ -163,7 +164,7 @@ export interface MergeSources {
 export interface MergeTaskParameters {
   targetFormat: TileOutputFormat;
   isNewTarget: boolean;
-  sources: MergeSources[];
+  sources: TaskSources[];
   batches: ITileRange[];
 }
 
@@ -191,6 +192,27 @@ export interface MergeTilesMetadata {
 }
 
 //#endregion task
+
+//#region exportTask
+
+export interface ZoomBoundsParameters {
+  minZoom: number;
+  maxZoom: number;
+  bbox: BBox;
+}
+
+export interface ExportTaskParameters {
+  isNewTarget: boolean;
+  targetFormat?: TileOutputFormat;
+  outputFormatStrategy: TileFormatStrategy;
+  batches: ITileRange[];
+  sources: TaskSources[];
+  traceParentContext?: SpanContext;
+}
+
+export type ExportTask = ICreateTaskBody<ExportTaskParameters>;
+
+//#endregion exportTask
 
 //#region mapproxyApi
 export interface PublishMapLayerRequest {
@@ -238,12 +260,14 @@ export interface CatalogUpdateRequestBody {
   metadata: CatalogUpdateMetadata;
 }
 
-export type CatalogUpdateMetadata = Partial<LayerMetadata>;
+export type FindLayerBody = Pick<RasterLayerMetadata, 'id'>;
 
-export interface CatalogUpdateAdditionalParams {
-  displayPath?: string;
-  polygonPartsEntityName: string;
+export interface FindLayerResponse {
+  metadata: RasterLayerMetadata;
 }
+
+export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
+
 //#endregion catalogClient
 
 //#region seedingJobCreator

@@ -1,11 +1,11 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
-import { trace } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { JobProcessor } from '../../../../src/job/models/jobProcessor';
 import { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory';
 import { configMock } from '../../mocks/configMock';
 import { JobManagerConfig } from '../../../../src/common/interfaces';
+import { tracerMock } from '../../mocks/tracerMock';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -53,7 +53,6 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const tracerMock = trace.getTracer('test');
   const jobProcessor = new JobProcessor(mockLogger, tracerMock, configMock, mockJobHandlerFactory, queueClient);
   return {
     jobProcessor,

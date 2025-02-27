@@ -5,17 +5,17 @@ import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { ZodError } from 'zod';
 import { getAvailableJobTypes } from '../../utils/configUtil';
-import { jobTaskSchemaMap, type OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { SERVICES } from '../../common/constants';
-import { IConfig, IngestionConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
+import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
+import { IConfig, PollingConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
 export class JobProcessor {
   private readonly dequeueIntervalMs: number;
-  private readonly jobTypes: string[];
+  private readonly pollingJobTypes: string[];
   private readonly pollingTaskTypes: string[];
-  private readonly ingestionConfig: IngestionConfig;
+  private readonly pollingConfig: PollingConfig;
   private isRunning = true;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
@@ -25,10 +25,10 @@ export class JobProcessor {
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
-    this.ingestionConfig = this.config.get<IngestionConfig>('jobManagement.ingestion');
-    const { pollingJobs, pollingTasks } = this.ingestionConfig;
-    this.jobTypes = getAvailableJobTypes(pollingJobs);
-    this.pollingTaskTypes = [pollingTasks.init, pollingTasks.finalize];
+    this.pollingConfig = this.config.get<PollingConfig>('jobManagement.polling');
+    const { jobs, tasks } = this.pollingConfig;
+    this.pollingJobTypes = getAvailableJobTypes(jobs);
+    this.pollingTaskTypes = [tasks.init, tasks.finalize];
   }
 
   public async start(): Promise<void> {
@@ -82,7 +82,7 @@ export class JobProcessor {
       });
 
       try {
-        const taskTypes = this.ingestionConfig.pollingTasks;
+        const taskTypes = this.pollingConfig.tasks;
         const jobHandler = this.jobHandlerFactory(job.type);
 
         switch (task.type) {
@@ -109,7 +109,7 @@ export class JobProcessor {
   private async getJobAndTaskResponse(): Promise<JobAndTaskResponse | undefined> {
     try {
       for (const taskType of this.pollingTaskTypes) {
-        for (const jobType of this.jobTypes) {
+        for (const jobType of this.pollingJobTypes) {
           const { task, shouldSkipTask } = await this.getTask(jobType, taskType);
 
           if (shouldSkipTask) {
@@ -153,7 +153,7 @@ export class JobProcessor {
       logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
       return { task: null, shouldSkipTask: true };
     }
-    if (task.attempts >= this.ingestionConfig.maxTaskAttempts) {
+    if (task.attempts >= this.pollingConfig.maxTaskAttempts) {
       const message = `${taskType} task ${task.id} reached max attempts, rejects as unrecoverable`;
       logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
       await this.queueClient.reject(task.jobId, task.id, false);
@@ -173,7 +173,7 @@ export class JobProcessor {
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (validationSchemas === undefined) {
-      throw new Error(`no validation schema found for job type ${job.type} and task type ${task.type}`);
+      throw new Error(`No validation schema found for job type ${job.type} and task type ${task.type}`);
     }
     const { jobSchema, taskSchema } = validationSchemas;
 
