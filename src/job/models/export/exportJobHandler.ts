@@ -1,3 +1,4 @@
+import path from 'path';
 import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { type Logger } from '@map-colonies/js-logger';
@@ -16,6 +17,8 @@ import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
+  private readonly gpkgsPath: string;
+
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) config: IConfig,
@@ -28,6 +31,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   ) {
     super(logger, queueClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
+    this.gpkgsPath = config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
   }
   public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobInit.name}`)), async () => {
@@ -69,12 +73,14 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async handleJobFinalize(job: ExportJob, task: ExportFinalizeTask): Promise<void> {
     let finalizeTaskParams: ExportFinalizeTaskParams = task.parameters;
+    const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
     const { gpkgModified } = finalizeTaskParams;
+
+    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
 
     if (!gpkgModified) {
       const metadata = { example1: 'example1', example2: 'example2' }; // need to be replaced with real metadata
-      const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
-      const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgRelativePath, metadata);
+      const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
       if (isTableCreated) {
         finalizeTaskParams = await this.markFinalizeStepAsCompleted<ExportFinalizeTaskParams>(job.id, task.id, finalizeTaskParams, 'gpkgModified');
       }

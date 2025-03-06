@@ -1,33 +1,22 @@
-import path from 'path';
 import { Logger } from '@map-colonies/js-logger';
 import { snakeCase } from 'change-case';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import Database from 'better-sqlite3';
 import { getUTCDate } from '@map-colonies/mc-utils';
-import { IConfig, TableDefinition } from '../../common/interfaces';
+import { TableDefinition } from '../../common/interfaces';
 import { SERVICES, SqlDataType } from '../../common/constants';
 
 @injectable()
 export class GeoPackageClient {
-  private readonly gpkgsPath: string;
-  public constructor(
-    @inject(SERVICES.LOGGER) private readonly logger: Logger,
-    @inject(SERVICES.CONFIG) private readonly config: IConfig,
-    @inject(SERVICES.TRACER) private readonly tracer: Tracer
-  ) {
-    this.gpkgsPath = this.config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
-  }
+  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.TRACER) private readonly tracer: Tracer) {}
 
-  public createTableFromMetadata(gpkgRelativePath: string, metadata: Record<string, unknown>, tableName: string = 'metadata'): boolean {
+  public createTableFromMetadata(gpkgFilePath: string, metadata: Record<string, unknown>, tableName: string = 'metadata'): boolean {
     return context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${GeoPackageClient.name}.${this.createTableFromMetadata.name}`)),
       () => {
         const activeSpan = trace.getActiveSpan();
         try {
-          const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
-          activeSpan?.setAttributes({ gpkgFilePath, tableName });
-
           this.logger.info({ msg: 'Opening gpkg file', gpkgFilePath });
           const db = new Database(gpkgFilePath, { readonly: false });
           activeSpan?.addEvent('gpkg.opened', { gpkgFilePath });
