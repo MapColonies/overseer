@@ -50,4 +50,13 @@ export const SeedMode = {
 
 export type SeedMode = (typeof SeedMode)[keyof typeof SeedMode];
 
+export const SqlDataType = {
+  TEXT: 'TEXT',
+  INTEGER: 'INTEGER',
+  REAL: 'REAL',
+  NULL: 'NULL',
+} as const;
+
+export type SqlDataType = (typeof SqlDataType)[keyof typeof SqlDataType];
+
 /* eslint-enable @typescript-eslint/naming-convention */

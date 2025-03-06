@@ -8,6 +8,7 @@ import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 import { configMock } from '../../mocks/configMock';
+import { GeoPackageClient } from '../../../../src/utils/db/geoPackageClient';
 
 export interface ExportJobHandlerTestContext {
   configMock: IConfig;
@@ -26,6 +27,8 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
 
   const catalogClientMock = { findLayer: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
 
+  const gpkgServiceMock = { createTableFromMetadata: jest.fn() } as unknown as jest.Mocked<GeoPackageClient>;
+
   const exportJobHandler = new ExportJobHandler(
     jsLogger({ enabled: false }),
     configMock,
@@ -33,6 +36,7 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     queueClientMock,
     catalogClientMock,
     exportTaskManagerMock,
+    gpkgServiceMock,
     taskMetricsMock
   );
 

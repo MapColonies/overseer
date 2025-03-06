@@ -5,7 +5,7 @@ import type { LayerName } from '@map-colonies/raster-shared';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
-import type { FinalizeTaskParams, JobAndTaskTelemetry } from '../../common/interfaces';
+import type { JobAndTaskTelemetry } from '../../common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../common/constants';
 
 export class JobHandler {
@@ -18,12 +18,7 @@ export class JobHandler {
     return `${resourceId}-${validProductType}`;
   }
 
-  protected async markFinalizeStepAsCompleted<T extends FinalizeTaskParams>(
-    jobId: string,
-    taskId: string,
-    finalizeTaskParams: T,
-    step: keyof T
-  ): Promise<T> {
+  protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, finalizeTaskParams: T, step: keyof T): Promise<T> {
     const updatedParams: T = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
     this.logger.debug({ msg: `finalization step completed`, step });

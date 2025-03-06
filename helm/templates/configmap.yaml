@@ -4,6 +4,8 @@
 {{- $serviceUrls := (include "common.serviceUrls.merged" .) | fromYaml }}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 {{- $jobDefinitions := (include "common.jobDefinitions.merged" .) | fromYaml }}
+{{ $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.outputPath $storage.fs.internalPvc.gpkgSubPath) }}
+
 
 {{- if .Values.enabled -}}
 apiVersion: v1
@@ -45,6 +47,8 @@ data:
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}
   INGESTION_SEED_JOB_TYPE : {{ $jobDefinitions.jobs.seed.type | quote }}
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
+  EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}
+  EXPORT_GPKGS_PATH: {{ $gpkgPath | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}

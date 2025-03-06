@@ -121,6 +121,7 @@ const registerDefaultConfig = (): void => {
           },
           export: {
             type: 'Export',
+            gpkgsPath: '/gpkgs',
           },
         },
       },

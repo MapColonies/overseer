@@ -18,7 +18,7 @@ import { bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@m
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, TilesStorageProvider } from '../../common/constants';
 import { IConfig, type TaskSources, type ZoomBoundsParameters } from '../../common/interfaces';
-import type { ExportInitJob } from '../../utils/zod/schemas/job.schema';
+import type { ExportJob } from '../../utils/zod/schemas/job.schema';
 import { createChildSpan } from '../../common/tracing';
 
 @injectable()
@@ -85,7 +85,7 @@ export class ExportTaskManager {
     );
   }
 
-  public generateSources(job: ExportInitJob, layerMetadata: RasterLayerMetadata): TaskSources[] {
+  public generateSources(job: ExportJob, layerMetadata: RasterLayerMetadata): TaskSources[] {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportTaskManager.name}.${this.generateSources.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ layerId: layerMetadata.id, jobId: job.id });

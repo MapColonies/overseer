@@ -14,8 +14,8 @@ global:
     path: '/usr/local/share/ca-certificates'
     key: 'ca.crt'
   gracefulReloadMaxSeconds: 300
-  storage:
-    tilesStorageProvider: "FS"     
+  storage: {}
+     
 
 enabled: true
 environment: development
@@ -58,6 +58,12 @@ sidecars: []
 
 storage:
   tilesStorageProvider: ""
+  fs:
+    internalPvc:
+      enabled: false
+      name: ""
+      gpkgSubPath: ""
+      outputPath: ""
 
 cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'
@@ -116,6 +122,7 @@ jobDefinitions:
         type: ""
      export:
       type: ""
+      cleanupExpirationDays: 14
     tasks:
       init:
         type: ""
