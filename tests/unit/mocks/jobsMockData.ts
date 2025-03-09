@@ -200,7 +200,7 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const exportInitJob: ExportJob = {
+export const exportJob: ExportJob = {
   id: 'd78516d4-d815-4e0b-a8bd-88e0c434c928',
   resourceId: 'raster_shared_test_swap',
   version: '2.0',

@@ -4,13 +4,7 @@ import type { LayerName } from '@map-colonies/raster-shared';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
-import {
-  exportInitJob,
-  ingestionNewJobExtended,
-  ingestionSwapUpdateJob,
-  ingestionUpdateFinalizeJob,
-  ingestionUpdateJob,
-} from '../mocks/jobsMockData';
+import { exportJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import { FindLayerResponse } from '../../../src/common/interfaces';
 import { layerRecord } from '../mocks/catalogClientMockData';
 import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogClientSetup';
@@ -121,7 +115,7 @@ describe('CatalogClient', () => {
     it('should return layer', async () => {
       const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
-      const recordId = exportInitJob.internalId as string;
+      const recordId = exportJob.internalId as string;
       const reqBody = { id: recordId };
       const layer: FindLayerResponse = layerRecord;
       nock(baseUrl)

@@ -1,7 +1,7 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
 import {
-  exportInitJob,
+  exportJob,
   ingestionNewJob,
   ingestionNewJobExtended,
   ingestionSwapUpdateFinalizeJob,
@@ -46,8 +46,8 @@ export const initTestCases: InitTestCase[] = [
     task: initTaskForIngestionSwapUpdate,
   },
   {
-    jobType: exportInitJob.type,
-    job: exportInitJob,
+    jobType: exportJob.type,
+    job: exportJob,
     taskType: initTaskForExport.type,
     task: initTaskForExport,
   },

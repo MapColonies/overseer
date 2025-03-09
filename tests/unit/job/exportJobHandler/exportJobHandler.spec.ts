@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/unbound-method */
+import path from 'path';
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { finalizeTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
-import { exportInitJob } from '../../mocks/jobsMockData';
+import { exportJob } from '../../mocks/jobsMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
 import { exportTaskSources, exportTileRangeBatches } from '../../mocks/exportTaskMockData';
 import { setupExportJobHandlerTest } from './exportJobHandlerSetup';
@@ -17,7 +18,7 @@ describe('ExportJobHandler', () => {
       const { exportJobHandler, exportTaskManagerMock, queueClientMock, jobManagerClientMock, catalogClientMock, configMock } =
         setupExportJobHandlerTest();
       const exportTaskType = configMock.get<string>('export.tasks.tilesExporting.type');
-      const job = exportInitJob;
+      const job = exportJob;
       const task = initTaskForExport;
       const tilesExportingTask: ExportTask = {
         type: exportTaskType,
@@ -25,8 +26,8 @@ describe('ExportJobHandler', () => {
           batches: exportTileRangeBatches,
           sources: exportTaskSources,
           isNewTarget: true,
-          outputFormatStrategy: exportInitJob.parameters.additionalParams.outputFormatStrategy,
-          targetFormat: exportInitJob.parameters.additionalParams.targetFormat,
+          outputFormatStrategy: exportJob.parameters.additionalParams.outputFormatStrategy,
+          targetFormat: exportJob.parameters.additionalParams.targetFormat,
         },
       };
 
@@ -47,7 +48,7 @@ describe('ExportJobHandler', () => {
 
     it('should handle job init failure when catalog client fails', async () => {
       const { exportJobHandler, queueClientMock, catalogClientMock } = setupExportJobHandlerTest();
-      const job = exportInitJob;
+      const job = exportJob;
       const task = initTaskForExport;
       const error = new LayerNotFoundError('Layer not found');
 
@@ -61,7 +62,7 @@ describe('ExportJobHandler', () => {
 
     it('should handle job init failure when generating tile ranges fails', async () => {
       const { exportJobHandler, exportTaskManagerMock, queueClientMock, catalogClientMock } = setupExportJobHandlerTest();
-      const job = exportInitJob;
+      const job = exportJob;
       const task = initTaskForExport;
       const error = new Error('Failed to generate tile ranges');
 
@@ -78,7 +79,7 @@ describe('ExportJobHandler', () => {
 
     it('should handle job init failure when generating sources fails', async () => {
       const { exportJobHandler, exportTaskManagerMock, queueClientMock, catalogClientMock } = setupExportJobHandlerTest();
-      const job = exportInitJob;
+      const job = exportJob;
       const task = initTaskForExport;
       const error = new Error('Failed to generate sources');
 
@@ -97,11 +98,16 @@ describe('ExportJobHandler', () => {
 
   describe('handleJobFinalize', () => {
     it('should throw not implemented error', async () => {
-      const { exportJobHandler } = setupExportJobHandlerTest();
-      const job = exportInitJob;
+      const { exportJobHandler, configMock } = setupExportJobHandlerTest();
+      const gpkgsPath = configMock.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
+      const job = exportJob;
       const task = finalizeTaskForExport;
+      const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+
+      const pathJoinSpy = jest.spyOn(path, 'join').mockReturnValue(`${gpkgsPath}/${gpkgRelativePath}`);
 
       await expect(exportJobHandler.handleJobFinalize(job, task)).rejects.toThrow('Method not implemented.');
+      expect(pathJoinSpy).toHaveBeenCalledWith(gpkgsPath, gpkgRelativePath);
     });
   });
 });

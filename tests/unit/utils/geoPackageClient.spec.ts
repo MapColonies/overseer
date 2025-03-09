@@ -34,7 +34,7 @@ describe('geoPackageClient', () => {
       get: mockGet,
     });
 
-    geoPackageClient = new GeoPackageClient(jsLogger({ enabled: false }), configMock, tracerMock);
+    geoPackageClient = new GeoPackageClient(jsLogger({ enabled: false }), tracerMock);
   });
 
   describe('createTableFromMetadata', () => {
@@ -49,7 +49,7 @@ describe('geoPackageClient', () => {
 
       mockGet.mockReturnValue(undefined); // Table doesn't exist initially
 
-      const result = geoPackageClient.createTableFromMetadata(gpkgFilename, metadata, tableName);
+      const result = geoPackageClient.createTableFromMetadata(gpkgFilePath, metadata, tableName);
 
       expect(result).toBe(true);
       expect(Database).toHaveBeenCalledWith(gpkgFilePath, { readonly: false });
