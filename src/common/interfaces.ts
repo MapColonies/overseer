@@ -315,3 +315,14 @@ export interface JobAndTaskTelemetry {
   tracingSpan?: Span;
 }
 //#endregion telemetry
+
+//#region s3
+export interface IS3Config {
+  accessKeyId: string;
+  secretAccessKey: string;
+  endpointUrl: string;
+  bucket: string;
+  objectKey: string;
+  sslEnabled: boolean;
+}
+//#endregion s3

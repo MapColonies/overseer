@@ -35,8 +35,16 @@
     "delay": "exponential",
     "shouldResetTimeout": true
   },
+  "S3": {
+    "accessKeyId": "minioadmin",
+    "secretAccessKey": "minioadmin",
+    "endpointUrl": "http://localhost:9000",
+    "bucket": "",
+    "sslEnabled": false
+  },
   "disableHttpClientLogs": true,
   "tilesStorageProvider": "FS",
+  "gpkgStorageProvider": "FS",
   "linkTemplatesPath": "config/linkTemplates.template",
   "servicesUrl": {
     "mapproxyApi": "http://localhost:8083",

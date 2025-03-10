@@ -65,4 +65,9 @@ data:
   POLYGON_PARTS_MANAGER_URL: {{ $serviceUrls.polygonPartsManager | quote }}
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
+  GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
+  {{- if eq (upper $storage.gpkgProvider) "S3" }}
+  S3_ENDPOINT_URL: {{ $storage.s3.endpointUrl | quote }}
+  S3_BUCKET: {{ $storage.s3.bucketName | quote }}
+  S3_SSL_ENABLED: {{ $storage.s3.sslEnabled | quote }}
 {{- end }}

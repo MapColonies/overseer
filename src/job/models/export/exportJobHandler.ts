@@ -1,20 +1,24 @@
+import path from 'path';
 import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { SERVICES } from '../../../common/constants';
+import { GPKG_CONTENT_TYPE, SERVICES, StorageProvider } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { ExportTask, ExportTaskParameters, IConfig, IJobHandler } from '../../../common/interfaces';
-import { ExportInitJob, ExportInitTask } from '../../../utils/zod/schemas/job.schema';
+import { ExportJob, ExportInitTask, ExportFinalizeTask, ExportFinalizeTaskParams } from '../../../utils/zod/schemas/job.schema';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { ExportTaskManager } from '../../../task/models/exportTaskManager';
+import { S3Service } from '../../../utils/storage/s3Service';
 
 @injectable()
-export class ExportJobHandler extends JobHandler implements IJobHandler<ExportInitJob, ExportInitTask> {
+export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
+  private readonly gpkgsPath: string;
+  private readonly isS3GpkgProvider: boolean;
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) config: IConfig,
@@ -22,12 +26,17 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(ExportTaskManager) private readonly exportTaskManager: ExportTaskManager,
+    @inject(S3Service) private readonly s3Service: S3Service,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, queueClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
+    this.gpkgsPath = config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
+    this.isS3GpkgProvider = gpkgProvider === StorageProvider.S3;
   }
-  public async handleJobInit(job: ExportInitJob, task: ExportInitTask): Promise<void> {
+  public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
@@ -64,13 +73,31 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
       }
     });
   }
+
+  /* istanbul ignore next @preserve */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async handleJobFinalize(job: unknown, task: unknown): Promise<void> {
+  public async handleJobFinalize(job: ExportJob, task: ExportFinalizeTask): Promise<void> {
+    let finalizeTaskParams: ExportFinalizeTaskParams = task.parameters;
+    const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+
+    const { gpkgModified, gpkgUploadedToS3, callbacksSent } = finalizeTaskParams;
+
+    const gpkgPath = '/home/almogk/Documents/test_epxort';
+
+    const gpkgFilePath = path.join(gpkgPath, gpkgRelativePath);
+
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    const shouldUploadToS3 = this.isS3GpkgProvider && gpkgModified && !gpkgUploadedToS3;
+    if (shouldUploadToS3) {
+      await this.s3Service.uploadFile(gpkgFilePath, gpkgRelativePath, GPKG_CONTENT_TYPE);
+
+      finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgUploadedToS3');
+    }
     await Promise.resolve();
     throw new Error('Method not implemented.');
   }
 
-  private createExportTask(job: ExportInitJob, metadata: RasterLayerMetadata): ExportTask {
+  private createExportTask(job: ExportJob, metadata: RasterLayerMetadata): ExportTask {
     const logger = this.logger.child({ jobId: job.id, jobType: job.type, layerId: metadata.id });
     const activeSpan = trace.getActiveSpan();
     const { exportInputParams, additionalParams } = job.parameters;

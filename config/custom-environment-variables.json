@@ -52,11 +52,19 @@
       "__format": "boolean"
     }
   },
+  "S3": {
+    "accessKeyId": "S3_ACCESS_KEY_ID",
+    "secretAccessKey": "S3_SECRET_ACCESS_KEY",
+    "endpointUrl": "S3_ENDPOINT_URL",
+    "bucket": "S3_BUCKET",
+    "sslEnabled": "S3_SSL_ENABLED"
+  },
   "disableHttpClientLogs": {
     "__name": "DISABLE_HTTP_CLIENT_LOGS",
     "__format": "boolean"
   },
   "tilesStorageProvider": "TILES_STORAGE_PROVIDER",
+  "gpkgStorageProvider": "GPKG_STORAGE_PROVIDER",
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",
     "geoserverApi": "GEOSERVER_API_URL",

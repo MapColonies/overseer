@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
-import { initTaskForExport } from '../../mocks/tasksMockData';
+import { finalizeTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
 import { exportInitJob } from '../../mocks/jobsMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
 import { exportTaskSources, exportTileRangeBatches } from '../../mocks/exportTaskMockData';
@@ -99,7 +99,7 @@ describe('ExportJobHandler', () => {
     it('should throw not implemented error', async () => {
       const { exportJobHandler } = setupExportJobHandlerTest();
       const job = exportInitJob;
-      const task = initTaskForExport;
+      const task = finalizeTaskForExport;
 
       await expect(exportJobHandler.handleJobFinalize(job, task)).rejects.toThrow('Method not implemented.');
     });

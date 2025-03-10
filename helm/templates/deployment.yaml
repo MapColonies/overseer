@@ -6,6 +6,10 @@
 {{- $cloudProviderImagePullSecretName := include "overseer.cloudProviderImagePullSecretName" . -}}
 {{- $cloudProviderDockerRegistryUrl := include "overseer.cloudProviderDockerRegistryUrl" . -}}
 {{- $imageTag := include "overseer.tag" . -}}
+{{- $storage := (include "common.storage.merged" .) | fromYaml }}
+
+{{- $s3SecretName := ternary $storage.s3.secretName (printf "%s%s" $releaseName "-s3-secret") (ne $storage.s3.secretName "") -}}
+
 
 {{- if .Values.enabled -}}
 apiVersion: apps/v1
@@ -84,6 +88,18 @@ spec:
             {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
+            {{- if eq (upper $storage.gpkgProvider) "S3" }}
+            - name: S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $s3SecretName }}
+                  key: accessKeyId
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $s3SecretName }}
+                  key: secretAccessKey
             {{- end }}            
           envFrom:
             - configMapRef:
