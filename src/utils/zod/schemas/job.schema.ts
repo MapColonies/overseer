@@ -11,6 +11,7 @@ import {
   ingestionUpdateFinalizeTaskParamsSchema,
   ingestionUpdateJobParamsSchema,
   taskBlockDuplicationParamSchema,
+  exportFinalizeTaskParamsSchema,
 } from '@map-colonies/raster-shared';
 import type { JobTypes, TaskTypes } from '@map-colonies/raster-shared';
 import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
@@ -68,12 +69,16 @@ export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdate
 //#endregion
 
 //#region Export
+export const exportJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportJobSchema');
+export type ExportJob = z.infer<typeof exportJobSchema>;
 //init
-export const exportInitJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportInitJobSchema');
-export type ExportInitJob = z.infer<typeof exportInitJobSchema>;
-
 export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('ExportInitTaskSchema');
 export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
+
+//finalize
+export const exportFinalizeTaskSchema = createTaskResponseSchema(exportFinalizeTaskParamsSchema).describe('ExportFinalizeTaskSchema');
+export type ExportFinalizeTask = z.infer<typeof exportFinalizeTaskSchema>;
+export type ExportFinalizeTaskParams = z.infer<typeof exportFinalizeTaskParamsSchema>;
 //#endregion
 
 export type OperationValidationKey = `${JobTypes}_${TaskTypes}`;
@@ -104,11 +109,11 @@ export const jobTaskSchemaMap = {
     taskSchema: ingestionSwapUpdateFinalizeTaskSchema,
   },
   Export_init: {
-    jobSchema: exportInitJobSchema,
+    jobSchema: exportJobSchema,
     taskSchema: exportInitTaskSchema,
   },
   Export_finalize: {
-    jobSchema: exportInitJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
-    taskSchema: exportInitTaskSchema,
+    jobSchema: exportJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
+    taskSchema: exportFinalizeTaskSchema,
   },
 };

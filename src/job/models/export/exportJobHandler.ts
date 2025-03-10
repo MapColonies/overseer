@@ -1,3 +1,4 @@
+import path from 'path';
 import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { type Logger } from '@map-colonies/js-logger';
@@ -7,14 +8,17 @@ import { SERVICES } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { ExportTask, ExportTaskParameters, IConfig, IJobHandler } from '../../../common/interfaces';
-import { ExportInitJob, ExportInitTask } from '../../../utils/zod/schemas/job.schema';
+import { ExportFinalizeTask, ExportFinalizeTaskParams, ExportInitTask, ExportJob } from '../../../utils/zod/schemas/job.schema';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { ExportTaskManager } from '../../../task/models/exportTaskManager';
+import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
 
 @injectable()
-export class ExportJobHandler extends JobHandler implements IJobHandler<ExportInitJob, ExportInitTask> {
+export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
+  private readonly gpkgsPath: string;
+
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) config: IConfig,
@@ -22,12 +26,14 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(ExportTaskManager) private readonly exportTaskManager: ExportTaskManager,
+    private readonly gpkgService: GeoPackageClient,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, queueClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
+    this.gpkgsPath = config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
   }
-  public async handleJobInit(job: ExportInitJob, task: ExportInitTask): Promise<void> {
+  public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
@@ -65,12 +71,26 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportIn
     });
   }
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public async handleJobFinalize(job: unknown, task: unknown): Promise<void> {
+  public async handleJobFinalize(job: ExportJob, task: ExportFinalizeTask): Promise<void> {
+    let finalizeTaskParams: ExportFinalizeTaskParams = task.parameters;
+    const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+    const { gpkgModified } = finalizeTaskParams;
+
+    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
+
+    if (!gpkgModified) {
+      const metadata = { example1: 'example1', example2: 'example2' }; // need to be replaced with real metadata
+      const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
+      if (isTableCreated) {
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted<ExportFinalizeTaskParams>(job.id, task.id, finalizeTaskParams, 'gpkgModified');
+      }
+    }
+
     await Promise.resolve();
     throw new Error('Method not implemented.');
   }
 
-  private createExportTask(job: ExportInitJob, metadata: RasterLayerMetadata): ExportTask {
+  private createExportTask(job: ExportJob, metadata: RasterLayerMetadata): ExportTask {
     const logger = this.logger.child({ jobId: job.id, jobType: job.type, layerId: metadata.id });
     const activeSpan = trace.getActiveSpan();
     const { exportInputParams, additionalParams } = job.parameters;
