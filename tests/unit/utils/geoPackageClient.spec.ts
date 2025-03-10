@@ -52,7 +52,7 @@ describe('geoPackageClient', () => {
       const result = geoPackageClient.createTableFromMetadata(gpkgFilePath, metadata, tableName);
 
       expect(result).toBe(true);
-      expect(Database).toHaveBeenCalledWith(gpkgFilePath, { readonly: false });
+      expect(Database).toHaveBeenCalledWith(gpkgFilePath, { readonly: false, fileMustExist: true });
       expect(mockExec).toHaveBeenCalledWith('BEGIN TRANSACTION');
       expect(mockExec).toHaveBeenCalledWith('COMMIT');
 
@@ -100,6 +100,23 @@ describe('geoPackageClient', () => {
 
       const expectedSQL = 'CREATE TABLE "test_table" ("string_val" TEXT, "integer_val" INTEGER, "float_val" REAL)';
       expect(mockExec).toHaveBeenCalledWith(expect.stringContaining(expectedSQL));
+    });
+
+    it('should handle error when gpkg file is not found', () => {
+      const nonExistingFilePath = 'non-existing-file.gpkg';
+      const metadata = { test: 'value' };
+      const errorMessage = `SQLITE_CANTOPEN: unable to open database file'`;
+
+      const fileNotFoundError = new Error(errorMessage);
+      (Database as unknown as jest.Mock).mockImplementation(() => {
+        throw fileNotFoundError;
+      });
+
+      expect(() => geoPackageClient.createTableFromMetadata(nonExistingFilePath, metadata, tableName)).toThrow(errorMessage);
+
+      expect(mockExec).not.toHaveBeenCalled();
+      expect(mockPrepare).not.toHaveBeenCalled();
+      expect(mockClose).not.toHaveBeenCalled();
     });
   });
 });

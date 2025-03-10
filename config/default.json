@@ -78,7 +78,7 @@
         "export": {
           "type": "Export",
           "cleanupExpirationDays": 14,
-          "gpkgsPath": "/tmp/gpkgs"
+          "gpkgsPath": "/gpkgs"
         }
       }
     },

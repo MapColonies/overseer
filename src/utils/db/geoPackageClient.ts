@@ -18,7 +18,7 @@ export class GeoPackageClient {
         const activeSpan = trace.getActiveSpan();
         try {
           this.logger.info({ msg: 'Opening gpkg file', gpkgFilePath });
-          const db = new Database(gpkgFilePath, { readonly: false });
+          const db = new Database(gpkgFilePath, { readonly: false, fileMustExist: true });
           activeSpan?.addEvent('gpkg.opened', { gpkgFilePath });
 
           db.exec('BEGIN TRANSACTION');
