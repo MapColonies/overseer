@@ -78,11 +78,11 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   }
 
   /* istanbul ignore next @preserve */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public async handleJobFinalize(job: ExportJob, task: ExportFinalizeTask): Promise<void> {
     let finalizeTaskParams: ExportFinalizeTaskParams = task.parameters;
     const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { gpkgModified, gpkgUploadedToS3, callbacksSent } = finalizeTaskParams;
 
     const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
