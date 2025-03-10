@@ -9,16 +9,18 @@ import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { ExportTask, ExportTaskParameters, IConfig, IJobHandler } from '../../../common/interfaces';
 import { ExportJob, ExportInitTask, ExportFinalizeTask, ExportFinalizeTaskParams } from '../../../utils/zod/schemas/job.schema';
+import { S3Service } from '../../../utils/storage/s3Service';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { ExportTaskManager } from '../../../task/models/exportTaskManager';
-import { S3Service } from '../../../utils/storage/s3Service';
+import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
   private readonly gpkgsPath: string;
   private readonly isS3GpkgProvider: boolean;
+
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) config: IConfig,
@@ -27,6 +29,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(ExportTaskManager) private readonly exportTaskManager: ExportTaskManager,
     @inject(S3Service) private readonly s3Service: S3Service,
+    private readonly gpkgService: GeoPackageClient,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, queueClient);
@@ -82,17 +85,32 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
 
     const { gpkgModified, gpkgUploadedToS3, callbacksSent } = finalizeTaskParams;
 
-    const gpkgPath = '/home/almogk/Documents/test_epxort';
+    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
 
-    const gpkgFilePath = path.join(gpkgPath, gpkgRelativePath);
+    if (!gpkgModified) {
+      this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', gpkgFilePath });
+      const metadata = { example1: 'example1', example2: 'example2' }; // need to be replaced with real metadata
+      const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
+      if (isTableCreated) {
+        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgModified');
+      }
+    }
 
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    const shouldUploadToS3 = this.isS3GpkgProvider && gpkgModified && !gpkgUploadedToS3;
+    const shouldUploadToS3 = this.isS3GpkgProvider && finalizeTaskParams.gpkgModified && gpkgUploadedToS3 === false;
+    this.logger.debug({
+      msg: 'S3 upload status check',
+      shouldUploadToS3,
+      gpkgModified: finalizeTaskParams.gpkgModified,
+      gpkgUploadedToS3,
+      isS3GpkgProvider: this.isS3GpkgProvider,
+    });
+
     if (shouldUploadToS3) {
+      this.logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, gpkgRelativePath, contentType: GPKG_CONTENT_TYPE });
       await this.s3Service.uploadFile(gpkgFilePath, gpkgRelativePath, GPKG_CONTENT_TYPE);
-
       finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgUploadedToS3');
     }
+
     await Promise.resolve();
     throw new Error('Method not implemented.');
   }

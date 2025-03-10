@@ -9,6 +9,7 @@ import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMoc
 import { tracerMock } from '../../mocks/tracerMock';
 import { configMock } from '../../mocks/configMock';
 import { S3Service } from '../../../../src/utils/storage/s3Service';
+import { GeoPackageClient } from '../../../../src/utils/db/geoPackageClient';
 
 export interface ExportJobHandlerTestContext {
   configMock: IConfig;
@@ -30,6 +31,7 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
   const s3ServiceMock = {
     uploadFile: jest.fn(),
   } as unknown as jest.Mocked<S3Service>;
+  const gpkgServiceMock = { createTableFromMetadata: jest.fn() } as unknown as jest.Mocked<GeoPackageClient>;
 
   const exportJobHandler = new ExportJobHandler(
     jsLogger({ enabled: false }),
@@ -39,6 +41,7 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     catalogClientMock,
     exportTaskManagerMock,
     s3ServiceMock,
+    gpkgServiceMock,
     taskMetricsMock
   );
 

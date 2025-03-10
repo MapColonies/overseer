@@ -4,6 +4,8 @@
 {{- $serviceUrls := (include "common.serviceUrls.merged" .) | fromYaml }}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 {{- $jobDefinitions := (include "common.jobDefinitions.merged" .) | fromYaml }}
+{{ $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.outputPath $storage.fs.internalPvc.gpkgSubPath) }}
+
 
 {{- if .Values.enabled -}}
 apiVersion: v1
@@ -26,6 +28,11 @@ data:
   TELEMETRY_METRICS_INTERVAL: {{ $metrics.interval | quote }}
   TELEMETRY_METRICS_BUCKETS: {{ $metrics.buckets | toJson | quote }}
   {{ end }}
+  {{- if eq (upper $storage.gpkgProvider) "S3" }}
+  S3_ENDPOINT_URL: {{ $storage.s3.endpointUrl | quote }}
+  S3_BUCKET: {{ $storage.s3.tilesBucket | quote }}
+  S3_SSL_ENABLED: {{ $storage.s3.sslEnabled | quote }}
+  {{- end }}
   npm_config_cache: /tmp/
 
   HTTP_RETRY_ATTEMPTS: {{ .Values.env.httpRetry.attempts | quote }}
@@ -45,6 +52,8 @@ data:
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}
   INGESTION_SEED_JOB_TYPE : {{ $jobDefinitions.jobs.seed.type | quote }}
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
+  EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}
+  EXPORT_GPKGS_PATH: {{ $gpkgPath | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}
@@ -66,8 +75,4 @@ data:
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
-  {{- if eq (upper $storage.gpkgProvider) "S3" }}
-  S3_ENDPOINT_URL: {{ $storage.s3.endpointUrl | quote }}
-  S3_BUCKET: {{ $storage.s3.bucketName | quote }}
-  S3_SSL_ENABLED: {{ $storage.s3.sslEnabled | quote }}
-{{- end }}
+{{- end }}  

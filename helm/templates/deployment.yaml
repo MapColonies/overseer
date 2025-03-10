@@ -9,7 +9,7 @@
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 
 {{- $s3SecretName := ternary $storage.s3.secretName (printf "%s%s" $releaseName "-s3-secret") (ne $storage.s3.secretName "") -}}
-
+{{ $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.outputPath $storage.fs.internalPvc.gpkgSubPath) }}
 
 {{- if .Values.enabled -}}
 apiVersion: apps/v1
@@ -69,6 +69,10 @@ spec:
             {{- toYaml .Values.args | nindent 12 }}
           {{- end }}
           volumeMounts:
+            {{- if $storage.fs.internalPvc.enabled }}
+            - name: internal-storage
+              mountPath: {{ $storage.fs.internalPvc.outputPath }}
+            {{- end }}
             {{- if .Values.global.ca.secretName }}
             - mountPath: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
               name: root-ca
@@ -80,6 +84,8 @@ spec:
           env:
             - name: SERVER_PORT
               value: {{ .Values.env.targetPort | quote }}
+            - name: GPKGS_LOCATION
+              value: {{ $gpkgPath }}
             {{- if .Values.global.ca.secretName }}
             - name: REQUESTS_CA_BUNDLE
               value: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
@@ -134,6 +140,11 @@ spec:
         {{- tpl (toYaml .Values.sidecars) . | nindent 8 }}
         {{- end }}
       volumes:
+        {{- if $storage.fs.internalPvc.enabled }}  
+        - name: internal-storage
+          persistentVolumeClaim:
+            claimName: {{ $storage.fs.internalPvc.name }}
+        {{- end }}          
         - name: nginx-config
           configMap:
             name: 'nginx-extra-configmap'      

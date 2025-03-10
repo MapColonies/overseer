@@ -6,6 +6,7 @@ import { IS3Config } from '../../../src/common/interfaces';
 import { S3Service } from '../../../src/utils/storage/s3Service';
 import { tracerMock } from '../mocks/tracerMock';
 import { GPKG_CONTENT_TYPE } from '../../../src/common/constants';
+import { S3Error } from '../../../src/common/errors';
 
 jest.mock('@aws-sdk/client-s3');
 
@@ -67,7 +68,9 @@ describe('s3Service', () => {
       const uploadError = new Error('upload failed');
       S3ClientSendSpy.mockRejectedValueOnce(uploadError);
 
-      await expect(s3Service.uploadFile(testFilePath, testS3Key, testContentType)).rejects.toThrow(uploadError);
+      const expectedError = new S3Error(uploadError, 'Failed to upload file to S3');
+
+      await expect(s3Service.uploadFile(testFilePath, testS3Key, testContentType)).rejects.toThrow(expectedError);
     });
 
     it('should handle file system errors', async () => {
@@ -76,7 +79,9 @@ describe('s3Service', () => {
         throw fsError;
       });
 
-      await expect(s3Service.uploadFile(testFilePath, testS3Key, testContentType)).rejects.toThrow(fsError);
+      const expectedError = new S3Error(fsError, 'Failed to upload file to S3');
+
+      await expect(s3Service.uploadFile(testFilePath, testS3Key, testContentType)).rejects.toThrow(expectedError);
     });
   });
 });

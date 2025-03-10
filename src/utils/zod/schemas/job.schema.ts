@@ -3,7 +3,6 @@ import { z } from 'zod';
 import {
   createJobResponseSchema,
   createTaskResponseSchema,
-  exportFinalizeTaskParamsSchema,
   exportJobParametersSchema,
   ingestionNewFinalizeTaskParamsSchema,
   ingestionNewJobParamsSchema,
@@ -12,6 +11,7 @@ import {
   ingestionUpdateFinalizeTaskParamsSchema,
   ingestionUpdateJobParamsSchema,
   taskBlockDuplicationParamSchema,
+  exportFinalizeTaskParamsSchema,
 } from '@map-colonies/raster-shared';
 import type { JobTypes, TaskTypes } from '@map-colonies/raster-shared';
 import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
@@ -68,10 +68,10 @@ export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdate
 //#endregion
 
 //#region Export
-//init
-export const exportJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportInitJobSchema');
+export const exportJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportJobSchema');
 export type ExportJob = z.infer<typeof exportJobSchema>;
 
+//init
 export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('ExportInitTaskSchema');
 export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
 
@@ -113,7 +113,7 @@ export const jobTaskSchemaMap = {
     taskSchema: exportInitTaskSchema,
   },
   Export_finalize: {
-    jobSchema: exportJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
-    taskSchema: exportInitTaskSchema,
+    jobSchema: exportJobSchema,
+    taskSchema: exportFinalizeTaskSchema,
   },
 };

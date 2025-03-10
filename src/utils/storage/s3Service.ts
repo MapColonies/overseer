@@ -6,6 +6,7 @@ import { Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer, SpanStatusCode } from '@opentelemetry/api';
 import { SERVICES } from '../../common/constants';
 import { IS3Config } from '../../common/interfaces';
+import { S3Error } from '../../common/errors';
 
 @injectable()
 export class S3Service {
@@ -62,15 +63,16 @@ export class S3Service {
 
         return url;
       } catch (err) {
-        this.logger.error({ msg: 'Error uploading file to S3', err });
-        if (err instanceof Error) {
-          activeSpan?.recordException(err);
-          activeSpan?.setStatus({
-            code: SpanStatusCode.ERROR,
-            message: err.message,
-          });
-        }
-        throw err;
+        const error = new S3Error(err, 'Failed to upload file to S3');
+
+        this.logger.error({ msg: error.message, error });
+        activeSpan?.recordException(error);
+        activeSpan?.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error.message,
+        });
+
+        throw error;
       } finally {
         activeSpan?.end();
       }

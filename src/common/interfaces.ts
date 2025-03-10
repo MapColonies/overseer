@@ -21,7 +21,7 @@ import {
   extendedRasterLayerMetadataSchema,
   ingestionNewExtendedJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
-import { LayerCacheType, SeedMode } from './constants';
+import { LayerCacheType, SeedMode, SqlDataType } from './constants';
 
 //#region config interfaces
 export interface IConfig {
@@ -213,6 +213,16 @@ export interface ExportTaskParameters {
 export type ExportTask = ICreateTaskBody<ExportTaskParameters>;
 
 //#endregion exportTask
+
+//#region gpkgClient
+
+export interface TableDefinition {
+  name: string;
+  dataType: SqlDataType;
+  value: unknown;
+}
+
+//#endregion gpkgClient
 
 //#region mapproxyApi
 export interface PublishMapLayerRequest {

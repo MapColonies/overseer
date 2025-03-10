@@ -106,7 +106,12 @@
           "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
         },
         "export": {
-          "type": "EXPORT_JOB_TYPE"
+          "type": "EXPORT_JOB_TYPE",
+          "cleanupExpirationDays": {
+            "__name": "EXPORT_CLEANUP_EXPIRATION_DAYS",
+            "__format": "number"
+          },
+          "gpkgsPath": "EXPORT_GPKGS_PATH"
         }
       }
     },

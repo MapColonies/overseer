@@ -84,7 +84,9 @@
           "type": "Ingestion_Swap_Update"
         },
         "export": {
-          "type": "Export"
+          "type": "Export",
+          "cleanupExpirationDays": 14,
+          "gpkgsPath": "/gpkgs"
         }
       }
     },

@@ -52,9 +52,8 @@ export class JobProcessor {
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
-      const shouldValidate = true;
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions, @typescript-eslint/no-unnecessary-condition
-      shouldValidate && this.validateTaskAndJob(jobAndTask);
+
+      this.validateTaskAndJob(jobAndTask);
 
       await this.processJob(jobAndTask);
     } catch (error) {

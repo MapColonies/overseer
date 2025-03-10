@@ -7,8 +7,8 @@ import {} from '@turf/turf';
 import { configMock, init, registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { mockRoi, nonIntersectingRoiCase } from '../../mocks/exportTaskMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
-import { exportInitJob } from '../../mocks/jobsMockData';
 import { StorageProvider } from '../../../../src/common/constants';
+import { exportJob } from '../../mocks/jobsMockData';
 import { ExportTaskManager } from '../../../../src/task/models/exportTaskManager';
 import { tracerMock } from '../../mocks/tracerMock';
 import { setupExportTaskBuilderTest } from './exportTaskManagerSetup';
@@ -63,7 +63,7 @@ describe('exportTaskManager', () => {
       const tilesStorageProvider = configMock.get<string>('tilesStorageProvider');
       const separator = tilesStorageProvider === StorageProvider.S3 ? '/' : sep;
       const expectedPath = `${layerRecord.metadata.id}${separator}${layerRecord.metadata.displayPath}`;
-      const job = exportInitJob;
+      const job = exportJob;
       const { metadata } = layerRecord;
 
       const sources = exportTaskManager.generateSources(job, metadata);
@@ -81,7 +81,7 @@ describe('exportTaskManager', () => {
 
     it('should throw an error when the roi is invalid', () => {
       const { exportTaskManager } = setupExportTaskBuilderTest();
-      const job = exportInitJob;
+      const job = exportJob;
 
       job.parameters.exportInputParams.roi.features[0].geometry.type = 'invalidType' as 'Polygon';
       const { metadata } = layerRecord;
