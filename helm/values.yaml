@@ -60,7 +60,7 @@ storage:
   tilesStorageProvider: ""
   s3:
     endpointUrl: ""
-    tilesBucket: ""
+    downloadsBucket: ""
     sslEnabled: false
     secretName: ""
   fs:

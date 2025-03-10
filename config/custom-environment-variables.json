@@ -56,7 +56,7 @@
     "accessKeyId": "S3_ACCESS_KEY_ID",
     "secretAccessKey": "S3_SECRET_ACCESS_KEY",
     "endpointUrl": "S3_ENDPOINT_URL",
-    "bucket": "S3_BUCKET",
+    "bucket": "S3_DOWNLOADS_BUCKET",
     "sslEnabled": "S3_SSL_ENABLED"
   },
   "disableHttpClientLogs": {
