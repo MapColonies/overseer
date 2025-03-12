@@ -54,8 +54,13 @@ export class S3Service {
           Body: fileContent,
         });
 
+        this.logger.info({ msg: 'Uploading file to S3', bucket, s3Key });
         await this.client.send(command);
         activeSpan?.addEvent('s3.upload.complete');
+
+        this.logger.info({ msg: 'Deleting file from fs', filePath });
+        fs.unlinkSync(filePath);
+        activeSpan?.addEvent('file.deleted', { filePath });
 
         const url = `${endpointUrl}/${bucket}/${s3Key}`;
         this.logger.info({ msg: 'File uploaded to S3', url });
