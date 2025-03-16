@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import fs from 'fs';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 import jsLogger from '@map-colonies/js-logger';
 import { IS3Config } from '../../../src/common/interfaces';
 import { S3Service } from '../../../src/utils/storage/s3Service';
@@ -9,6 +10,7 @@ import { GPKG_CONTENT_TYPE } from '../../../src/common/constants';
 import { S3Error } from '../../../src/common/errors';
 
 jest.mock('@aws-sdk/client-s3');
+jest.mock('@aws-sdk/lib-storage');
 
 describe('s3Service', () => {
   const mockS3Config: IS3Config = {
@@ -21,17 +23,26 @@ describe('s3Service', () => {
   };
 
   let s3Service: S3Service;
-  let S3ClientSendSpy: jest.SpyInstance;
-  let readFileSyncSpy: jest.SpyInstance;
+  let createReadStreamSpy: jest.SpyInstance;
+  let uploadDoneSpy: jest.Mock;
   const testFilePath = '/path/to/test/file.gpkg';
   const testS3Key = 'test/file.gpkg';
   const testContentType = GPKG_CONTENT_TYPE;
-  const testFileContent = Buffer.from('test file content');
+  const mockReadStream = { fake: 'stream' };
 
   beforeEach(() => {
-    readFileSyncSpy = jest.spyOn(fs, 'readFileSync').mockReturnValue(testFileContent);
+    jest.clearAllMocks();
 
-    S3ClientSendSpy = jest.spyOn(S3Client.prototype, 'send');
+    createReadStreamSpy = jest.spyOn(fs, 'createReadStream').mockReturnValue(mockReadStream as unknown as fs.ReadStream);
+
+    uploadDoneSpy = jest.fn().mockResolvedValue({
+      Bucket: mockS3Config.bucket,
+      Key: testS3Key,
+    });
+
+    (Upload as unknown as jest.Mock).mockImplementation(() => ({
+      done: uploadDoneSpy,
+    }));
 
     s3Service = new S3Service(jsLogger({ enabled: false }), mockS3Config, tracerMock);
   });
@@ -49,24 +60,29 @@ describe('s3Service', () => {
         region: 'us-east-1',
       };
 
-      const uploadCommandParams = {
-        Bucket: mockS3Config.bucket,
-        Key: testS3Key,
-        ContentType: testContentType,
-        Body: testFileContent,
+      const expectedUploadParams = {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        client: expect.any(S3Client),
+        params: {
+          Bucket: mockS3Config.bucket,
+          Key: testS3Key,
+          ContentType: testContentType,
+          Body: mockReadStream,
+        },
       };
 
       const url = await s3Service.uploadFile(testFilePath, testS3Key, testContentType);
 
       expect(url).toBe(expectedUrl);
-      expect(readFileSyncSpy).toHaveBeenCalledWith(testFilePath);
+      expect(createReadStreamSpy).toHaveBeenCalledWith(testFilePath);
       expect(S3Client).toHaveBeenCalledWith(s3ClientCtorArgs);
-      expect(PutObjectCommand).toHaveBeenCalledWith(uploadCommandParams);
+      expect(Upload).toHaveBeenCalledWith(expectedUploadParams);
+      expect(uploadDoneSpy).toHaveBeenCalled();
     });
 
     it('should throw an error if the file upload fails', async () => {
       const uploadError = new Error('upload failed');
-      S3ClientSendSpy.mockRejectedValueOnce(uploadError);
+      uploadDoneSpy.mockRejectedValueOnce(uploadError);
 
       const expectedError = new S3Error(uploadError, 'Failed to upload file to S3');
 
@@ -75,7 +91,7 @@ describe('s3Service', () => {
 
     it('should handle file system errors', async () => {
       const fsError = new Error('file system error');
-      readFileSyncSpy.mockImplementationOnce(() => {
+      createReadStreamSpy.mockImplementationOnce(() => {
         throw fsError;
       });
 

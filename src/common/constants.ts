@@ -6,6 +6,7 @@ export const DEFAULT_SERVER_PORT = 80;
 export const COMPLETED_PERCENTAGE = 100;
 export const JOB_SUCCESS_MESSAGE = 'Job completed successfully';
 export const GPKG_CONTENT_TYPE = 'application/geopackage+sqlite3';
+export const S3_GPKGS_PREFIX = 'gpkgs';
 
 export const IGNORED_OUTGOING_TRACE_ROUTES = [/^.*\/v1\/metrics.*$/];
 export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];

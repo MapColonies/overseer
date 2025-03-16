@@ -208,11 +208,12 @@ export const exportJob: ExportJob = {
   description: 'This is roi exporting example',
   parameters: {
     additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       jobTrackerServiceURL: 'http://job-tracker-service',
       targetFormat: 'PNG',
       gpkgEstimatedSize: 2662500,
       fileNamesTemplates: {
-        dataURI: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
+        packageName: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
       },
       packageRelativePath: '04c2a753-4af3-41a5-a16d-1e9c3bec87b6/RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
       outputFormatStrategy: 'mixed',

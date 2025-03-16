@@ -56,11 +56,11 @@ args: []
 sidecars: []
 
 storage:
-  gpkgProvider: "FS"
+  gpkgProvider: ""
   tilesStorageProvider: ""
   s3:
     endpointUrl: ""
-    downloadsBucket: ""
+    artifactsBucket: ""
     sslEnabled: false
     secretName: ""
   fs:

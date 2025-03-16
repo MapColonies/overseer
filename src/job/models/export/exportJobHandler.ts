@@ -1,10 +1,11 @@
 import path from 'path';
+import fs from 'fs/promises';
 import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
-import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { GPKG_CONTENT_TYPE, SERVICES, StorageProvider } from '../../../common/constants';
+import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { GPKG_CONTENT_TYPE, S3_GPKGS_PREFIX, SERVICES, StorageProvider } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { ExportTask, ExportTaskParameters, IConfig, IJobHandler } from '../../../common/interfaces';
@@ -14,6 +15,7 @@ import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { ExportTaskManager } from '../../../task/models/exportTaskManager';
 import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
+import { FSService } from '../../../utils/storage/fsService';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
@@ -29,6 +31,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(ExportTaskManager) private readonly exportTaskManager: ExportTaskManager,
     @inject(S3Service) private readonly s3Service: S3Service,
+    @inject(FSService) private readonly fsService: FSService,
     private readonly gpkgService: GeoPackageClient,
     private readonly taskMetrics: TaskMetrics
   ) {
@@ -80,14 +83,17 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   /* istanbul ignore next @preserve */
   public async handleJobFinalize(job: ExportJob, task: ExportFinalizeTask): Promise<void> {
     let finalizeTaskParams: ExportFinalizeTaskParams = task.parameters;
+
     const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { gpkgModified, gpkgUploadedToS3, callbacksSent } = finalizeTaskParams;
+    if (finalizeTaskParams.status === OperationStatus.FAILED) {
+      //later we will add logic to send failure callback
+      return;
+    }
 
     const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
 
-    if (!gpkgModified) {
+    if (!finalizeTaskParams.gpkgModified) {
       this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', gpkgFilePath });
       const metadata = { example1: 'example1', example2: 'example2' }; // need to be replaced with real metadata
       const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
@@ -96,18 +102,20 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       }
     }
 
-    const shouldUploadToS3 = this.isS3GpkgProvider && finalizeTaskParams.gpkgModified && gpkgUploadedToS3 === false;
+    const shouldUploadToS3 = this.isS3GpkgProvider && finalizeTaskParams.gpkgModified && !finalizeTaskParams.gpkgUploadedToS3;
     this.logger.debug({
       msg: 'S3 upload status check',
       shouldUploadToS3,
       gpkgModified: finalizeTaskParams.gpkgModified,
-      gpkgUploadedToS3,
+      gpkgUploadedToS3: finalizeTaskParams.gpkgUploadedToS3,
       isS3GpkgProvider: this.isS3GpkgProvider,
     });
 
     if (shouldUploadToS3) {
-      this.logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, gpkgRelativePath, contentType: GPKG_CONTENT_TYPE });
-      await this.s3Service.uploadFile(gpkgFilePath, gpkgRelativePath, GPKG_CONTENT_TYPE);
+      this.logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, contentType: GPKG_CONTENT_TYPE });
+      const s3Key = `${S3_GPKGS_PREFIX}/${gpkgRelativePath}`;
+      await this.s3Service.uploadFile(gpkgFilePath, s3Key, GPKG_CONTENT_TYPE);
+      await this.fsService.deleteFileAndParentDir(gpkgFilePath);
       finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgUploadedToS3');
     }
 

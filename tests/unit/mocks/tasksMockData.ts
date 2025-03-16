@@ -83,6 +83,7 @@ export const finalizeTaskForExport: ExportFinalizeTask = {
   type: 'finalize',
   description: '',
   parameters: {
+    status: OperationStatus.COMPLETED,
     gpkgModified: false,
     gpkgUploadedToS3: false,
     callbacksSent: false,

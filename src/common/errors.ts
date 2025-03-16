@@ -79,3 +79,12 @@ export class S3Error extends Error {
     this.stack = err instanceof Error ? err.stack : undefined;
   }
 }
+
+export class FSError extends Error {
+  public constructor(err: unknown, customMessage?: string) {
+    const message = `FS Error(${customMessage}): ${err instanceof Error ? err.message : 'unknown'}`;
+    super(message);
+    this.name = FSError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}
