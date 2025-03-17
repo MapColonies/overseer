@@ -1,5 +1,4 @@
 import path from 'path';
-import fs from 'fs/promises';
 import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { type Logger } from '@map-colonies/js-logger';
@@ -115,7 +114,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       this.logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, contentType: GPKG_CONTENT_TYPE });
       const s3Key = `${S3_GPKGS_PREFIX}/${gpkgRelativePath}`;
       await this.s3Service.uploadFile(gpkgFilePath, s3Key, GPKG_CONTENT_TYPE);
-      await this.fsService.deleteFileAndParentDir(gpkgFilePath);
+      const dirPath = path.dirname(gpkgFilePath);
+      await this.fsService.deleteDirectory(dirPath, { force: true });
       finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgUploadedToS3');
     }
 
