@@ -7,6 +7,7 @@
 {{- $cloudProviderDockerRegistryUrl := include "overseer.cloudProviderDockerRegistryUrl" . -}}
 {{- $imageTag := include "overseer.tag" . -}}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
+
 {{ $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.outputPath $storage.fs.internalPvc.gpkgSubPath) }}
 
 {{- if .Values.enabled -}}
@@ -92,6 +93,18 @@ spec:
             {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
+            {{- if eq (upper $storage.gpkgProvider) "S3" }}
+            - name: S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $storage.s3.secretName }}
+                  key: accessKeyId
+            - name: S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $storage.s3.secretName }}
+                  key: secretAccessKey
             {{- end }}            
           envFrom:
             - configMapRef:

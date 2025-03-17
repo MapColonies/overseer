@@ -69,7 +69,7 @@ describe('JobProcessor', () => {
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
       };
 
-      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockDequeue.mockResolvedValueOnce(task);
       mockUpdateJob.mockResolvedValueOnce(undefined);
       mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       mockJobHandlerFactory.mockReturnValueOnce(mockHandler);
@@ -104,7 +104,7 @@ describe('JobProcessor', () => {
         handleJobInit: jest.fn().mockResolvedValue(undefined),
         handleJobFinalize: jest.fn().mockResolvedValue(undefined),
       };
-      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockDequeue.mockResolvedValueOnce(task);
       mockUpdateJob.mockResolvedValueOnce(undefined);
       mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       mockJobHandlerFactory.mockReturnValueOnce(mockHandler);
@@ -131,7 +131,7 @@ describe('JobProcessor', () => {
       const job = initTestCases[0].job;
       const task = initTestCases[0].task;
 
-      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockDequeue.mockResolvedValueOnce(task);
       mockUpdateJob.mockResolvedValue(undefined);
       mockGetJob.mockResolvedValueOnce(job as unknown as IJobResponse<unknown, unknown>);
       queueClient.reject = jest.fn().mockResolvedValue(undefined);
@@ -305,7 +305,7 @@ describe('JobProcessor', () => {
       const taskType = initTestCases[0].taskType;
       const task = initTestCases[0].task;
 
-      mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
+      mockDequeue.mockResolvedValueOnce(task);
 
       const result = await jobProcessor['getTask'](jobType, taskType);
       expect(result.task).toEqual(task);

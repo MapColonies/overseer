@@ -8,7 +8,7 @@ import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { NotFoundError } from '@map-colonies/error-types';
 import type { GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
-import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, TilesStorageProvider } from '../common/constants';
+import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, StorageProvider } from '../common/constants';
 import {
   LayerCacheNotFoundError,
   PublishLayerError,
@@ -19,7 +19,7 @@ import {
 
 @injectable()
 export class MapproxyApiClient extends HttpClient {
-  private readonly tilesStorageProvider: TilesStorageProvider;
+  private readonly tilesStorageProvider: StorageProvider;
   private readonly layerCacheType: LayerCacheType;
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
@@ -31,7 +31,7 @@ export class MapproxyApiClient extends HttpClient {
     const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
     const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
-    this.tilesStorageProvider = config.get<TilesStorageProvider>('tilesStorageProvider');
+    this.tilesStorageProvider = config.get<StorageProvider>('tilesStorageProvider');
     this.layerCacheType = this.getCacheType();
   }
 

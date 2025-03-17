@@ -5,6 +5,8 @@ export const SERVICE_VERSION = readPackageJsonSync().version ?? 'unknown_version
 export const DEFAULT_SERVER_PORT = 80;
 export const COMPLETED_PERCENTAGE = 100;
 export const JOB_SUCCESS_MESSAGE = 'Job completed successfully';
+export const GPKG_CONTENT_TYPE = 'application/geopackage+sqlite3';
+export const S3_GPKGS_PREFIX = 'gpkgs';
 
 export const IGNORED_OUTGOING_TRACE_ROUTES = [/^.*\/v1\/metrics.*$/];
 export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];
@@ -15,6 +17,7 @@ export const SERVICES = {
   CONFIG: Symbol('Config'),
   TRACER: Symbol('Tracer'),
   METRICS: Symbol('METRICS'),
+  S3CONFIG: Symbol('S3Config'),
   QUEUE_CLIENT: Symbol('QueueClient'),
   TILE_RANGER: Symbol('TileRanger'),
 } satisfies Record<string, symbol>;
@@ -23,12 +26,12 @@ export const INJECTION_VALUES = {
   ingestionJobTypes: Symbol('IngestionJobTypes'),
 } satisfies Record<string, symbol>;
 
-export const TilesStorageProvider = {
+export const StorageProvider = {
   FS: 'FS',
   S3: 'S3',
 } as const;
 
-export type TilesStorageProvider = (typeof TilesStorageProvider)[keyof typeof TilesStorageProvider];
+export type StorageProvider = (typeof StorageProvider)[keyof typeof StorageProvider];
 
 export const LayerCacheType = {
   FS: 'file',
@@ -39,8 +42,8 @@ export const LayerCacheType = {
 export type LayerCacheType = (typeof LayerCacheType)[keyof typeof LayerCacheType];
 
 export const storageProviderToCacheTypeMap = new Map([
-  [TilesStorageProvider.FS, LayerCacheType.FS],
-  [TilesStorageProvider.S3, LayerCacheType.S3],
+  [StorageProvider.FS, LayerCacheType.FS],
+  [StorageProvider.S3, LayerCacheType.S3],
 ]);
 
 export const SeedMode = {

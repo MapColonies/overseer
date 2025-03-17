@@ -14,8 +14,7 @@ global:
     path: '/usr/local/share/ca-certificates'
     key: 'ca.crt'
   gracefulReloadMaxSeconds: 300
-  storage: {}
-     
+  storage: {}  
 
 enabled: true
 environment: development
@@ -57,7 +56,13 @@ args: []
 sidecars: []
 
 storage:
+  gpkgProvider: ""
   tilesStorageProvider: ""
+  s3:
+    endpointUrl: ""
+    artifactsBucket: ""
+    sslEnabled: false
+    secretName: ""
   fs:
     internalPvc:
       enabled: false

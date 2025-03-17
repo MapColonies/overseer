@@ -66,11 +66,11 @@ export const ingestionSwapUpdateFinalizeTaskSchema = createTaskResponseSchema(in
 );
 export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdateFinalizeTaskSchema>;
 //#endregion
-//#endregion
 
 //#region Export
 export const exportJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportJobSchema');
 export type ExportJob = z.infer<typeof exportJobSchema>;
+
 //init
 export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('ExportInitTaskSchema');
 export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
@@ -113,7 +113,7 @@ export const jobTaskSchemaMap = {
     taskSchema: exportInitTaskSchema,
   },
   Export_finalize: {
-    jobSchema: exportJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
+    jobSchema: exportJobSchema,
     taskSchema: exportFinalizeTaskSchema,
   },
 };

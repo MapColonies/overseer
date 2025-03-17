@@ -52,6 +52,7 @@ export class JobProcessor {
         await setTimeoutPromise(this.dequeueIntervalMs);
         return;
       }
+
       this.validateTaskAndJob(jobAndTask);
 
       await this.processJob(jobAndTask);

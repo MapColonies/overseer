@@ -39,6 +39,8 @@
     }
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/lib-storage": "^3.758.0",
     "@faker-js/faker": "^9.2.0",
     "@godaddy/terminus": "^4.12.1",
     "@map-colonies/error-express-handler": "^2.1.0",
@@ -48,7 +50,7 @@
     "@map-colonies/mc-model-types": "^17.15.1",
     "@map-colonies/mc-priority-queue": "^8.1.1",
     "@map-colonies/mc-utils": "^3.2.0",
-    "@map-colonies/raster-shared": "^1.5.1",
+    "@map-colonies/raster-shared": "^1.7.3",
     "@map-colonies/read-pkg": "0.0.1",
     "@map-colonies/telemetry": "^7.0.1",
     "@map-colonies/types": "^1.4.0",
