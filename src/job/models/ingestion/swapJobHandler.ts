@@ -76,7 +76,7 @@ export class SwapJobHandler
 
         await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
-        await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+        await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
 
         await this.updateJobAdditionalParams(job, additionalParams, displayPath);
         activeSpan?.addEvent('updateJobAdditionalParams.success', { displayPath });

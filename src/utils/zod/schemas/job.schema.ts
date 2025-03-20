@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { z } from 'zod';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import {
   createJobResponseSchema,
   createTaskResponseSchema,
@@ -79,6 +80,8 @@ export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
 export const exportFinalizeTaskSchema = createTaskResponseSchema(exportFinalizeTaskParamsSchema).describe('ExportFinalizeTaskSchema');
 export type ExportFinalizeTask = z.infer<typeof exportFinalizeTaskSchema>;
 export type ExportFinalizeTaskParams = z.infer<typeof exportFinalizeTaskParamsSchema>;
+export type ExportFinalizeSuccessTaskParams = Extract<ExportFinalizeTaskParams, { status: OperationStatus.COMPLETED }>;
+export type ExportFinalizeFailureTaskParams = Extract<ExportFinalizeTaskParams, { status: OperationStatus.FAILED }>;
 //#endregion
 
 export type OperationValidationKey = `${JobTypes}_${TaskTypes}`;

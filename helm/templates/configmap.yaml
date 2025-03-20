@@ -54,6 +54,7 @@ data:
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
   EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}
   EXPORT_GPKGS_PATH: {{ $gpkgPath | quote }}
+  EXPORT_DOWNLOAD_PATH: {{ $jobDefinitions.jobs.export.downloadPath | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}
@@ -72,6 +73,7 @@ data:
   MAPPROXY_DNS: {{ $serviceUrls.mapServerPublicDNS | quote }}
   CATALOG_MANAGER_URL: {{ $serviceUrls.catalogManager | quote }}
   POLYGON_PARTS_MANAGER_URL: {{ $serviceUrls.polygonPartsManager | quote }}
+  DOWNLOAD_SERVER_PUBLIC_DNS: {{ $serviceUrls.downloadServerPublicDNS | quote }}
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}

@@ -5,7 +5,7 @@ import type { LayerName } from '@map-colonies/raster-shared';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
-import type { JobAndTaskTelemetry } from '../../common/interfaces';
+import type { JobAndTaskTelemetry, StepKey } from '../../common/interfaces';
 import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../common/constants';
 
 export class JobHandler {
@@ -18,7 +18,7 @@ export class JobHandler {
     return `${resourceId}-${validProductType}`;
   }
 
-  protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, finalizeTaskParams: T, step: keyof T): Promise<T> {
+  protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, finalizeTaskParams: T, step: StepKey<T>): Promise<T> {
     const updatedParams: T = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
     this.logger.debug({ msg: `finalization step completed`, step });
@@ -30,7 +30,7 @@ export class JobHandler {
     return Object.values(steps).every((step) => step);
   }
 
-  protected async completeInitTask(job: IJobResponse<unknown, unknown>, task: ITaskResponse<unknown>, telemetry: JobAndTaskTelemetry): Promise<void> {
+  protected async completeTask(job: IJobResponse<unknown, unknown>, task: ITaskResponse<unknown>, telemetry: JobAndTaskTelemetry): Promise<void> {
     const { taskTracker, tracingSpan } = telemetry;
     const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
 

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import fs from 'fs/promises';
-import { Dirent } from 'fs';
+import { Dirent, Stats } from 'fs';
 import path from 'path';
 import jsLogger from '@map-colonies/js-logger';
 import { FSService } from '../../../src/utils/storage/fsService';
@@ -119,6 +119,19 @@ describe('fsService', () => {
       expect(fs.rmdir).not.toHaveBeenCalled();
     });
 
+    it('should wrap non-FSError in FSError when an error occurs', async () => {
+      const regularError = new Error('Some unexpected error');
+      jest.spyOn(fsService, 'deleteFile').mockRejectedValue(regularError);
+
+      const result = fsService.deleteFileAndParentDir(testFilePath);
+
+      await expect(result).rejects.toThrow(FSError);
+      await expect(result).rejects.toThrow(`Failed to delete file and parent directory for ${testFilePath}`);
+
+      expect(fs.readdir).not.toHaveBeenCalled();
+      expect(fs.rmdir).not.toHaveBeenCalled();
+    });
+
     it('should throw FSError when directory operation fails', async () => {
       jest.mocked(path.dirname).mockReturnValue(testDirPath);
       jest.mocked(fs.unlink).mockResolvedValue(undefined);
@@ -130,6 +143,48 @@ describe('fsService', () => {
 
       expect(fs.unlink).toHaveBeenCalledWith(testFilePath);
       expect(fs.rmdir).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getFileSize', () => {
+    it('should return the file size correctly', async () => {
+      const testFileSize = 1024;
+      const statsMock = {
+        size: testFileSize,
+        isFile: jest.fn().mockReturnValue(true),
+        isDirectory: jest.fn().mockReturnValue(false),
+      } as unknown as Stats;
+
+      jest.mocked(fs.stat).mockResolvedValue(statsMock);
+
+      const result = await fsService.getFileSize(testFilePath);
+
+      expect(result).toBe(testFileSize);
+      expect(fs.stat).toHaveBeenCalledWith(testFilePath);
+    });
+
+    it('should throw FSError when stat operation fails', async () => {
+      const statError = new Error('File not found');
+      jest.mocked(fs.stat).mockRejectedValue(statError);
+
+      await expect(fsService.getFileSize(testFilePath)).rejects.toThrow(FSError);
+      expect(fs.stat).toHaveBeenCalledWith(testFilePath);
+    });
+
+    it('should handle very large file sizes', async () => {
+      const largeFileSize = Number.MAX_SAFE_INTEGER; // 9,007,199,254,740,991
+      const statsMock = {
+        size: largeFileSize,
+        isFile: jest.fn().mockReturnValue(true),
+        isDirectory: jest.fn().mockReturnValue(false),
+      } as unknown as Stats;
+
+      jest.mocked(fs.stat).mockResolvedValue(statsMock);
+
+      const result = await fsService.getFileSize(testFilePath);
+
+      expect(result).toBe(largeFileSize);
+      expect(fs.stat).toHaveBeenCalledWith(testFilePath);
     });
   });
 });

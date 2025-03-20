@@ -89,6 +89,7 @@ serviceUrls:
   geoserverApiUrl: ""
   geoserverUrl: ""
   polygonPartsManager: ""
+  downloadServerPublicDNS: ""
 
 tracing:
   enabled: false
@@ -128,6 +129,7 @@ jobDefinitions:
      export:
       type: ""
       cleanupExpirationDays: 14
+      downloadPath: ""
     tasks:
       init:
         type: ""

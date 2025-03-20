@@ -44,7 +44,7 @@ describe('swapJobHandler', () => {
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
-      const completeInitTaskSpy = jest.spyOn(swapJobHandler as unknown as { completeInitTask: jest.Func }, 'completeInitTask');
+      const completeInitTaskSpy = jest.spyOn(swapJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
 
       await swapJobHandler.handleJobInit(job, task);
 

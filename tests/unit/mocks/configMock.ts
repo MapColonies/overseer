@@ -2,9 +2,12 @@
 
 import config, { IConfig, IUtil } from 'config';
 import get from 'lodash.get';
+import set from 'lodash.set';
 import has from 'lodash.has';
 
+// The single source of truth for our mock configuration
 let mockConfig: Record<string, unknown> = {};
+
 const getMock = jest.fn();
 const hasMock = jest.fn();
 const utiMock = jest.fn() as unknown as IUtil;
@@ -17,28 +20,39 @@ const configMock: IConfig = {
 
 const init = (): void => {
   getMock.mockImplementation((key: string): unknown => {
-    return mockConfig[key] ?? config.get(key);
+    return get(mockConfig, key) ?? config.get(key);
+  });
+
+  hasMock.mockImplementation((key: string): boolean => {
+    return has(mockConfig, key) || config.has(key);
   });
 };
 
+interface SetValueParams {
+  key: string | Record<string, unknown>;
+  value?: unknown;
+}
+
 const setValue = (key: string | Record<string, unknown>, value?: unknown): void => {
   if (typeof key === 'string') {
-    mockConfig[key] = value;
+    set(mockConfig, key, value);
   } else {
-    mockConfig = { ...mockConfig, ...key };
+    // When key is an object, iterate through it and set each key-value pair
+    // This preserves potential nested paths in object keys
+    Object.entries(key).forEach(([objKey, objValue]) => {
+      set(mockConfig, objKey, objValue);
+    });
   }
 };
 
 const clear = (): void => {
   mockConfig = {};
+  init();
 };
 
 const setConfigValues = (values: Record<string, unknown>): void => {
-  getMock.mockImplementation((key: string) => {
-    const value: unknown = (get as (object: Record<string, unknown>, path: string) => unknown)(values, key) ?? config.get(key);
-    return value;
-  });
-  hasMock.mockImplementation((key: string) => (has as (object: Record<string, unknown>, path: string) => boolean)(values, key) || config.has(key));
+  mockConfig = { ...values };
+  init();
 };
 
 const registerDefaultConfig = (): void => {
@@ -50,7 +64,7 @@ const registerDefaultConfig = (): void => {
         pinoCaller: false,
       },
       tracing: {
-        enabled: true, // Changed from string "true" to boolean true
+        enabled: true,
         url: 'http://localhost:4318/v1/traces',
       },
       metrics: {
@@ -61,7 +75,7 @@ const registerDefaultConfig = (): void => {
       },
     },
     server: {
-      port: 8080, // Changed from string "8080" to number 8080
+      port: 8080,
       request: {
         payload: {
           limit: '1mb',
@@ -80,6 +94,7 @@ const registerDefaultConfig = (): void => {
       shouldResetTimeout: true,
     },
     tilesStorageProvider: 'FS',
+    gpkgStorageProvider: 'FS',
     disableHttpClientLogs: true,
     linkTemplatesPath: 'config/linkTemplates.template',
     servicesUrl: {
@@ -158,4 +173,4 @@ const registerDefaultConfig = (): void => {
   setConfigValues(config);
 };
 
-export { getMock, hasMock, configMock, setValue, clear, init, setConfigValues, registerDefaultConfig };
+export { getMock, hasMock, configMock, setValue, clear, init, setConfigValues, registerDefaultConfig, SetValueParams };

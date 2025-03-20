@@ -82,7 +82,7 @@ export class NewJobHandler
         });
         activeSpan?.addEvent('updateJob.completed', { ...extendedLayerMetadata });
 
-        await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+        await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {
         await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } finally {

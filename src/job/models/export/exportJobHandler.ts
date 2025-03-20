@@ -1,37 +1,48 @@
 import path from 'path';
-import fs from 'fs/promises';
-import { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
+import { CallbackExportResponse, callbackExportResponseSchema, CallbacksStatus, CleanupData, RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
+import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { GPKG_CONTENT_TYPE, S3_GPKGS_PREFIX, SERVICES, StorageProvider } from '../../../common/constants';
+import { CompletedOrFailedStatus, GPKG_CONTENT_TYPE, GPKGS_PREFIX, SERVICES, StorageProvider } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
-import { ExportTask, ExportTaskParameters, IConfig, IJobHandler } from '../../../common/interfaces';
-import { ExportJob, ExportInitTask, ExportFinalizeTask, ExportFinalizeTaskParams } from '../../../utils/zod/schemas/job.schema';
+import { ExportTask, ExportTaskParameters, IConfig, IJobHandler, JobAndTaskTelemetry } from '../../../common/interfaces';
+import {
+  ExportJob,
+  ExportInitTask,
+  ExportFinalizeTask,
+  ExportFinalizeTaskParams,
+  ExportFinalizeSuccessTaskParams,
+  ExportFinalizeFailureTaskParams,
+} from '../../../utils/zod/schemas/job.schema';
 import { S3Service } from '../../../utils/storage/s3Service';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { ExportTaskManager } from '../../../task/models/exportTaskManager';
 import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
 import { FSService } from '../../../utils/storage/fsService';
+import { createExpirationDate } from '../../../utils/dateUtil';
+import { CallbackClient } from '../../../httpClients/callbackClient';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
   private readonly gpkgsPath: string;
   private readonly isS3GpkgProvider: boolean;
-
+  private readonly cleanupExpirationDays: number;
+  private readonly downloadUrl: string;
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
-    @inject(CatalogClient) private readonly catalogClient: CatalogClient,
-    @inject(ExportTaskManager) private readonly exportTaskManager: ExportTaskManager,
-    @inject(S3Service) private readonly s3Service: S3Service,
-    @inject(FSService) private readonly fsService: FSService,
+    private readonly catalogClient: CatalogClient,
+    private readonly exportTaskManager: ExportTaskManager,
+    private readonly s3Service: S3Service,
+    private readonly fsService: FSService,
+    private readonly callbackClient: CallbackClient,
     private readonly gpkgService: GeoPackageClient,
     private readonly taskMetrics: TaskMetrics
   ) {
@@ -41,6 +52,10 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
     this.isS3GpkgProvider = gpkgProvider === StorageProvider.S3;
+    this.cleanupExpirationDays = config.get<number>('jobManagement.polling.jobs.export.cleanupExpirationDays');
+    const downloadServerUrl = config.get<string>('servicesUrl.downloadServerPublicDNS');
+    const downloadPath = config.get<string>('jobManagement.polling.jobs.export.downloadPath');
+    this.downloadUrl = `${downloadServerUrl}/${downloadPath}`;
   }
   public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobInit.name}`)), async () => {
@@ -71,7 +86,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
         this.taskMetrics.trackTasksEnqueue(job.type, this.exportTaskType, exportTask.parameters.batches.length);
         activeSpan?.addEvent('exportTask.enqueued');
 
-        await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+        await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {
         await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } finally {
@@ -80,47 +95,101 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     });
   }
 
-  /* istanbul ignore next @preserve */
   public async handleJobFinalize(job: ExportJob, task: ExportFinalizeTask): Promise<void> {
-    let finalizeTaskParams: ExportFinalizeTaskParams = task.parameters;
+    await context.with(
+      trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobFinalize.name}`)),
+      async () => {
+        const activeSpan = trace.getActiveSpan();
+        const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
+        const logger = this.logger.child(monitorAttributes);
+        const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
-    const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+        try {
+          activeSpan?.setAttributes(monitorAttributes);
 
-    if (finalizeTaskParams.status === OperationStatus.FAILED) {
-      //later we will add logic to send failure callback
-      return;
-    }
+          const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+          const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
+          const gpkgDirPath = path.dirname(gpkgFilePath);
+          let finalizeParams = task.parameters;
 
-    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
+          logger.info({ msg: `Handling ${job.type} job finalization`, taskType: task.type });
 
-    if (!finalizeTaskParams.gpkgModified) {
-      this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', gpkgFilePath });
-      const metadata = { example1: 'example1', example2: 'example2' }; // need to be replaced with real metadata
-      const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
-      if (isTableCreated) {
-        finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgModified');
+          if (finalizeParams.status === OperationStatus.FAILED) {
+            await this.handleFailedFinalizeTask(job, task, finalizeParams, gpkgDirPath, {
+              taskTracker: taskProcessTracking,
+              tracingSpan: activeSpan,
+            });
+            return;
+          }
+
+          if (!finalizeParams.gpkgModified) {
+            activeSpan?.addEvent('gpkg.modification.started');
+            finalizeParams = await this.modifyGpkgFile(gpkgFilePath, job, task.id, finalizeParams);
+            activeSpan?.addEvent('gpkg.modification.completed', { success: finalizeParams.gpkgModified });
+          }
+
+          const shouldUploadToS3 = this.isS3GpkgProvider && finalizeParams.gpkgModified && !finalizeParams.gpkgUploadedToS3;
+
+          logger.info({
+            msg: 'Should upload to S3',
+            shouldUploadToS3,
+            isS3GpkgProvider: this.isS3GpkgProvider,
+            gpkgModified: finalizeParams.gpkgModified,
+            gpkgUploadedToS3: finalizeParams.gpkgUploadedToS3,
+          });
+
+          if (shouldUploadToS3) {
+            activeSpan?.addEvent('s3.upload.started');
+            finalizeParams = await this.uploadGpkgToS3(gpkgFilePath, gpkgRelativePath, job.id, task.id, finalizeParams);
+            activeSpan?.addEvent('s3.upload.completed', { success: finalizeParams.gpkgUploadedToS3 });
+          }
+
+          const bypasS3OrUploaded = !this.isS3GpkgProvider || finalizeParams.gpkgUploadedToS3;
+          const gpkgProcessingComplete = finalizeParams.gpkgModified && bypasS3OrUploaded;
+
+          logger.info({
+            msg: 'GPKG processing completed',
+            success: gpkgProcessingComplete,
+            gpkgModified: finalizeParams.gpkgModified,
+            bypasS3OrUploaded,
+          });
+
+          if (gpkgProcessingComplete && !finalizeParams.callbacksSent) {
+            activeSpan?.addEvent('callbacks.sending.started');
+            await this.sendCallbacks(job, task.id, finalizeParams, gpkgDirPath);
+            activeSpan?.addEvent('callbacks.sending.completed');
+          }
+
+          if (gpkgProcessingComplete) {
+            activeSpan?.addEvent('all.steps.completed');
+            logger.info({ msg: 'All finalize steps completed successfully' });
+            await this.completeTaskAndJob(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+          }
+        } catch (err) {
+          await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+        } finally {
+          activeSpan?.end();
+        }
       }
-    }
+    );
+  }
 
-    const shouldUploadToS3 = this.isS3GpkgProvider && finalizeTaskParams.gpkgModified && !finalizeTaskParams.gpkgUploadedToS3;
-    this.logger.debug({
-      msg: 'S3 upload status check',
-      shouldUploadToS3,
-      gpkgModified: finalizeTaskParams.gpkgModified,
-      gpkgUploadedToS3: finalizeTaskParams.gpkgUploadedToS3,
-      isS3GpkgProvider: this.isS3GpkgProvider,
-    });
+  private async handleFailedFinalizeTask(
+    job: ExportJob,
+    task: ExportFinalizeTask,
+    finalizeParams: ExportFinalizeFailureTaskParams,
+    gpkgDirPath: string,
+    telemetry: JobAndTaskTelemetry
+  ): Promise<void> {
+    const reason = finalizeParams.errorReason;
+    this.logger.info({ msg: 'Processing failed finalize task', reason });
+    await this.updateCallbackParams(job, OperationStatus.FAILED, { errorReason: reason });
+    await this.sendCallbacks(job, task.id, finalizeParams, gpkgDirPath);
+    await this.completeTask(job, task, telemetry);
 
-    if (shouldUploadToS3) {
-      this.logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, contentType: GPKG_CONTENT_TYPE });
-      const s3Key = `${S3_GPKGS_PREFIX}/${gpkgRelativePath}`;
-      await this.s3Service.uploadFile(gpkgFilePath, s3Key, GPKG_CONTENT_TYPE);
-      await this.fsService.deleteFileAndParentDir(gpkgFilePath);
-      finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'gpkgUploadedToS3');
-    }
-
-    await Promise.resolve();
-    throw new Error('Method not implemented.');
+    this.logger.error({ msg: 'Job finalized with failed status', jobId: job.id, reason });
+    await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason });
+    telemetry.tracingSpan?.addEvent('job.failed', { reason });
   }
 
   private createExportTask(job: ExportJob, metadata: RasterLayerMetadata): ExportTask {
@@ -152,5 +221,127 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     logger.info({ msg: 'export task created', exportTaskType: exportTask.type });
 
     return exportTask;
+  }
+
+  private async modifyGpkgFile(
+    gpkgFilePath: string,
+    job: ExportJob,
+    taskId: string,
+    taskParams: ExportFinalizeSuccessTaskParams
+  ): Promise<ExportFinalizeSuccessTaskParams> {
+    this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', jobId: job.id, taskId, gpkgFilePath });
+
+    // TODO: Replace with real metadata
+    const metadata = { example1: 'example1', example2: 'example2' };
+
+    const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
+    if (isTableCreated) {
+      const fileSize = await this.fsService.getFileSize(gpkgFilePath);
+      await this.updateCallbackParams(job, OperationStatus.IN_PROGRESS, { fileSize });
+      const updatedParams = await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'gpkgModified');
+      return updatedParams;
+    }
+    return taskParams;
+  }
+
+  private async uploadGpkgToS3(
+    gpkgFilePath: string,
+    gpkgRelativePath: string,
+    jobId: string,
+    taskId: string,
+    taskParams: ExportFinalizeSuccessTaskParams
+  ): Promise<ExportFinalizeSuccessTaskParams> {
+    const logger = this.logger.child({ jobId, taskId });
+
+    const s3Key = `${GPKGS_PREFIX}/${gpkgRelativePath}`;
+    logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, s3Key, contentType: GPKG_CONTENT_TYPE });
+    await this.s3Service.uploadFile(gpkgFilePath, s3Key, GPKG_CONTENT_TYPE);
+    await this.fsService.deleteFileAndParentDir(gpkgFilePath);
+    const updatedParams = await this.markFinalizeStepAsCompleted(jobId, taskId, taskParams, 'gpkgUploadedToS3');
+    return updatedParams;
+  }
+
+  private async updateCallbackParams(job: ExportJob, status: CallbacksStatus, callbackParams: Partial<CallbackExportResponse> = {}): Promise<void> {
+    const validInternalId = internalIdSchema.parse(job).internalId;
+    job.parameters.callbackParams = {
+      ...callbackParams,
+      status,
+      jobId: job.id,
+      recordCatalogId: validInternalId,
+      roi: job.parameters.exportInputParams.roi,
+    };
+    await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { ...job.parameters } });
+  }
+
+  private async sendCallbacks(job: ExportJob, taskId: string, taskParams: ExportFinalizeTaskParams, dirPath: string): Promise<boolean> {
+    try {
+      const cleanupExpirationTimeUTC = createExpirationDate(this.cleanupExpirationDays);
+      const cleanupDataParams: CleanupData = { cleanupExpirationTimeUTC, directoryPath: dirPath };
+      const callbackParams = this.createCallbacksParams(job, taskParams.status, cleanupExpirationTimeUTC);
+
+      await this.queueClient.jobManagerClient.updateJob(job.id, {
+        parameters: { ...job.parameters, cleanupDataParams, callbackParams },
+      });
+
+      const targetCallbacks = job.parameters.exportInputParams.callbackUrls;
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (!targetCallbacks?.length) {
+        this.logger.info({ msg: 'No callbacks url provided, skipping callbacks sending', jobId: job.id });
+        return false;
+      }
+
+      this.logger.info({ msg: 'Sending callbacks', jobId: job.id, status: taskParams.status, callbackCount: targetCallbacks.length });
+
+      await Promise.all(
+        targetCallbacks.map(async (callback) =>
+          this.callbackClient.send(callback.url, callbackParams).catch(() => {
+            this.logger.error({
+              msg: 'Failed to send callback',
+              url: callback.url,
+              jobId: job.id,
+            });
+          })
+        )
+      );
+
+      const updatedParams = await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'callbacksSent');
+      return updatedParams.callbacksSent;
+    } catch (err) {
+      this.logger.error({ msg: 'Sending callbacks has failed', err });
+      throw err;
+    }
+  }
+
+  private createCallbacksParams(job: ExportJob, status: CompletedOrFailedStatus, expirationDate: Date): CallbackExportResponse {
+    const { additionalParams, callbackParams } = job.parameters;
+    const { packageRelativePath, fileNamesTemplates } = additionalParams;
+    const validCallbackParams = callbackExportResponseSchema.parse(callbackParams);
+
+    const callbackResponse: CallbackExportResponse = {
+      ...validCallbackParams,
+      status,
+      expirationTime: expirationDate,
+      artifacts: [],
+      links: undefined,
+    };
+
+    if (status === OperationStatus.COMPLETED) {
+      const gpkgDownloadUrl = this.isS3GpkgProvider
+        ? `${this.downloadUrl}/${GPKGS_PREFIX}/${packageRelativePath}`
+        : `${this.downloadUrl}/${packageRelativePath}`; // later when we change download server mount directory, the path for s3 and fs should be the same
+
+      callbackResponse.artifacts = [
+        {
+          name: fileNamesTemplates.packageName,
+          type: ArtifactRasterType.GPKG,
+          size: validCallbackParams.fileSize ?? 0,
+          url: gpkgDownloadUrl,
+        },
+      ];
+
+      callbackResponse.links = { dataURI: gpkgDownloadUrl };
+    }
+
+    return callbackResponse;
   }
 }

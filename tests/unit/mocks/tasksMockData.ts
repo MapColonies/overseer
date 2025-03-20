@@ -98,6 +98,45 @@ export const finalizeTaskForExport: ExportFinalizeTask = {
   updated: '2025-02-13T11:31:52.154Z',
 };
 
+export const finalizeSuccessTaskForExport: ExportFinalizeTask = {
+  id: 'f2127449-d989-44c5-b517-f370c353f3de',
+  jobId: '0bf16d1b-183d-4d27-8fea-6f6c2b5c0961',
+  type: 'finalize',
+  description: '',
+  status: OperationStatus.IN_PROGRESS,
+  percentage: 100,
+  reason: '',
+  parameters: {
+    status: OperationStatus.COMPLETED,
+    gpkgModified: false,
+    gpkgUploadedToS3: false,
+    callbacksSent: false,
+  },
+  attempts: 0,
+  resettable: false,
+  created: '2023-01-01T00:00:00.000Z',
+  updated: '2023-01-01T00:00:00.000Z',
+};
+
+export const finalizeFailureTaskForExport: ExportFinalizeTask = {
+  id: '04f01850-9e67-4fac-bc01-f9b416f801bf',
+  jobId: '8e8b03fa-e0cf-4d93-9034-709007da818a',
+  type: 'finalize',
+  description: '',
+  status: OperationStatus.IN_PROGRESS,
+  percentage: 100,
+  reason: '',
+  parameters: {
+    status: OperationStatus.FAILED,
+    errorReason: 'Export task failed',
+    callbacksSent: false,
+  },
+  attempts: 0,
+  resettable: false,
+  created: '2023-01-01T00:00:00.000Z',
+  updated: '2023-01-01T00:00:00.000Z',
+};
+
 export const finalizeTaskForIngestionNew: ITaskResponse<IngestionNewFinalizeTaskParams> = {
   id: '4a5486bd-6269-4898-b9b1-647fe56d6ae2',
   type: 'finalize',
