@@ -253,7 +253,7 @@ describe('ExportJobHandler', () => {
       it('should upload GPKG to S3 and delete local file when storage provider is S3', async () => {
         setValue('gpkgStorageProvider', 'S3');
         setValue('jobManagement.jobs.export.gpkgsPath', '/gpkgs');
-        const { exportJobHandler, s3ServiceMock, fsServiceMock, jobManagerClientMock } = setupExportJobHandlerTest(true);
+        const { exportJobHandler, s3ServiceMock, fsServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
 
         const job = {
           ...exportJob,
