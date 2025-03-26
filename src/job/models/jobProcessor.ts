@@ -166,6 +166,7 @@ export class JobProcessor {
     logger.info({ msg: `dequeued task ${task.id} successfully` });
     return { task, shouldSkipTask: false };
   }
+
   private validateTaskAndJob(jobAndTask: JobAndTaskResponse): void {
     const { job, task } = jobAndTask;
     const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
