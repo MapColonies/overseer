@@ -82,6 +82,7 @@ image:
 
 serviceUrls:
   jobManager: ""
+  jobTracker: ""
   heartbeatManager: ""
   catalogManager: ""
   mapServerPublicDNS: ""

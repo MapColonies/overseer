@@ -2,6 +2,7 @@
 import path from 'path';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { faker } from '@faker-js/faker';
+import { EXPORT_FAILURE_MESSAGE } from '../../../../src/common/constants';
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
@@ -114,8 +115,8 @@ describe('ExportJobHandler', () => {
       dirnameSpy = jest.spyOn(path, 'dirname').mockReturnValue(gpkgDirPath);
     });
     describe('when handling failed finalization', () => {
-      it('should update job status and send callbacks when task fails', async () => {
-        const { exportJobHandler, jobManagerClientMock, queueClientMock, callbackClientMock } = setupExportJobHandlerTest();
+      it('should send callbacks when task fails and notify jobTracker', async () => {
+        const { exportJobHandler, jobManagerClientMock, queueClientMock, callbackClientMock, jobTrackerClientMock } = setupExportJobHandlerTest();
         const callbackUrl = 'http://callback-url.com';
 
         const job: ExportJob = {
@@ -133,7 +134,6 @@ describe('ExportJobHandler', () => {
           },
         };
         const task = finalizeFailureTaskForExport;
-        const errorReason = 'Export task failed';
 
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
         callbackClientMock.send.mockResolvedValue(undefined);
@@ -152,15 +152,9 @@ describe('ExportJobHandler', () => {
             callbackParams: {
               ...job.parameters.callbackParams,
               status: OperationStatus.FAILED,
-              errorReason,
+              errorReason: EXPORT_FAILURE_MESSAGE,
             },
           },
-        });
-
-        // Check job was marked as failed
-        expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
-          status: OperationStatus.FAILED,
-          reason: errorReason,
         });
 
         // Check callback was sent
@@ -168,12 +162,13 @@ describe('ExportJobHandler', () => {
           callbackUrl,
           expect.objectContaining({
             status: OperationStatus.FAILED,
-            errorReason,
+            errorReason: EXPORT_FAILURE_MESSAGE,
           })
         );
 
         // Check task was acknowledged
         expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
+        expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
       });
     });
 
@@ -428,8 +423,8 @@ describe('ExportJobHandler', () => {
       });
     });
 
-    describe('when completing the job', () => {
-      it('should complete the job when all steps are done', async () => {
+    describe('when completing the task', () => {
+      it('should complete the task when all steps are done', async () => {
         const { exportJobHandler, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job = exportJob;
         const task = {
@@ -445,11 +440,11 @@ describe('ExportJobHandler', () => {
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
         queueClientMock.ack.mockResolvedValue(undefined);
 
-        const completeTaskAndJobSpy = jest.spyOn(exportJobHandler as unknown as { completeTaskAndJob: jest.Func }, 'completeTaskAndJob');
+        const completeTaskSpy = jest.spyOn(exportJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
 
         await exportJobHandler.handleJobFinalize(job, task);
 
-        expect(completeTaskAndJobSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
+        expect(completeTaskSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
       });
     });
 

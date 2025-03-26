@@ -5,10 +5,10 @@ import { readPackageJsonSync } from '@map-colonies/read-pkg';
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const SERVICE_VERSION = readPackageJsonSync().version ?? 'unknown_version';
 export const DEFAULT_SERVER_PORT = 80;
-export const COMPLETED_PERCENTAGE = 100;
-export const JOB_SUCCESS_MESSAGE = 'Job completed successfully';
 export const GPKG_CONTENT_TYPE = 'application/geopackage+sqlite3';
 export const GPKGS_PREFIX = 'gpkgs';
+export const EXPORT_FAILURE_MESSAGE = 'The export process could not be completed. Error occurred.';
+export const EXPORT_SUCCESS_MESSAGE = 'The export process completed successfully.';
 
 export const IGNORED_OUTGOING_TRACE_ROUTES = [/^.*\/v1\/metrics.*$/];
 export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];

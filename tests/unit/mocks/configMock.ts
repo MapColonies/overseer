@@ -104,6 +104,7 @@ const registerDefaultConfig = (): void => {
       mapproxyDns: 'http://mapproxy',
       polygonPartsManager: 'http://polygon-parts-manager',
       geoserverDns: 'http://geoserver',
+      jobTracker: 'http://job-tracker',
     },
     geoserver: {
       workspace: 'testWorkspace',

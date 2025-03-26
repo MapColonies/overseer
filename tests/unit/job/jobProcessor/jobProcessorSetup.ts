@@ -6,6 +6,8 @@ import { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory'
 import { configMock } from '../../mocks/configMock';
 import { JobManagerConfig } from '../../../../src/common/interfaces';
 import { tracerMock } from '../../mocks/tracerMock';
+import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -21,6 +23,7 @@ export interface JobProcessorTestContext {
   mockUpdateJob: MockUpdateJob;
   configMock: typeof configMock;
   queueClient: QueueClient;
+  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
 }
 
 export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQueueClient?: boolean }): JobProcessorTestContext {
@@ -53,7 +56,7 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const jobProcessor = new JobProcessor(mockLogger, tracerMock, configMock, mockJobHandlerFactory, queueClient);
+  const jobProcessor = new JobProcessor(mockLogger, tracerMock, configMock, mockJobHandlerFactory, queueClient, jobTrackerClientMock);
   return {
     jobProcessor,
     mockJobHandlerFactory,
@@ -63,5 +66,6 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
     mockReject,
     configMock,
     queueClient,
+    jobTrackerClientMock,
   };
 }

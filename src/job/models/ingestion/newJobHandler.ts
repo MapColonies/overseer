@@ -23,6 +23,7 @@ import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { GeoserverClient } from '../../../httpClients/geoserverClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { JobHandler } from '../jobHandler';
+import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 
 @injectable()
 /* eslint-disable @typescript-eslint/brace-style */
@@ -39,9 +40,10 @@ export class NewJobHandler
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
     @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
+    @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    super(logger, queueClient);
+    super(logger, queueClient, jobTrackerClient);
   }
 
   public async handleJobInit(job: IngestionNewInitJob, task: IngestionInitTask): Promise<void> {
@@ -135,7 +137,7 @@ export class NewJobHandler
 
         if (this.isAllStepsCompleted(finalizeTaskParams)) {
           logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-          await this.completeTaskAndJob(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+          await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
         }
       } catch (err) {
         await this.handleError(err, job, task, { taskTracker: taskProcessTracking });

@@ -27,10 +27,10 @@ export class CallbackClient extends HttpClient {
       try {
         const monitorAttributes = {
           callbackUrl,
-          jobId: data.jobId,
           callbackStatus: data.status,
+          ...data,
         };
-        activeSpan?.setAttributes(monitorAttributes);
+        activeSpan?.setAttributes({ metadata: JSON.stringify(monitorAttributes) });
 
         this.logger.info({ msg: 'Sending callback', ...monitorAttributes });
         activeSpan?.addEvent('callback.sending');

@@ -1,4 +1,5 @@
 import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { JobTrackerClient } from '../../../src/httpClients/jobTrackerClient';
 
 export const jobManagerClientMock = {
   updateJob: jest.fn(),
@@ -11,3 +12,7 @@ export const queueClientMock = {
   ack: jest.fn(),
   reject: jest.fn(),
 } as unknown as jest.Mocked<QueueClient>;
+
+export const jobTrackerClientMock = {
+  notify: jest.fn(),
+} as unknown as jest.Mocked<JobTrackerClient>;

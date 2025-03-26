@@ -5,7 +5,15 @@ import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { CompletedOrFailedStatus, GPKG_CONTENT_TYPE, GPKGS_PREFIX, SERVICES, StorageProvider } from '../../../common/constants';
+import {
+  CompletedOrFailedStatus,
+  EXPORT_FAILURE_MESSAGE,
+  EXPORT_SUCCESS_MESSAGE,
+  GPKG_CONTENT_TYPE,
+  GPKGS_PREFIX,
+  SERVICES,
+  StorageProvider,
+} from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { ExportTask, ExportTaskParameters, IConfig, IJobHandler, JobAndTaskTelemetry } from '../../../common/interfaces';
@@ -25,6 +33,7 @@ import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
 import { FSService } from '../../../utils/storage/fsService';
 import { createExpirationDate } from '../../../utils/dateUtil';
 import { CallbackClient } from '../../../httpClients/callbackClient';
+import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
@@ -38,6 +47,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     @inject(SERVICES.CONFIG) config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
+    @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     private readonly catalogClient: CatalogClient,
     private readonly exportTaskManager: ExportTaskManager,
     private readonly s3Service: S3Service,
@@ -46,7 +56,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     private readonly gpkgService: GeoPackageClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    super(logger, queueClient);
+    super(logger, queueClient, jobTrackerClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
     this.gpkgsPath = config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -163,7 +173,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
           if (gpkgProcessingComplete) {
             activeSpan?.addEvent('all.steps.completed');
             logger.info({ msg: 'All finalize steps completed successfully' });
-            await this.completeTaskAndJob(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+            await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
           }
         } catch (err) {
           await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
@@ -181,15 +191,10 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     gpkgDirPath: string,
     telemetry: JobAndTaskTelemetry
   ): Promise<void> {
-    const reason = finalizeParams.errorReason;
-    this.logger.info({ msg: 'Processing failed finalize task', reason });
-    await this.updateCallbackParams(job, OperationStatus.FAILED, { errorReason: reason });
+    this.logger.info({ msg: 'Processing failed finalize task' });
+    await this.updateCallbackParams(job, OperationStatus.FAILED, { errorReason: EXPORT_FAILURE_MESSAGE });
     await this.sendCallbacks(job, task.id, finalizeParams, gpkgDirPath);
     await this.completeTask(job, task, telemetry);
-
-    this.logger.error({ msg: 'Job finalized with failed status', jobId: job.id, reason });
-    await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason });
-    telemetry.tracingSpan?.addEvent('job.failed', { reason });
   }
 
   private createExportTask(job: ExportJob, metadata: RasterLayerMetadata): ExportTask {
@@ -294,11 +299,13 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
 
       await Promise.all(
         targetCallbacks.map(async (callback) =>
-          this.callbackClient.send(callback.url, callbackParams).catch(() => {
+          this.callbackClient.send(callback.url, callbackParams).catch((err) => {
+            const error = err instanceof Error ? err.message : String(err);
             this.logger.error({
               msg: 'Failed to send callback',
               url: callback.url,
               jobId: job.id,
+              error,
             });
           })
         )
@@ -340,6 +347,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       ];
 
       callbackResponse.links = { dataURI: gpkgDownloadUrl };
+      callbackResponse.description = EXPORT_SUCCESS_MESSAGE;
     }
 
     return callbackResponse;

@@ -5,6 +5,7 @@ import { inject, injectable } from 'tsyringe';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { ZodError } from 'zod';
 import { getAvailableJobTypes } from '../../utils/configUtil';
+import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 import { SERVICES } from '../../common/constants';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { IConfig, PollingConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
@@ -22,7 +23,8 @@ export class JobProcessor {
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(JOB_HANDLER_FACTORY_SYMBOL) private readonly jobHandlerFactory: JobHandlerFactory,
-    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient
+    @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
+    @inject(JobTrackerClient) private readonly jobTrackerClient: JobTrackerClient
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
     this.pollingConfig = this.config.get<PollingConfig>('jobManagement.polling');
@@ -63,7 +65,7 @@ export class JobProcessor {
         this.logger.error({ msg: 'rejecting task', error, jobId: job.id, taskId: task.id });
         await this.queueClient.reject(job.id, task.id, isRecoverable, error.message);
         if (!isRecoverable) {
-          await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: error.message });
+          await this.jobTrackerClient.notify(task);
         }
       }
       this.logger.debug({ msg: 'waiting for next dequeue', dequeueIntervalMs: this.dequeueIntervalMs });
@@ -158,9 +160,7 @@ export class JobProcessor {
       const message = `${taskType} task ${task.id} reached max attempts, rejects as unrecoverable`;
       logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
       await this.queueClient.reject(task.jobId, task.id, false);
-
-      logger.error({ msg: `updating job status to ${OperationStatus.FAILED}`, jobId: task.jobId });
-      await this.queueClient.jobManagerClient.updateJob(task.jobId, { status: OperationStatus.FAILED, reason: message });
+      await this.jobTrackerClient.notify(task);
       return { task: null, shouldSkipTask: true };
     }
     logger.info({ msg: `dequeued task ${task.id} successfully` });

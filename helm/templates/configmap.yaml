@@ -77,4 +77,6 @@ data:
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
+  JOB_TRACKER_URL: {{ $serviceUrls.jobTracker | quote}}
+
 {{- end }}  

@@ -5,13 +5,14 @@ import { ExportTaskManager } from '../../../../src/task/models/exportTaskManager
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { ExportJobHandler } from '../../../../src/job/models/export/exportJobHandler';
 import { taskMetricsMock } from '../../mocks/metricsMock';
-import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
+import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 import { configMock } from '../../mocks/configMock';
 import { S3Service } from '../../../../src/utils/storage/s3Service';
 import { GeoPackageClient } from '../../../../src/utils/db/geoPackageClient';
 import { FSService } from '../../../../src/utils/storage/fsService';
 import { CallbackClient } from '../../../../src/httpClients/callbackClient';
+import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 
 export interface ExportJobHandlerTestContext {
   configMock: IConfig;
@@ -24,6 +25,7 @@ export interface ExportJobHandlerTestContext {
   gpkgServiceMock: jest.Mocked<GeoPackageClient>;
   fsServiceMock: jest.Mocked<FSService>;
   callbackClientMock: jest.Mocked<CallbackClient>;
+  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
 }
 
 export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
@@ -55,6 +57,7 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     configMock,
     tracerMock,
     queueClientMock,
+    jobTrackerClientMock,
     catalogClientMock,
     exportTaskManagerMock,
     s3ServiceMock,
@@ -75,5 +78,6 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     gpkgServiceMock,
     fsServiceMock,
     callbackClientMock,
+    jobTrackerClientMock,
   };
 };

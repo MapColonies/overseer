@@ -75,7 +75,8 @@
     "catalogManager": "CATALOG_MANAGER_URL",
     "mapproxyDns": "MAPPROXY_DNS",
     "polygonPartsManager": "POLYGON_PARTS_MANAGER_URL",
-    "downloadServerPublicDNS": "DOWNLOAD_SERVER_PUBLIC_DNS"
+    "downloadServerPublicDNS": "DOWNLOAD_SERVER_PUBLIC_DNS",
+    "jobTracker": "JOB_TRACKER_URL"
   },
   "jobManagement": {
     "config": {
