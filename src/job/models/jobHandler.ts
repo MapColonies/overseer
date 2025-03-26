@@ -2,14 +2,18 @@ import { ZodError } from 'zod';
 import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { rasterProductTypeSchema } from '@map-colonies/raster-shared';
 import type { LayerName } from '@map-colonies/raster-shared';
-import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
-import type { JobAndTaskTelemetry } from '../../common/interfaces';
-import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../common/constants';
+import type { JobAndTaskTelemetry, StepKey } from '../../common/interfaces';
+import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 
 export class JobHandler {
-  public constructor(protected readonly logger: Logger, protected readonly queueClient: QueueClient) {}
+  public constructor(
+    protected readonly logger: Logger,
+    protected readonly queueClient: QueueClient,
+    private readonly jobTrackerClient: JobTrackerClient
+  ) {}
 
   protected validateAndGenerateLayerName(job: IJobResponse<unknown, unknown>): LayerName {
     const { resourceId, productType } = job;
@@ -18,7 +22,7 @@ export class JobHandler {
     return `${resourceId}-${validProductType}`;
   }
 
-  protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, finalizeTaskParams: T, step: keyof T): Promise<T> {
+  protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, finalizeTaskParams: T, step: StepKey<T>): Promise<T> {
     const updatedParams: T = { ...finalizeTaskParams, [step]: true };
     await this.queueClient.jobManagerClient.updateTask(jobId, taskId, { parameters: updatedParams });
     this.logger.debug({ msg: `finalization step completed`, step });
@@ -30,40 +34,19 @@ export class JobHandler {
     return Object.values(steps).every((step) => step);
   }
 
-  protected async completeInitTask(job: IJobResponse<unknown, unknown>, task: ITaskResponse<unknown>, telemetry: JobAndTaskTelemetry): Promise<void> {
-    const { taskTracker, tracingSpan } = telemetry;
-    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
-
-    logger.info({ msg: 'Acking task' });
-    await this.queueClient.ack(job.id, task.id);
-
-    const successMsg = `${task.type} task completed successfully`;
-    taskTracker?.success();
-    tracingSpan?.setStatus({ code: SpanStatusCode.OK, message: successMsg });
-    logger.info({ msg: successMsg });
-  }
-
-  protected async completeTaskAndJob(
-    job: IJobResponse<unknown, unknown>,
-    task: ITaskResponse<unknown>,
-    telemetry: JobAndTaskTelemetry
-  ): Promise<void> {
+  protected async completeTask(job: IJobResponse<unknown, unknown>, task: ITaskResponse<unknown>, telemetry: JobAndTaskTelemetry): Promise<void> {
     const { taskTracker, tracingSpan } = telemetry;
     const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
 
     logger.info({ msg: 'acknowledging task' });
     tracingSpan?.addEvent('acknowledging.task');
     await this.queueClient.ack(job.id, task.id);
+    await this.jobTrackerClient.notify(task);
 
-    logger.info({ msg: 'updating job status to completed' });
-    await this.queueClient.jobManagerClient.updateJob(job.id, {
-      status: OperationStatus.COMPLETED,
-      percentage: COMPLETED_PERCENTAGE,
-      reason: JOB_SUCCESS_MESSAGE,
-    });
-
+    const successMsg = `${task.type} task completed successfully`;
     taskTracker?.success();
-    tracingSpan?.setStatus({ code: SpanStatusCode.OK, message: JOB_SUCCESS_MESSAGE });
+    tracingSpan?.setStatus({ code: SpanStatusCode.OK, message: successMsg });
+    logger.info({ msg: successMsg });
   }
 
   protected async handleError(
@@ -86,7 +69,7 @@ export class JobHandler {
     tracingSpan?.recordException(error instanceof Error ? error : new Error(reason));
 
     if (!isRecoverable) {
-      await this.queueClient.jobManagerClient.updateJob(job.id, { status: OperationStatus.FAILED, reason: error.message });
+      await this.jobTrackerClient.notify(task);
     }
   }
 }

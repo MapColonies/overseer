@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { finalizeTaskForIngestionNew, initTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
 import { MergeTaskParameters } from '../../../../src/common/interfaces';
-import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE } from '../../../../src/common/constants';
 import { PublishLayerError } from '../../../../src/common/errors';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
 
@@ -55,8 +53,15 @@ describe('NewJobHandler', () => {
 
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock, mapproxyClientMock, geoserverClientMock, catalogClientMock } =
-        setupNewJobHandlerTest();
+      const {
+        newJobHandler,
+        queueClientMock,
+        jobManagerClientMock,
+        mapproxyClientMock,
+        geoserverClientMock,
+        catalogClientMock,
+        jobTrackerClientMock,
+      } = setupNewJobHandlerTest();
       const job = ingestionNewJobExtended;
       const task = finalizeTaskForIngestionNew;
 
@@ -69,17 +74,12 @@ describe('NewJobHandler', () => {
 
       await newJobHandler.handleJobFinalize(job, task);
 
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
-        status: OperationStatus.COMPLETED,
-        percentage: COMPLETED_PERCENTAGE,
-        reason: JOB_SUCCESS_MESSAGE,
-      });
-
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
     });
 
     it('should handle job finalize failure, reject the task and fail the job (zod validation error)', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
+      const { newJobHandler, queueClientMock, jobManagerClientMock, jobTrackerClientMock } = setupNewJobHandlerTest();
       const job = { ...ingestionNewJobExtended };
       const task = finalizeTaskForIngestionNew;
 
@@ -90,8 +90,9 @@ describe('NewJobHandler', () => {
       queueClientMock.reject.mockResolvedValue(undefined);
 
       await newJobHandler.handleJobFinalize(job, task);
+
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: expect.any(String) });
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
     });
 
     it('should handle job finalize failure and reject the task (mapproxyApi publish failed)', async () => {

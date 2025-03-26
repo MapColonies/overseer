@@ -14,6 +14,7 @@ import type {
   IngestionSwapUpdateInitJob,
 } from '../../../utils/zod/schemas/job.schema';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
+import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
@@ -36,9 +37,10 @@ export class SwapJobHandler
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
+    @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    super(logger, queueClient);
+    super(logger, queueClient, jobTrackerClient);
   }
 
   public async handleJobInit(job: IngestionSwapUpdateInitJob, task: IngestionInitTask): Promise<void> {
@@ -76,7 +78,7 @@ export class SwapJobHandler
 
         await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
 
-        await this.completeInitTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+        await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
 
         await this.updateJobAdditionalParams(job, additionalParams, displayPath);
         activeSpan?.addEvent('updateJobAdditionalParams.success', { displayPath });
@@ -122,7 +124,7 @@ export class SwapJobHandler
 
         if (this.isAllStepsCompleted(finalizeTaskParams)) {
           logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
-          await this.completeTaskAndJob(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+          await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
 
           activeSpan?.addEvent('createSeedingJob.start', { layerName, seedMode: SeedMode.CLEAN });
           await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });

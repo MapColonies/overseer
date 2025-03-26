@@ -52,7 +52,9 @@
     "catalogManager": "http://localhost:8085",
     "mapproxyDns": "http://localhost:8086",
     "polygonPartsManager": "http://localhost:8087",
-    "geoserverDns": "http://localhost:8088"
+    "geoserverDns": "http://localhost:8088",
+    "downloadServerPublicDNS": "http://localhost:8089",
+    "jobTracker": "http://localhost:8090"
   },
   "geoserver": {
     "workspace": "polygonParts",
@@ -86,7 +88,8 @@
         "export": {
           "type": "Export",
           "cleanupExpirationDays": 14,
-          "gpkgsPath": "/gpkgs"
+          "gpkgsPath": "/gpkgs",
+          "downloadPath": "downloads"
         }
       }
     },

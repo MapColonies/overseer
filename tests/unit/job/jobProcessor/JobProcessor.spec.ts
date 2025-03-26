@@ -1,5 +1,5 @@
 import nock from 'nock';
-import { IJobResponse, ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { IJobHandler, JobAndTaskResponse, PollingConfig } from '../../../../src/common/interfaces';
@@ -149,9 +149,9 @@ describe('JobProcessor', () => {
       expect(rejectSpy).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
 
-    it('Should set job status to failed if an Zod error occurred during processing', async () => {
+    it('Should notify jobTracker if task is unrecoverable', async () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
-      const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient } = testContext;
+      const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient, jobTrackerClientMock } = testContext;
       const job = { ...initTestCases[0].job, id: 'invalidJobId' };
       const task = { ...initTestCases[0].task, id: 'invalidTaskId' };
 
@@ -167,10 +167,7 @@ describe('JobProcessor', () => {
 
       expect(rejectSpy).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(queueClient.jobManagerClient.updateJob).toHaveBeenCalledWith(job.id, {
-        status: OperationStatus.FAILED,
-        reason: expect.any(String) as string,
-      });
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
     });
   });
 
@@ -231,7 +228,7 @@ describe('JobProcessor', () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: false });
       setValue('jobManagement.polling.maxTaskAttempts', 3);
 
-      const { jobProcessor, configMock, queueClient } = testContext;
+      const { jobProcessor, configMock, queueClient, jobTrackerClientMock } = testContext;
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const heartbeatBaseUrl = configMock.get<string>('jobManagement.config.heartbeat.baseUrl');
       const job = initTestCases[0].job;
@@ -267,6 +264,8 @@ describe('JobProcessor', () => {
       const jobAndTask = await jobProcessor['getJobAndTaskResponse']();
 
       expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(dequeuedTask);
       expect(jobAndTask).toBeUndefined();
 
       await queueClient.heartbeatClient.stop(dequeuedTask.id);

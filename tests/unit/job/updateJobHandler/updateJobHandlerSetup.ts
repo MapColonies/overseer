@@ -7,8 +7,9 @@ import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { UpdateJobHandler } from '../../../../src/job/models/ingestion/updateJobHandler';
 import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
-import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
+import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
+import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 
 export interface UpdateJobHandlerTestContext {
   updateJobHandler: UpdateJobHandler;
@@ -18,6 +19,7 @@ export interface UpdateJobHandlerTestContext {
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   catalogClientMock: jest.Mocked<CatalogClient>;
   seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
+  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
 }
 
 export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
@@ -38,6 +40,7 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     queueClientMock,
     catalogClientMock,
     seedingJobCreatorMock,
+    jobTrackerClientMock,
     taskMetricsMock
   );
 
@@ -49,5 +52,6 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     mapproxyClientMock,
     catalogClientMock,
     seedingJobCreatorMock,
+    jobTrackerClientMock,
   };
 };

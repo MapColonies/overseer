@@ -88,6 +88,39 @@ export class FSService {
     });
   }
 
+  public async getFileSize(filePath: string): Promise<number> {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.getFileSize.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      try {
+        activeSpan?.setAttributes({
+          filePath,
+          operation: 'getFileSize',
+        });
+
+        this.logger.info({ msg: 'Getting file size', filePath });
+        const stats = await fs.stat(filePath);
+
+        activeSpan?.addEvent('file.size.read', { size: stats.size });
+        this.logger.info({ msg: 'File size retrieved successfully', filePath, size: stats.size });
+
+        return stats.size;
+      } catch (err) {
+        const error = new FSError(err, `Failed to get file size for ${filePath}`);
+
+        this.logger.error({ msg: error.message, error });
+        activeSpan?.recordException(error);
+        activeSpan?.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error.message,
+        });
+
+        throw error;
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
+
   public async deleteFileAndParentDir(filePath: string): Promise<void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.deleteFileAndParentDir.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();

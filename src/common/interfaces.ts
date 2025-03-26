@@ -23,6 +23,8 @@ import {
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode, SqlDataType } from './constants';
 
+export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
+
 //#region config interfaces
 export interface IConfig {
   get: <T>(setting: string) => T;
@@ -100,7 +102,7 @@ export type IngestionSwapUpdateFinalizeJobParams = z.infer<typeof ingestionSwapU
 
 export type IngestionNewExtendedJobParams = z.infer<typeof ingestionNewExtendedJobParamsSchema>;
 
-export type FinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
+export type IngestionFinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
 
 //#endregion job/task
 

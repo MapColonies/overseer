@@ -1,4 +1,3 @@
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { ZodError } from 'zod';
 import { JobAndTaskTelemetry } from '../../../../src/common/interfaces';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
@@ -25,7 +24,7 @@ describe('JobHandler', () => {
     });
 
     it('should handle unrecoverable error', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock } = setupJobHandlerTest();
+      const { newJobHandler, queueClientMock, jobTrackerClientMock } = setupJobHandlerTest();
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
       const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };
@@ -35,7 +34,7 @@ describe('JobHandler', () => {
 
       /* eslint-disable @typescript-eslint/unbound-method */
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, error.message);
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.FAILED, reason: error.message });
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
       /* eslint-enable @typescript-eslint/unbound-method */
     });
   });

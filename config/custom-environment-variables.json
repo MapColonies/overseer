@@ -74,7 +74,9 @@
     "geoserverDns": "GEOSERVER_DNS",
     "catalogManager": "CATALOG_MANAGER_URL",
     "mapproxyDns": "MAPPROXY_DNS",
-    "polygonPartsManager": "POLYGON_PARTS_MANAGER_URL"
+    "polygonPartsManager": "POLYGON_PARTS_MANAGER_URL",
+    "downloadServerPublicDNS": "DOWNLOAD_SERVER_PUBLIC_DNS",
+    "jobTracker": "JOB_TRACKER_URL"
   },
   "jobManagement": {
     "config": {
@@ -114,7 +116,8 @@
             "__name": "EXPORT_CLEANUP_EXPIRATION_DAYS",
             "__format": "number"
           },
-          "gpkgsPath": "EXPORT_GPKGS_PATH"
+          "gpkgsPath": "EXPORT_GPKGS_PATH",
+          "downloadPath": "EXPORT_DOWNLOAD_PATH"
         }
       }
     },

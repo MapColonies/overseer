@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
 import { type LayerName, type RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, SeedJobParams } from '../../../../src/common/interfaces';
-import { COMPLETED_PERCENTAGE, JOB_SUCCESS_MESSAGE, SeedMode } from '../../../../src/common/constants';
+import { SeedMode } from '../../../../src/common/constants';
 import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
+import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
 import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
 
 describe('swapJobHandler', () => {
@@ -44,13 +44,14 @@ describe('swapJobHandler', () => {
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
-      const completeInitTaskSpy = jest.spyOn(swapJobHandler as unknown as { completeInitTask: jest.Func }, 'completeInitTask');
+      const completeInitTaskSpy = jest.spyOn(swapJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
 
       await swapJobHandler.handleJobInit(job, task);
 
       expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams);
       expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, mergeTasks);
       expect(completeInitTaskSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
+      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
     it('should handle job init failure and reject the task', async () => {
@@ -106,11 +107,7 @@ describe('swapJobHandler', () => {
         parameters: { updatedInCatalog: true, updatedInMapproxy: true },
       });
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
-        status: OperationStatus.COMPLETED,
-        percentage: COMPLETED_PERCENTAGE,
-        reason: JOB_SUCCESS_MESSAGE,
-      });
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
       expect(seedingJobCreatorMock.create).toHaveBeenCalledWith(createSeedingJobParams);
     });
 
