@@ -1,5 +1,5 @@
 import { TileOutputFormat, Transparency } from '@map-colonies/raster-shared';
-import { fileExtensionExtractor } from '../../../src/utils/fileutils';
+import { fileExtensionExtractor } from '../../../src/utils/fileutil';
 import { getTileOutputFormat } from '../../../src/utils/imageFormatUtil';
 import { registerDefaultConfig } from '../mocks/configMock';
 

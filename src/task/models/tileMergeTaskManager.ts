@@ -12,7 +12,7 @@ import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
 import { SERVICES, type StorageProvider } from '../../common/constants';
-import { fileExtensionExtractor } from '../../utils/fileutils';
+import { fileExtensionExtractor } from '../../utils/fileutil';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import type {
