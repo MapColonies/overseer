@@ -11,7 +11,7 @@ RUN npm run build
 
 FROM node:20.3.1-alpine3.17 as production
 
-RUN apk add dumb-init
+RUN apk add --no-cache dumb-init python3 make g++ gcc libc-dev
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080

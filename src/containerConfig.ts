@@ -18,7 +18,7 @@ import { UpdateJobHandler } from './job/models/ingestion/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { validateAndGetHandlersTokens } from './utils/configUtil';
 import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
-import { IConfig, JobManagerConfig, PollingJobs } from './common/interfaces';
+import { IConfig, IS3Config, JobManagerConfig, PollingJobs } from './common/interfaces';
 import { ExportJobHandler } from './job/models/export/exportJobHandler';
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
@@ -48,6 +48,8 @@ export interface RegisterOptions {
 
 export const registerExternalValues = (options?: RegisterOptions): DependencyContainer => {
   const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
+  const s3Config = config.get<IS3Config>('S3');
+
   const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin(), pinoCaller: loggerConfig.pinoCaller });
 
   const metricsRegistry = new Registry();
@@ -69,6 +71,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: handlersTokens.Export, provider: { useClass: ExportJobHandler } },
     { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
     { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
+    { token: SERVICES.S3CONFIG, provider: { useValue: s3Config } },
     {
       token: SERVICES.METRICS,
       provider: {

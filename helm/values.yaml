@@ -14,8 +14,7 @@ global:
     path: '/usr/local/share/ca-certificates'
     key: 'ca.crt'
   gracefulReloadMaxSeconds: 300
-  storage:
-    tilesStorageProvider: "FS"     
+  storage: {}  
 
 enabled: true
 environment: development
@@ -57,7 +56,19 @@ args: []
 sidecars: []
 
 storage:
+  gpkgProvider: ""
   tilesStorageProvider: ""
+  s3:
+    endpointUrl: ""
+    artifactsBucket: ""
+    sslEnabled: false
+    secretName: ""
+  fs:
+    internalPvc:
+      enabled: false
+      name: ""
+      gpkgSubPath: ""
+      outputPath: ""
 
 cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'
@@ -71,6 +82,7 @@ image:
 
 serviceUrls:
   jobManager: ""
+  jobTracker: ""
   heartbeatManager: ""
   catalogManager: ""
   mapServerPublicDNS: ""
@@ -78,6 +90,7 @@ serviceUrls:
   geoserverApiUrl: ""
   geoserverUrl: ""
   polygonPartsManager: ""
+  downloadServerPublicDNS: ""
 
 tracing:
   enabled: false
@@ -116,6 +129,8 @@ jobDefinitions:
         type: ""
      export:
       type: ""
+      cleanupExpirationDays: 14
+      downloadPath: ""
     tasks:
       init:
         type: ""

@@ -1,7 +1,6 @@
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
 import {
-  exportInitJob,
+  exportJob,
   ingestionNewJob,
   ingestionNewJobExtended,
   ingestionSwapUpdateFinalizeJob,
@@ -10,6 +9,7 @@ import {
   ingestionUpdateJob,
 } from '../mocks/jobsMockData';
 import {
+  finalizeTaskForExport,
   finalizeTaskForIngestionNew,
   finalizeTaskForIngestionSwapUpdate,
   finalizeTaskForIngestionUpdate,
@@ -19,14 +19,14 @@ import {
   initTaskForIngestionUpdate,
 } from '../mocks/tasksMockData';
 
-interface InitTestCase {
+interface JobProcessingTestCase {
   jobType: string;
   taskType: string;
   job: IJobResponse<unknown, unknown>;
-  task: ITaskResponse<TaskBlockDuplicationParam>;
+  task: ITaskResponse<unknown>;
 }
 
-export const initTestCases: InitTestCase[] = [
+export const initTestCases: JobProcessingTestCase[] = [
   {
     jobType: ingestionNewJob.type,
     taskType: initTaskForIngestionNew.type,
@@ -46,13 +46,13 @@ export const initTestCases: InitTestCase[] = [
     task: initTaskForIngestionSwapUpdate,
   },
   {
-    jobType: exportInitJob.type,
-    job: exportInitJob,
+    jobType: exportJob.type,
+    job: exportJob,
     taskType: initTaskForExport.type,
     task: initTaskForExport,
   },
 ];
-export const finalizeTestCases = [
+export const finalizeTestCases: JobProcessingTestCase[] = [
   {
     jobType: ingestionNewJob.type,
     taskType: finalizeTaskForIngestionNew.type,
@@ -70,5 +70,11 @@ export const finalizeTestCases = [
     taskType: finalizeTaskForIngestionSwapUpdate.type,
     job: ingestionSwapUpdateFinalizeJob,
     task: finalizeTaskForIngestionSwapUpdate,
+  },
+  {
+    jobType: exportJob.type,
+    job: exportJob,
+    taskType: finalizeTaskForExport.type,
+    task: finalizeTaskForExport,
   },
 ];

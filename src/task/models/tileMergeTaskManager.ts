@@ -11,8 +11,8 @@ import type { InputFiles, PolygonPart } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
-import { SERVICES, type TilesStorageProvider } from '../../common/constants';
-import { fileExtensionExtractor } from '../../utils/fileutils';
+import { SERVICES, type StorageProvider } from '../../common/constants';
+import { fileExtensionExtractor } from '../../utils/fileUtil';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import type {
@@ -47,7 +47,7 @@ export class TileMergeTaskManager {
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    this.tilesStorageProvider = this.config.get<TilesStorageProvider>('tilesStorageProvider');
+    this.tilesStorageProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { z } from 'zod';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import {
   createJobResponseSchema,
   createTaskResponseSchema,
@@ -11,6 +12,7 @@ import {
   ingestionUpdateFinalizeTaskParamsSchema,
   ingestionUpdateJobParamsSchema,
   taskBlockDuplicationParamSchema,
+  exportFinalizeTaskParamsSchema,
 } from '@map-colonies/raster-shared';
 import type { JobTypes, TaskTypes } from '@map-colonies/raster-shared';
 import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
@@ -65,15 +67,21 @@ export const ingestionSwapUpdateFinalizeTaskSchema = createTaskResponseSchema(in
 );
 export type IngestionSwapUpdateFinalizeTask = z.infer<typeof ingestionSwapUpdateFinalizeTaskSchema>;
 //#endregion
-//#endregion
 
 //#region Export
-//init
-export const exportInitJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportInitJobSchema');
-export type ExportInitJob = z.infer<typeof exportInitJobSchema>;
+export const exportJobSchema = createJobResponseSchema(exportJobParametersSchema).describe('ExportJobSchema');
+export type ExportJob = z.infer<typeof exportJobSchema>;
 
+//init
 export const exportInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('ExportInitTaskSchema');
 export type ExportInitTask = z.infer<typeof exportInitTaskSchema>;
+
+//finalize
+export const exportFinalizeTaskSchema = createTaskResponseSchema(exportFinalizeTaskParamsSchema).describe('ExportFinalizeTaskSchema');
+export type ExportFinalizeTask = z.infer<typeof exportFinalizeTaskSchema>;
+export type ExportFinalizeTaskParams = z.infer<typeof exportFinalizeTaskParamsSchema>;
+export type ExportFinalizeSuccessTaskParams = Extract<ExportFinalizeTaskParams, { status: OperationStatus.COMPLETED }>;
+export type ExportFinalizeFailureTaskParams = Extract<ExportFinalizeTaskParams, { status: OperationStatus.FAILED }>;
 //#endregion
 
 export type OperationValidationKey = `${JobTypes}_${TaskTypes}`;
@@ -104,11 +112,11 @@ export const jobTaskSchemaMap = {
     taskSchema: ingestionSwapUpdateFinalizeTaskSchema,
   },
   Export_init: {
-    jobSchema: exportInitJobSchema,
+    jobSchema: exportJobSchema,
     taskSchema: exportInitTaskSchema,
   },
   Export_finalize: {
-    jobSchema: exportInitJobSchema, // finalize job schema not yet implemented(need to change to support finalize job)
-    taskSchema: exportInitTaskSchema,
+    jobSchema: exportJobSchema,
+    taskSchema: exportFinalizeTaskSchema,
   },
 };

@@ -21,7 +21,9 @@ import {
   extendedRasterLayerMetadataSchema,
   ingestionNewExtendedJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
-import { LayerCacheType, SeedMode } from './constants';
+import { LayerCacheType, SeedMode, SqlDataType } from './constants';
+
+export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
 //#region config interfaces
 export interface IConfig {
@@ -100,7 +102,7 @@ export type IngestionSwapUpdateFinalizeJobParams = z.infer<typeof ingestionSwapU
 
 export type IngestionNewExtendedJobParams = z.infer<typeof ingestionNewExtendedJobParamsSchema>;
 
-export type FinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
+export type IngestionFinalizeTaskParams = IngestionNewFinalizeTaskParams | IngestionUpdateFinalizeTaskParams | IngestionSwapUpdateFinalizeTaskParams;
 
 //#endregion job/task
 
@@ -214,6 +216,16 @@ export type ExportTask = ICreateTaskBody<ExportTaskParameters>;
 
 //#endregion exportTask
 
+//#region gpkgClient
+
+export interface TableDefinition {
+  name: string;
+  dataType: SqlDataType;
+  value: unknown;
+}
+
+//#endregion gpkgClient
+
 //#region mapproxyApi
 export interface PublishMapLayerRequest {
   name: string;
@@ -315,3 +327,14 @@ export interface JobAndTaskTelemetry {
   tracingSpan?: Span;
 }
 //#endregion telemetry
+
+//#region s3
+export interface IS3Config {
+  accessKeyId: string;
+  secretAccessKey: string;
+  endpointUrl: string;
+  bucket: string;
+  objectKey: string;
+  sslEnabled: boolean;
+}
+//#endregion s3

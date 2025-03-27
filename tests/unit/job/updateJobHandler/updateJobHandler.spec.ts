@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
-import { COMPLETED_PERCENTAGE } from '../../../../src/common/constants';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
@@ -66,7 +64,7 @@ describe('updateJobHandler', () => {
   });
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
-      const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock, jobTrackerClientMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
 
@@ -78,11 +76,7 @@ describe('updateJobHandler', () => {
       expect(catalogClientMock.update).toHaveBeenCalledWith(job);
       expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, { parameters: { updatedInCatalog: true } });
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
-      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
-        status: OperationStatus.COMPLETED,
-        percentage: COMPLETED_PERCENTAGE,
-        reason: 'Job completed successfully',
-      });
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
     });
 
     it('should handle job finalize failure and reject the task', async () => {

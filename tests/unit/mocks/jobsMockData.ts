@@ -1,7 +1,7 @@
 import { Transparency, TileOutputFormat, RasterProductTypes, RASTER_DOMAIN } from '@map-colonies/raster-shared';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import type {
-  ExportInitJob,
+  ExportJob,
   IngestionNewFinalizeJob,
   IngestionNewInitJob,
   IngestionSwapUpdateFinalizeJob,
@@ -200,7 +200,7 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   updated: '2024-07-21T10:59:23.510Z',
 };
 
-export const exportInitJob: ExportInitJob = {
+export const exportJob: ExportJob = {
   id: 'd78516d4-d815-4e0b-a8bd-88e0c434c928',
   resourceId: 'raster_shared_test_swap',
   version: '2.0',
@@ -208,11 +208,12 @@ export const exportInitJob: ExportInitJob = {
   description: 'This is roi exporting example',
   parameters: {
     additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      jobTrackerServiceURL: 'http://job-tracker-service',
       targetFormat: 'PNG',
       gpkgEstimatedSize: 2662500,
       fileNamesTemplates: {
-        dataURI: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
-        metadataURI: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.json',
+        packageName: 'RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
       },
       packageRelativePath: '04c2a753-4af3-41a5-a16d-1e9c3bec87b6/RasterVectorBest_raster_shared_test_swap_2_0_20_2025_02_13T09_38_25_804Z.gpkg',
       outputFormatStrategy: 'mixed',
