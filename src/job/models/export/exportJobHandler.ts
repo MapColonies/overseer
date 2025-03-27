@@ -154,14 +154,14 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
             activeSpan?.addEvent('s3.upload.completed', { success: finalizeParams.gpkgUploadedToS3 });
           }
 
-          const bypasS3OrUploaded = !this.isS3GpkgProvider || finalizeParams.gpkgUploadedToS3;
-          const gpkgProcessingComplete = finalizeParams.gpkgModified && bypasS3OrUploaded;
+          const bypassS3OrUploaded = !this.isS3GpkgProvider || finalizeParams.gpkgUploadedToS3;
+          const gpkgProcessingComplete = finalizeParams.gpkgModified && bypassS3OrUploaded;
 
           logger.info({
             msg: 'GPKG processing completed',
             success: gpkgProcessingComplete,
             gpkgModified: finalizeParams.gpkgModified,
-            bypasS3OrUploaded,
+            bypassS3OrUploaded,
           });
 
           if (gpkgProcessingComplete && !finalizeParams.callbacksSent) {
