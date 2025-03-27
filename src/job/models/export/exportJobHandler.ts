@@ -236,8 +236,9 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   ): Promise<ExportFinalizeSuccessTaskParams> {
     this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', jobId: job.id, taskId, gpkgFilePath });
 
-    // Fetch actual metadata from job or task parameters
-    const metadata = taskParams.metadata || job.metadata;
+    // TODO: Replace with real metadata
+    const metadata = { example1: 'example1', example2: 'example2' };
+
     const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
     if (isTableCreated) {
       const fileSize = await this.fsService.getFileSize(gpkgFilePath);
