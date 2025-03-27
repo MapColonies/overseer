@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.8.0](https://github.com/MapColonies/overseer/compare/v1.7.4...v1.8.0) (2025-03-27)
+
+
+### Features
+
+* Add Export Job Type Support to Polling Worker(MAPCO-5959) ([#43](https://github.com/MapColonies/overseer/issues/43)) ([554b419](https://github.com/MapColonies/overseer/commit/554b4195d34f649d362da16f088cff6cb1c4dc14)), closes [#44](https://github.com/MapColonies/overseer/issues/44)
+* export finalize ([#49](https://github.com/MapColonies/overseer/issues/49)) ([d93a97e](https://github.com/MapColonies/overseer/commit/d93a97e4fc311d9661d496db7667a5c5931c2d44)), closes [#45](https://github.com/MapColonies/overseer/issues/45) [#46](https://github.com/MapColonies/overseer/issues/46) [#48](https://github.com/MapColonies/overseer/issues/48)
+
 ### [1.7.4](https://github.com/MapColonies/overseer/compare/v1.7.3...v1.7.4) (2025-02-20)
 
 
