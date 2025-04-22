@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { RoiFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import { CORE_VALIDATIONS, RoiFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import { createFakePolygon } from './partsMockData';
 
 export function createFakeRoiFeature(): RoiFeature {
@@ -7,8 +7,8 @@ export function createFakeRoiFeature(): RoiFeature {
     geometry: createFakePolygon(),
     type: 'Feature',
     properties: {
-      maxResolutionDeg: faker.number.float({ min: 0, max: 1 }),
-      minResolutionDeg: faker.number.float({ min: 0, max: 1 }),
+      maxResolutionDeg: faker.number.float(CORE_VALIDATIONS.resolutionDeg),
+      minResolutionDeg: faker.number.float(CORE_VALIDATIONS.resolutionDeg),
     },
   };
 }

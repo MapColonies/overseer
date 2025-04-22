@@ -1,10 +1,13 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
-import type { AggregationLayerMetadata } from '@map-colonies/raster-shared';
+import type { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { AggregationLayerMetadata } from '@map-colonies/mc-model-types';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
+import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
+import { LayerMetadataAggregationError } from '../common/errors';
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
@@ -16,14 +19,21 @@ export class PolygonPartsMangerClient extends HttpClient {
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
   }
 
-  public async getAggregatedLayerMetadata(polygonPartsEntityName: string): Promise<AggregationLayerMetadata> {
+  public async getAggregatedLayerMetadata(polygonPartsEntityName: string, filter?: RoiFeatureCollection): Promise<AggregationLayerMetadata> {
     try {
-      const url = `aggregation/${polygonPartsEntityName}`;
-      const res = await this.get<AggregationLayerMetadata>(url);
-      return res;
+      const url = `${polygonPartsEntityName}/aggregate`;
+      const res = await this.post<AggregationFeature>(url, filter);
+      const aggregatedLayerMetadata = this.validateAndTransformFeatureToAggregationMetadata(res);
+      return aggregatedLayerMetadata;
     } catch (err) {
-      this.logger.error({ msg: 'failed to get aggregated layer metadata', polygonPartsEntityName, err });
-      throw err;
+      const aggregationError = new LayerMetadataAggregationError(err, polygonPartsEntityName);
+      this.logger.error({ msg: aggregationError.message, polygonPartsEntityName, err });
+      throw aggregationError;
     }
+  }
+
+  private validateAndTransformFeatureToAggregationMetadata(aggregationFeature: AggregationFeature): AggregationLayerMetadata {
+    const validAggregatedFeature = requiredAggregationFeatureSchema.parse(aggregationFeature);
+    return { ...validAggregatedFeature.properties, footprint: validAggregatedFeature.geometry };
   }
 }

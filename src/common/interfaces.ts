@@ -264,7 +264,7 @@ export interface PartAggregatedData {
   minResolutionDeg: number;
   maxResolutionMeter: number;
   minResolutionMeter: number;
-  footprint: Polygon;
+  footprint: Polygon | MultiPolygon;
   productBoundingBox: string;
 }
 

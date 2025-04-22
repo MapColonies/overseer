@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { faker } from '@faker-js/faker';
-import { BBox, Polygon } from 'geojson';
+import { BBox, MultiPolygon, Polygon } from 'geojson';
 import { PolygonPart } from '@map-colonies/raster-shared';
 import { PolygonFeature, PPFeatureCollection } from '../../../src/common/interfaces';
 
@@ -27,6 +27,28 @@ export function createFakePolygon(): Polygon {
       ],
     ],
   };
+}
+
+export function createFakeMultiPolygon(polygonCount: number = 3): MultiPolygon {
+  const polygonCoordinates: number[][][][] = [];
+
+  for (let i = 0; i < polygonCount; i++) {
+    const polygon = createFakePolygon();
+    polygonCoordinates.push(polygon.coordinates);
+  }
+
+  return {
+    type: 'MultiPolygon',
+    coordinates: polygonCoordinates,
+  };
+}
+
+export function createFakeRandomPolygonalGeometry(): Polygon | MultiPolygon {
+  const randomNumber = faker.number.int({ min: 0, max: 1 });
+  if (randomNumber === 0) {
+    return createFakePolygon();
+  }
+  return createFakeMultiPolygon(faker.number.int({ min: 1, max: 5 }));
 }
 
 export function createFakePolygonFeature(): PolygonFeature {
