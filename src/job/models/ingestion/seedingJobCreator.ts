@@ -11,6 +11,7 @@ import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, Til
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
+import { extractMaximalUpdatedResolution } from '../../../utils/partsDataUtil';
 
 @injectable()
 export class SeedingJobCreator {
@@ -27,7 +28,7 @@ export class SeedingJobCreator {
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
   }
 
-  public async create({ mode, layerName, ingestionJob }: SeedJobParams): Promise<void> {
+  public async create({ layerName, ingestionJob }: SeedJobParams): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SeedingJobCreator.name}.${this.create.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       try {
@@ -40,29 +41,31 @@ export class SeedingJobCreator {
           ingestionJobId: ingestionJob.id,
           seedJobType: this.seedJobType,
           seedTaskType,
-          mode,
           layerName,
         });
 
         logger.debug({ msg: 'Getting cache name for layer', layerName });
+
         const cacheName = await this.mapproxyClient.getCacheName({ layerName, cacheType: LayerCacheType.REDIS });
         activeSpan?.addEvent('getCacheName.success', { cacheName });
 
-        const geometry = this.calculateGeometryByMode(mode, ingestionJob);
+        const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
 
-        if (!geometry) {
-          activeSpan?.addEvent('calculateGeometry.empty');
-          logger.warn({ msg: 'No geometry found, skipping seeding job creation' });
+        const seedTasks: {
+          type: string;
+          parameters: SeedTaskParams;
+        }[] = [];
+
+        // Handle different modes
+        const clearTasks = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
+        const seedModeTasks = this.handleSeedMode(ingestionJob, cacheName, validCatalogId);
+
+        seedTasks.push(...clearTasks, ...seedModeTasks);
+
+        if (seedTasks.length === 0) {
+          logger.warn({ msg: 'No tasks created, skipping job creation' });
           return;
         }
-        activeSpan?.addEvent('calculateGeometry.success', { geometry: JSON.stringify(geometry) });
-
-        const seedOptions = this.createSeedOptions(mode, geometry, cacheName);
-        activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(seedOptions) });
-
-        const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
-        const taskParams = this.createTaskParams(validCatalogId, seedOptions);
-        activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
 
         const { resourceId, version, producerName, productType, domain } = ingestionJob;
         const createJobRequest: ICreateJobBody<unknown, SeedTaskParams> = {
@@ -75,12 +78,7 @@ export class SeedingJobCreator {
           producerName: producerName ?? undefined,
           productType,
           domain,
-          tasks: [
-            {
-              type: seedTaskType,
-              parameters: taskParams,
-            },
-          ],
+          tasks: seedTasks,
         };
 
         const res = await this.queueClient.jobManagerClient.createJob(createJobRequest);
@@ -98,14 +96,87 @@ export class SeedingJobCreator {
     });
   }
 
-  private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string): SeedTaskOptions {
+  private handleCleanMode(
+    job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
+    cacheName: string,
+    catalogId: string
+  ): { type: string; parameters: SeedTaskParams }[] {
+    const activeSpan = trace.getActiveSpan();
+    const seedTaskType = this.tilesSeedingConfig.type;
+    const logger = this.logger.child({ mode: SeedMode.CLEAN });
+
+    const cleanGeometry = this.calculateGeometryByMode(SeedMode.CLEAN, job);
+    if (!cleanGeometry) {
+      activeSpan?.addEvent('calculateCleanGeometry.empty');
+      logger.warn({ msg: 'No geometry found for CLEAN mode' });
+      return [];
+    }
+
+    activeSpan?.addEvent('calculateCleanGeometry.success', { geometry: JSON.stringify(cleanGeometry) });
+
+    const seedTasks: { type: string; parameters: SeedTaskParams }[] = [];
+
+    if (job.type === this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type')) {
+      const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName);
+      activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
+
+      const taskParams = this.createTaskParams(catalogId, cleanOptions);
+      activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+
+      seedTasks.push({ type: seedTaskType, parameters: taskParams });
+    }
+
+    if (job.type === this.config.get<string>('jobManagement.polling.jobs.update.type')) {
+      const maxUpdatedZoom = extractMaximalUpdatedResolution(job);
+      if (maxUpdatedZoom + 1 <= this.tilesSeedingConfig.maxZoom) {
+        const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdatedZoom + 1);
+        activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
+
+        const taskParams = this.createTaskParams(catalogId, cleanOptions);
+        activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+
+        seedTasks.push({ type: seedTaskType, parameters: taskParams });
+      }
+    }
+
+    return seedTasks;
+  }
+
+  private handleSeedMode(
+    job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
+    cacheName: string,
+    catalogId: string
+  ): { type: string; parameters: SeedTaskParams }[] {
+    const activeSpan = trace.getActiveSpan();
+    const seedTaskType = this.tilesSeedingConfig.type;
+
+    if (job.type !== this.config.get<string>('jobManagement.polling.jobs.update.type')) {
+      return [];
+    }
+
+    const seedGeometry = this.calculateGeometryByMode(SeedMode.SEED, job);
+    if (!seedGeometry) {
+      return [];
+    }
+
+    const maxUpdatedZoom = extractMaximalUpdatedResolution(job);
+    const seedOptions = this.createSeedOptions(SeedMode.SEED, seedGeometry, cacheName, 0, maxUpdatedZoom);
+    activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(seedOptions) });
+
+    const taskParams = this.createTaskParams(catalogId, seedOptions);
+    activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+
+    return [{ type: seedTaskType, parameters: taskParams }];
+  }
+
+  private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string, fromZoomLevel?: number, toZoomLevel?: number): SeedTaskOptions {
     const { grid, maxZoom, skipUncached } = this.tilesSeedingConfig;
     const refreshBefore = getUTCDate().toISOString().replace(/\..+/, '');
     return {
       mode,
       grid,
-      fromZoomLevel: 0, // by design will always seed\clean from zoom 0
-      toZoomLevel: maxZoom, // todo - on future should be calculated from mapproxy capabilities
+      fromZoomLevel: fromZoomLevel ?? 0,
+      toZoomLevel: toZoomLevel ?? maxZoom,
       geometry,
       skipUncached,
       layerId: cacheName,

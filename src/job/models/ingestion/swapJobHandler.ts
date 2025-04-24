@@ -18,7 +18,7 @@ import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
-import { SeedMode, SERVICES } from '../../../common/constants';
+import { SERVICES } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
@@ -126,8 +126,8 @@ export class SwapJobHandler
           logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
           await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
 
-          activeSpan?.addEvent('createSeedingJob.start', { layerName, seedMode: SeedMode.CLEAN });
-          await this.seedingJobCreator.create({ mode: SeedMode.CLEAN, layerName, ingestionJob: job });
+          activeSpan?.addEvent('createSeedingJob.start', { layerName });
+          await this.seedingJobCreator.create({ layerName, ingestionJob: job });
         }
       } catch (err) {
         await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });

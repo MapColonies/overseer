@@ -285,7 +285,6 @@ export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
 //#region seedingJobCreator
 
 export interface SeedJobParams {
-  mode: SeedMode;
   layerName: LayerName;
   ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
 }
