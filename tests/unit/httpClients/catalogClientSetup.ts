@@ -8,10 +8,10 @@ import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { CatalogClient } from '../../../src/httpClients/catalogClient';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
-import { PartAggregatedData } from '../../../src/common/interfaces';
 import { createFakeBBox, createFakeRandomPolygonalGeometry } from '../mocks/partsMockData';
 import { IngestionJobTypes } from '../../../src/utils/configUtil';
 import { tracerMock } from '../mocks/tracerMock';
+import { AggregationLayerMetadata } from '../../../src/common/interfaces';
 
 const jobTypes: IngestionJobTypes = {
   Ingestion_New: 'Ingestion_New',
@@ -68,7 +68,7 @@ export const createFakeAggregationProperties = (): z.infer<typeof aggregationFea
   };
 };
 
-export const createFakeAggregatedPartData = (): PartAggregatedData => {
+export const createFakeAggregatedPartData = (): AggregationLayerMetadata => {
   const aggregationProps = createFakeAggregationProperties();
   return {
     footprint: createFakeRandomPolygonalGeometry(),

@@ -2,12 +2,12 @@ import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import type { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { AggregationLayerMetadata } from '@map-colonies/mc-model-types';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
 import { LayerMetadataAggregationError } from '../common/errors';
+import { AggregationLayerMetadata } from '../common/interfaces';
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
