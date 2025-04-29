@@ -21,8 +21,14 @@ export class PolygonPartsMangerClient extends HttpClient {
 
   public async getAggregatedLayerMetadata(polygonPartsEntityName: string, filter?: RoiFeatureCollection): Promise<AggregationLayerMetadata> {
     try {
-      const url = `${polygonPartsEntityName}/aggregate`;
-      const res = await this.post<AggregationFeature>(url, filter);
+      this.logger.info({ msg: 'getAggregatedLayerMetadata', polygonPartsEntityName, filter });
+
+      const url = `polygonParts/${polygonPartsEntityName}/aggregate`;
+      const body = {
+        filter: filter ?? null,
+      };
+
+      const res = await this.post<AggregationFeature>(url, body);
       const aggregatedLayerMetadata = this.validateAndTransformFeatureToAggregationMetadata(res);
       return aggregatedLayerMetadata;
     } catch (err) {

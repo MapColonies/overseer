@@ -25,8 +25,8 @@ describe('polygonPartsManagerClient', () => {
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'bluemarble_orthophoto';
       const aggregatedFeature = createFakeAggregatedFeature();
-      const url = `/${polygonPartsEntityName}/aggregate`;
-      nock(baseUrl).post(url).reply(200, aggregatedFeature);
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
+      nock(baseUrl).post(url, { filter: null }).reply(200, aggregatedFeature);
 
       const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
       const expectedResult = {
@@ -42,15 +42,18 @@ describe('polygonPartsManagerClient', () => {
       polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'bluemarble_orthophoto';
-      const filter: RoiFeatureCollection = createFakeRoiFeatureCollection();
+      const featureCollection: RoiFeatureCollection = createFakeRoiFeatureCollection();
+      const filter = { filter: featureCollection };
       const aggregatedFeature = createFakeAggregatedFeature();
-      const url = `/${polygonPartsEntityName}/aggregate`;
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
       nock(baseUrl).post(url, JSON.stringify(filter)).reply(200, aggregatedFeature);
-      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName, filter);
+
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName, featureCollection);
       const expectedResult = {
         footprint: aggregatedFeature.geometry,
         ...aggregatedFeature.properties,
       };
+
       await expect(action).resolves.toEqual(expectedResult);
       expect(nock.isDone()).toBe(true);
     });
@@ -59,37 +62,44 @@ describe('polygonPartsManagerClient', () => {
       polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
 
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
-      const catalogId = faker.string.uuid();
-      nock(baseUrl).get(`/aggregation/${catalogId}`).reply(500);
+      const polygonPartsEntityName = faker.string.uuid();
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
+      nock(baseUrl).post(url, { filter: null }).reply(500);
 
-      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(catalogId);
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+
       await expect(action).rejects.toThrow(LayerMetadataAggregationError);
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should throw an LayerMetadataAggregationError when the entity does not exist', async () => {
       polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
 
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
-      const catalogId = faker.string.uuid();
-      nock(baseUrl).get(`/aggregation/${catalogId}`).reply(404);
+      const polygonPartsEntityName = faker.string.uuid();
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
+      nock(baseUrl).post(url, { filter: null }).reply(404);
 
-      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(catalogId);
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+
       await expect(action).rejects.toThrow(LayerMetadataAggregationError);
+      expect(nock.isDone()).toBe(true);
     });
 
     it('Should throw a LayerMetadataAggregationError error when the response returns invalid due to filtering', async () => {
       polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'bluemarble_orthophoto';
-      const filter: RoiFeatureCollection = createFakeRoiFeatureCollection();
+      const featureCollection: RoiFeatureCollection = createFakeRoiFeatureCollection();
+      const filter = { filter: featureCollection };
       const aggregatedFeature: AggregationFeature = {
         type: 'Feature',
         geometry: null,
         properties: null,
       };
-      const url = `/${polygonPartsEntityName}/aggregate`;
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
       nock(baseUrl).post(url, JSON.stringify(filter)).reply(200, aggregatedFeature);
-      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName, filter);
+      const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName, featureCollection);
 
       await expect(action).rejects.toThrow(LayerMetadataAggregationError);
     });
