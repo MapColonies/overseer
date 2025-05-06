@@ -1,6 +1,6 @@
 import { Logger } from '@map-colonies/js-logger';
 import { PolygonPart } from '@map-colonies/raster-shared';
-import { ICreateJobBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { ICreateJobBody, ICreateTaskBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { getUTCDate } from '@map-colonies/mc-utils';
 import { feature, featureCollection, union } from '@turf/turf';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
@@ -51,10 +51,7 @@ export class SeedingJobCreator {
 
         const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
 
-        const seedTasks: {
-          type: string;
-          parameters: SeedTaskParams;
-        }[] = [];
+        const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
 
         // Handle different modes
         const clearModeTask = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
@@ -79,7 +76,7 @@ export class SeedingJobCreator {
           type: this.seedJobType,
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
-          producerName: producerName ?? undefined,
+          producerName: producerName,
           productType,
           domain,
           tasks: seedTasks,
@@ -104,7 +101,7 @@ export class SeedingJobCreator {
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
     catalogId: string
-  ): { type: string; parameters: SeedTaskParams } | void {
+  ): ICreateTaskBody<SeedTaskParams> | void {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
     const logger = this.logger.child({ mode: SeedMode.CLEAN });
@@ -146,7 +143,7 @@ export class SeedingJobCreator {
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
     catalogId: string
-  ): { type: string; parameters: SeedTaskParams }[] {
+  ): ICreateTaskBody<SeedTaskParams>[] {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
 
