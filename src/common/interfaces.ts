@@ -1,15 +1,16 @@
 import { z } from 'zod';
 import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import type {
-  InputFiles,
-  PolygonPart,
-  IngestionNewFinalizeTaskParams,
-  IngestionUpdateFinalizeTaskParams,
-  IngestionSwapUpdateFinalizeTaskParams,
-  TileOutputFormat,
-  LayerName,
-  RasterLayerMetadata,
-  TileFormatStrategy,
+import {
+  type InputFiles,
+  type PolygonPart,
+  type IngestionNewFinalizeTaskParams,
+  type IngestionUpdateFinalizeTaskParams,
+  type IngestionSwapUpdateFinalizeTaskParams,
+  type TileOutputFormat,
+  type LayerName,
+  type RasterLayerMetadata,
+  type TileFormatStrategy,
+  aggregationFeatureSchema,
 } from '@map-colonies/raster-shared';
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
@@ -254,19 +255,9 @@ export interface InsertGeoserverRequest {
 
 //#region catalogClient
 
-export interface PartAggregatedData {
-  imagingTimeBeginUTC: Date;
-  imagingTimeEndUTC: Date;
-  minHorizontalAccuracyCE90: number;
-  maxHorizontalAccuracyCE90: number;
-  sensors: string[];
-  maxResolutionDeg: number;
-  minResolutionDeg: number;
-  maxResolutionMeter: number;
-  minResolutionMeter: number;
-  footprint: Polygon;
-  productBoundingBox: string;
-}
+export type AggregationLayerMetadata = z.infer<typeof aggregationFeatureSchema>['properties'] & {
+  footprint: Polygon | MultiPolygon;
+};
 
 export interface CatalogUpdateRequestBody {
   metadata: CatalogUpdateMetadata;

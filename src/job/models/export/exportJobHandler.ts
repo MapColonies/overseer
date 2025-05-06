@@ -34,6 +34,7 @@ import { FSService } from '../../../utils/storage/fsService';
 import { createExpirationDate } from '../../../utils/dateUtil';
 import { CallbackClient } from '../../../httpClients/callbackClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
+import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
@@ -54,7 +55,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     private readonly fsService: FSService,
     private readonly callbackClient: CallbackClient,
     private readonly gpkgService: GeoPackageClient,
-    private readonly taskMetrics: TaskMetrics
+    private readonly taskMetrics: TaskMetrics,
+    private readonly polygonPartsManagerClient: PolygonPartsMangerClient
   ) {
     super(logger, queueClient, jobTrackerClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
@@ -236,10 +238,14 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   ): Promise<ExportFinalizeSuccessTaskParams> {
     this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', jobId: job.id, taskId, gpkgFilePath });
 
-    // TODO: Replace with real metadata
-    const metadata = { example1: 'example1', example2: 'example2' };
+    const featureCollectionFilter = job.parameters.exportInputParams.roi;
+    const aggregatedMetadata = await this.polygonPartsManagerClient.getAggregatedLayerMetadata(
+      job.parameters.additionalParams.polygonPartsEntityName,
+      featureCollectionFilter
+    );
+    this.logger.info({ msg: 'Received Aggregated layer metadata', jobId: job.id, taskId, aggregatedMetadata });
 
-    const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, metadata);
+    const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, aggregatedMetadata);
     if (isTableCreated) {
       const fileSize = await this.fsService.getFileSize(gpkgFilePath);
       await this.updateCallbackParams(job, OperationStatus.IN_PROGRESS, { fileSize });

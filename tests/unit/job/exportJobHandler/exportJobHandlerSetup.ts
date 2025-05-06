@@ -13,6 +13,7 @@ import { GeoPackageClient } from '../../../../src/utils/db/geoPackageClient';
 import { FSService } from '../../../../src/utils/storage/fsService';
 import { CallbackClient } from '../../../../src/httpClients/callbackClient';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export interface ExportJobHandlerTestContext {
   configMock: IConfig;
@@ -26,6 +27,7 @@ export interface ExportJobHandlerTestContext {
   fsServiceMock: jest.Mocked<FSService>;
   callbackClientMock: jest.Mocked<CallbackClient>;
   jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
 }
 
 export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
@@ -52,6 +54,10 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     send: jest.fn(),
   } as unknown as jest.Mocked<CallbackClient>;
 
+  const polygonPartsManagerClientMock = {
+    getAggregatedLayerMetadata: jest.fn(),
+  } as unknown as jest.Mocked<PolygonPartsMangerClient>;
+
   const exportJobHandler = new ExportJobHandler(
     jsLogger({ enabled: false }),
     configMock,
@@ -64,7 +70,8 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     fsServiceMock,
     callbackClientMock,
     gpkgServiceMock,
-    taskMetricsMock
+    taskMetricsMock,
+    polygonPartsManagerClientMock
   );
 
   return {
@@ -79,5 +86,6 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     fsServiceMock,
     callbackClientMock,
     jobTrackerClientMock,
+    polygonPartsManagerClientMock,
   };
 };
