@@ -1,9 +1,9 @@
 import { Logger } from '@map-colonies/js-logger';
 import { PolygonPart } from '@map-colonies/raster-shared';
 import { ICreateJobBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { getUTCDate } from '@map-colonies/mc-utils';
-import { feature, featureCollection, union } from '@turf/turf';
-import { Feature, MultiPolygon, Polygon } from 'geojson';
+import { degreesPerPixelToZoomLevel, getUTCDate, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
+import { feature, featureCollection, union, bbox, bboxPolygon, intersect, area, convertArea, distance, point } from '@turf/turf';
+import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { inject, injectable } from 'tsyringe';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode, SERVICES } from '../../../common/constants';
@@ -17,6 +17,9 @@ import { extractMaximalUpdatedResolution } from '../../../utils/partsDataUtil';
 export class SeedingJobCreator {
   private readonly tilesSeedingConfig: TilesSeedingTaskConfig;
   private readonly seedJobType: string;
+  //TODO: add these two to config and helm
+  private readonly zoomThreshold: number;
+  private readonly areaThresholdKm: number;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -26,6 +29,8 @@ export class SeedingJobCreator {
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
+    this.zoomThreshold = 2;
+    this.areaThresholdKm = 12;
   }
 
   public async create({ layerName, ingestionJob }: SeedJobParams): Promise<void> {
@@ -142,6 +147,7 @@ export class SeedingJobCreator {
     return seedTasks;
   }
 
+  //TODO: use activeSpan and traces 
   private handleSeedMode(
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
@@ -149,24 +155,49 @@ export class SeedingJobCreator {
   ): { type: string; parameters: SeedTaskParams }[] {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
+    const seedTasks: {
+      type: string;
+      parameters: SeedTaskParams;
+    }[] = [];
 
     if (job.type !== this.config.get<string>('jobManagement.polling.jobs.update.type')) {
       return [];
     }
 
-    const seedGeometry = this.calculateGeometryByMode(SeedMode.SEED, job);
-    if (!seedGeometry) {
-      return [];
-    }
-
+    const partsData = job.parameters.partsData;
+    const thresholdZoom = zoomLevelToResolutionDeg(this.zoomThreshold) as number;
+    const highZoomParts = partsData.filter((p) => p.resolutionDegree < thresholdZoom);
     const maxUpdatedZoom = extractMaximalUpdatedResolution(job);
-    const seedOptions = this.createSeedOptions(SeedMode.SEED, seedGeometry, cacheName, 0, maxUpdatedZoom);
-    activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(seedOptions) });
 
+    const geometry = this.calculateGeometryByMode(SeedMode.SEED, job);
+    const seedOptions = this.createSeedOptions(SeedMode.SEED, geometry as Footprint, cacheName, 0, Math.min(maxUpdatedZoom, this.zoomThreshold));
     const taskParams = this.createTaskParams(catalogId, seedOptions);
-    activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+    seedTasks.push({ type: seedTaskType, parameters: taskParams });
 
-    return [{ type: seedTaskType, parameters: taskParams }];
+    // Step 2: Handle high-res parts individually by zoom level
+    highZoomParts.forEach((part) => {
+      const partArea = convertArea(area(part.footprint), 'meters', 'kilometers');
+      const partZoomLevel = degreesPerPixelToZoomLevel(part.resolutionDegree);
+      let splittedBboxes: Feature<Polygon | MultiPolygon>[] = [];
+      if (partArea > this.areaThresholdKm) {
+        splittedBboxes = this.poc(part.footprint, partArea);
+      }
+      for (let zoom = this.zoomThreshold + 1; zoom <= partZoomLevel; zoom++) {
+        if (partArea > this.areaThresholdKm) {
+          splittedBboxes.forEach((bbox) => {
+            const seedOptions = this.createSeedOptions(SeedMode.SEED, bbox, cacheName, zoom, zoom);
+            const taskParams = this.createTaskParams(catalogId, seedOptions);
+            seedTasks.push({ type: seedTaskType, parameters: taskParams });
+          });
+        } else {
+          const seedOptions = this.createSeedOptions(SeedMode.SEED, part.footprint, cacheName, zoom, zoom);
+          const taskParams = this.createTaskParams(catalogId, seedOptions);
+          seedTasks.push({ type: seedTaskType, parameters: taskParams });
+        }
+      }
+    });
+
+    return seedTasks;
   }
 
   private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string, fromZoomLevel?: number, toZoomLevel?: number): SeedTaskOptions {
@@ -193,7 +224,10 @@ export class SeedingJobCreator {
     };
   }
 
-  private calculateGeometryByMode(mode: SeedMode, job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Footprint | undefined {
+  private calculateGeometryByMode(
+    mode: SeedMode,
+    job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob
+  ): Polygon | MultiPolygon | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN) {
@@ -215,5 +249,144 @@ export class SeedingJobCreator {
     const collection = featureCollection(polygons);
     const footprint = union(collection);
     return footprint;
+  }
+
+  private poc(seedGeometry: Polygon | MultiPolygon, partArea: number): Feature<Polygon | MultiPolygon>[] {
+    const seedBbox = bbox(seedGeometry);
+    //const seedAreaInKm=  this.calculateBoundingBoxArea(seedBbox);
+    //const avi = area(seedGeometry);
+    //const avi2 = convertArea(area(bboxPolygon(seedBbox)), 'meters', 'kilometers');
+    const seedFeature = feature(seedGeometry);
+
+    // if (avi2 <= this.areaThresholdKm) {
+    //   return [seedFeature]; // no split needed
+    // }
+    const smallBboxes = this.splitBoundingBox(seedBbox, partArea);
+    //const features: Feature<Polygon | MultiPolygon>[] = [];
+
+    const intersectionFeatures: Feature<Polygon | MultiPolygon>[] = [];
+
+    for (const tileBbox of smallBboxes) {
+      // Create a polygon from the small bbox
+      const tilePolygon = bboxPolygon(tileBbox);
+
+      // Find the intersection with the original geometry
+      try {
+        const intersection = intersect(featureCollection([tilePolygon, seedFeature]));
+
+        // Only add the intersection if it exists (they might not intersect if the original
+        // geometry had a complex shape and the bbox was just a rough envelope)
+        if (intersection) {
+          intersectionFeatures.push(intersection);
+        }
+      } catch (error) {
+        // Handle any turf.js intersection errors
+        console.warn('Error calculating intersection for tile:', tileBbox, error);
+        // Skip this tile if there's an error
+      }
+    }
+
+    return intersectionFeatures;
+  }
+  private calculateDistanceInKm(point1: [number, number], point2: [number, number]): number {
+    const from = point(point1);
+    const to = point(point2);
+    return distance(from, to, { units: 'kilometers' });
+  }
+
+
+/**
+ * Splits a large bounding box (bbox) into smaller sub-boxes (tiles) such that each tile
+ * does not exceed a predefined maximum area threshold (in square kilometers). To achieve this,
+ * the function first converts the bbox dimensions from geographic coordinates (degrees) into
+ * real-world distances (kilometers) to calculate an accurate aspect ratio. Based on the total
+ * area and the maximum tile size, it estimates how many tiles are needed and determines the
+ * optimal number of horizontal (X) and vertical (Y) splits to preserve the shape of the original
+ * bbox — favoring square-shaped tiles over elongated ones. It then creates a sample tile to
+ * verify the actual area after conversion, and if that sample still exceeds the limit, it increases
+ * the split count accordingly. Finally, it generates a grid of equally sized sub-bboxes that fully
+ * cover the original bbox without overlaps or gaps, ensuring the result is efficient for downstream
+ * processing like spatial tiling, rendering, or parallel computation.
+ */
+
+  private splitBoundingBox(bbox: BBox, partArea: number): BBox[] {
+    const maxTileAreaKm2 = this.areaThresholdKm;
+
+    // We'll determine an appropriate number of splits based on the area ratio
+    // and the shape of the bounding box
+
+    // Calculate aspect ratio of the bbox (in terms of distance, not degrees)
+    const bboxWidth = this.calculateDistanceInKm([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
+
+    const bboxHeight = this.calculateDistanceInKm([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
+
+    const aspectRatio = bboxWidth / bboxHeight;
+
+    // Calculate how many tiles we need in total
+    // Add a buffer by multiplying by 1.2 to ensure we have enough tiles
+    const totalTilesNeeded = Math.ceil((partArea / maxTileAreaKm2) * 1.2);
+
+    // Distribute splits according to aspect ratio to maintain roughly square tiles
+    // We want more splits along the longer dimension
+    let numYSplits, numXSplits;
+
+    /* If it's wider than tall, split more horizontally.
+If it's taller than wide, split more vertically.
+*/
+    if (aspectRatio >= 1) {
+      // Width is greater than or equal to height
+      numXSplits = Math.ceil(Math.sqrt(totalTilesNeeded * aspectRatio));
+      numYSplits = Math.ceil(totalTilesNeeded / numXSplits);
+    } else {
+      // Height is greater than width
+      numYSplits = Math.ceil(Math.sqrt(totalTilesNeeded / aspectRatio));
+      numXSplits = Math.ceil(totalTilesNeeded / numYSplits);
+    }
+
+    // Make sure we have at least one split in each dimension
+    numXSplits = Math.max(1, numXSplits);
+    numYSplits = Math.max(1, numYSplits);
+
+    // To guarantee we don't exceed the area threshold without recursion,
+    // we might need to add more splits if our initial estimation isn't sufficient
+
+    // First check if our initial split estimate is enough
+    const xStep = (bbox[2] - bbox[0]) / numXSplits;
+    const yStep = (bbox[3] - bbox[1]) / numYSplits;
+
+    // Check the area of a single tile with our current split configuration
+    const sampleBBox: BBox = [bbox[0], bbox[1], bbox[0] + xStep, bbox[1] + yStep];
+    const samplePolygon = bboxPolygon(sampleBBox);
+    const sampleArea = area(samplePolygon) / 1000000; // km²
+
+    // If our sample tile is still too large, increase the number of splits
+    if (sampleArea > maxTileAreaKm2) {
+      const areaRatio = sampleArea / maxTileAreaKm2;
+      const additionalSplitFactor = Math.ceil(Math.sqrt(areaRatio));
+
+      numXSplits *= additionalSplitFactor;
+      numYSplits *= additionalSplitFactor;
+    }
+
+    // Recalculate steps with potentially adjusted split counts
+    const finalXStep = (bbox[2] - bbox[0]) / numXSplits;
+    const finalYStep = (bbox[3] - bbox[1]) / numYSplits;
+
+    // Generate all sub-bboxes
+    const resultBBoxes: BBox[] = [];
+
+    for (let yi = 0; yi < numYSplits; yi++) {
+      for (let xi = 0; xi < numXSplits; xi++) {
+        const minX = bbox[0] + xi * finalXStep;
+        const minY = bbox[1] + yi * finalYStep;
+        const maxX = Math.min(bbox[2], bbox[0] + (xi + 1) * finalXStep);
+        const maxY = Math.min(bbox[3], bbox[1] + (yi + 1) * finalYStep);
+
+        const subBBox: BBox = [minX, minY, maxX, maxY];
+        resultBBoxes.push(subBBox);
+      }
+    }
+
+    return resultBBoxes;
   }
 }
