@@ -17,6 +17,9 @@ import { extractMaxUpdateZoomLevel } from '../../../utils/partsDataUtil';
 export class SeedingJobCreator {
   private readonly tilesSeedingConfig: TilesSeedingTaskConfig;
   private readonly seedJobType: string;
+  private readonly updateJobType: string;
+  private readonly swapUpdateJobType: string;
+
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -26,6 +29,8 @@ export class SeedingJobCreator {
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
+    this.updateJobType = this.config.get<string>('jobManagement.polling.jobs.update.type');
+    this.swapUpdateJobType = this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type');
   }
 
   public async create({ layerName, ingestionJob }: SeedJobParams): Promise<void> {
@@ -104,7 +109,7 @@ export class SeedingJobCreator {
   ): ICreateTaskBody<SeedTaskParams> | void {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
-    const logger = this.logger.child({ mode: SeedMode.CLEAN });
+    const logger = this.logger.child({ mode: SeedMode.CLEAN, jobId: job.id, catalogId: job.internalId });
 
     const cleanGeometry = this.calculateGeometryByMode(SeedMode.CLEAN, job);
     if (!cleanGeometry) {
@@ -115,7 +120,7 @@ export class SeedingJobCreator {
 
     activeSpan?.addEvent('calculateCleanGeometry.success', { geometry: JSON.stringify(cleanGeometry) });
 
-    if (job.type === this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type')) {
+    if (job.type === this.swapUpdateJobType) {
       const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName);
       activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
 
@@ -123,7 +128,7 @@ export class SeedingJobCreator {
       activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
 
       return { type: seedTaskType, parameters: taskParams };
-    } else if (job.type === this.config.get<string>('jobManagement.polling.jobs.update.type')) {
+    } else if (job.type === this.updateJobType) {
       const maxUpdateZoomLevel = extractMaxUpdateZoomLevel(job);
       if (maxUpdateZoomLevel + 1 <= this.tilesSeedingConfig.maxZoom) {
         const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdateZoomLevel + 1);
@@ -147,7 +152,7 @@ export class SeedingJobCreator {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
 
-    if (job.type !== this.config.get<string>('jobManagement.polling.jobs.update.type')) {
+    if (job.type !== this.updateJobType) {
       this.logger.debug({ msg: 'Ingestion Job is not of update type, skipping SEED creation' });
       activeSpan?.addEvent('handleSeedMode.skipped');
       return [];
@@ -197,7 +202,7 @@ export class SeedingJobCreator {
   private calculateGeometryByMode(mode: SeedMode, job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Footprint | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
-    if (mode === SeedMode.CLEAN && job.type === this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type')) {
+    if (mode === SeedMode.CLEAN && job.type === this.swapUpdateJobType) {
       const footprint = job.parameters.additionalParams.footprint;
       return footprint;
     }
