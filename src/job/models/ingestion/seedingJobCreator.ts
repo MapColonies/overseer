@@ -197,7 +197,7 @@ export class SeedingJobCreator {
   private calculateGeometryByMode(mode: SeedMode, job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Footprint | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
-    if (mode === SeedMode.CLEAN) {
+    if (mode === SeedMode.CLEAN && job.type === this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type')) {
       const footprint = job.parameters.additionalParams.footprint;
       return footprint;
     }
