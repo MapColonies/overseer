@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.9.0](https://github.com/MapColonies/overseer/compare/v1.8.1...v1.9.0) (2025-05-07)
+
+
+### Features
+
+* add featureCollection filter to aggregation and getAggregation metadata in export process ([#51](https://github.com/MapColonies/overseer/issues/51)) ([6dea8f7](https://github.com/MapColonies/overseer/commit/6dea8f7d9c32f37ab4efbe4ed926e83c5e35db68))
+* implement multi ‘tilesSeeding’ tasks creation upon ingestion updates(MAPCO-5747) ([#52](https://github.com/MapColonies/overseer/issues/52)) ([8a7bd85](https://github.com/MapColonies/overseer/commit/8a7bd853fd6fbdcafc4f262c8754129a900d304a))
+
 ### [1.8.1](https://github.com/MapColonies/overseer/compare/v1.8.0...v1.8.1) (2025-03-30)
 
 
