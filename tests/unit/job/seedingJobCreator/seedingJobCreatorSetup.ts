@@ -4,7 +4,6 @@ import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJ
 import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
 import { SeedJobParams } from '../../../../src/common/interfaces';
-import { SeedMode } from '../../../../src/common/constants';
 import { ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import { tracerMock } from '../../mocks/tracerMock';
 
@@ -39,7 +38,6 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
 };
 
 export const seedJobParameters: SeedJobParams = {
-  mode: SeedMode.SEED,
   layerName: 'layer-Orthophoto',
   ingestionJob: ingestionUpdateFinalizeJob,
 };

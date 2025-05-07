@@ -3,7 +3,6 @@ import crypto from 'crypto';
 import { type LayerName, type RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTaskParameters, SeedJobParams } from '../../../../src/common/interfaces';
-import { SeedMode } from '../../../../src/common/constants';
 import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
@@ -86,7 +85,6 @@ describe('swapJobHandler', () => {
       const layerName: LayerName = `${job.resourceId}-${productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
-        mode: SeedMode.CLEAN,
         ingestionJob: job,
         layerName,
       };
