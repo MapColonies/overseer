@@ -88,3 +88,12 @@ export class FSError extends Error {
     this.stack = err instanceof Error ? err.stack : undefined;
   }
 }
+
+export class LayerMetadataAggregationError extends Error {
+  public constructor(err: unknown, polygonPartsEntityName: string) {
+    const message = `Failed to get aggregated layer metadata for ${polygonPartsEntityName}: ${err instanceof Error ? err.message : 'unknown'}`;
+    super(message);
+    this.name = LayerMetadataAggregationError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}

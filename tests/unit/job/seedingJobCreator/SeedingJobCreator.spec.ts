@@ -89,7 +89,7 @@ describe('SeedingJobCreator', () => {
       expect(res).toBeUndefined();
     });
 
-    it('should create seeding job successfully with seed task and clean task on update', async () => {
+    it('should create seeding job successfully with seed task and clean task on update with more than one part', async () => {
       const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock } = seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -116,7 +116,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 5,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: ingestionUpdateJob.parameters.additionalParams.footprint,
+        geometry: feature(ingestionUpdateJob.parameters.partsData[0].footprint).geometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,
@@ -170,7 +170,7 @@ describe('SeedingJobCreator', () => {
       expect(res).toBeUndefined();
     });
 
-    it('should create seeding job successfully with seed task mode(more then 1 part)', async () => {
+    it('should create seeding job successfully with seed task mode (more than 1 part)', async () => {
       const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock } = seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -200,7 +200,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 5,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: ingestionUpdateJob.parameters.additionalParams.footprint,
+        geometry: feature(ingestionUpdateJob.parameters.partsData[0].footprint).geometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,

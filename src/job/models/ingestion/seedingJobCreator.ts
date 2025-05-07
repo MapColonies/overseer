@@ -1,9 +1,9 @@
 import { Logger } from '@map-colonies/js-logger';
 import { PolygonPart } from '@map-colonies/raster-shared';
-import { ICreateJobBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { degreesPerPixelToZoomLevel, getUTCDate, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
 import { feature, featureCollection, union, bbox, bboxPolygon, intersect, area, convertArea, distance, point } from '@turf/turf';
 import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
+import { ICreateJobBody, ICreateTaskBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { inject, injectable } from 'tsyringe';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode, SERVICES } from '../../../common/constants';
@@ -11,7 +11,7 @@ import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, Til
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
-import { extractMaximalUpdatedResolution } from '../../../utils/partsDataUtil';
+import { extractMaxUpdateZoomLevel } from '../../../utils/partsDataUtil';
 
 @injectable()
 export class SeedingJobCreator {
@@ -20,6 +20,9 @@ export class SeedingJobCreator {
   //TODO: add these two to config and helm
   private readonly zoomThreshold: number;
   private readonly areaThresholdKm: number;
+  private readonly updateJobType: string;
+  private readonly swapUpdateJobType: string;
+
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -31,6 +34,8 @@ export class SeedingJobCreator {
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
     this.zoomThreshold = 2;
     this.areaThresholdKm = 12;
+    this.updateJobType = this.config.get<string>('jobManagement.polling.jobs.update.type');
+    this.swapUpdateJobType = this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type');
   }
 
   public async create({ layerName, ingestionJob }: SeedJobParams): Promise<void> {
@@ -56,19 +61,20 @@ export class SeedingJobCreator {
 
         const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
 
-        const seedTasks: {
-          type: string;
-          parameters: SeedTaskParams;
-        }[] = [];
+        const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
 
         // Handle different modes
-        const clearTasks = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
+        const clearModeTask = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
         const seedModeTasks = this.handleSeedMode(ingestionJob, cacheName, validCatalogId);
 
-        seedTasks.push(...clearTasks, ...seedModeTasks);
+        if (clearModeTask) {
+          seedTasks.push(clearModeTask);
+        }
+        seedTasks.push(...seedModeTasks);
 
         if (seedTasks.length === 0) {
           logger.warn({ msg: 'No tasks created, skipping job creation' });
+          activeSpan?.addEvent('createJob.skipped', { reason: 'No tasks created' });
           return;
         }
 
@@ -80,7 +86,7 @@ export class SeedingJobCreator {
           type: this.seedJobType,
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
-          producerName: producerName ?? undefined,
+          producerName: producerName,
           productType,
           domain,
           tasks: seedTasks,
@@ -105,71 +111,73 @@ export class SeedingJobCreator {
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
     catalogId: string
-  ): { type: string; parameters: SeedTaskParams }[] {
+  ): ICreateTaskBody<SeedTaskParams> | void {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
-    const logger = this.logger.child({ mode: SeedMode.CLEAN });
+    const logger = this.logger.child({ mode: SeedMode.CLEAN, jobId: job.id, catalogId: job.internalId });
 
     const cleanGeometry = this.calculateGeometryByMode(SeedMode.CLEAN, job);
     if (!cleanGeometry) {
       activeSpan?.addEvent('calculateCleanGeometry.empty');
       logger.warn({ msg: 'No geometry found for CLEAN mode' });
-      return [];
+      return;
     }
 
     activeSpan?.addEvent('calculateCleanGeometry.success', { geometry: JSON.stringify(cleanGeometry) });
 
-    const seedTasks: { type: string; parameters: SeedTaskParams }[] = [];
-
-    if (job.type === this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type')) {
+    if (job.type === this.swapUpdateJobType) {
       const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName);
       activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
 
       const taskParams = this.createTaskParams(catalogId, cleanOptions);
       activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
 
-      seedTasks.push({ type: seedTaskType, parameters: taskParams });
-    }
-
-    if (job.type === this.config.get<string>('jobManagement.polling.jobs.update.type')) {
-      const maxUpdatedZoom = extractMaximalUpdatedResolution(job);
-      if (maxUpdatedZoom + 1 <= this.tilesSeedingConfig.maxZoom) {
-        const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdatedZoom + 1);
+      return { type: seedTaskType, parameters: taskParams };
+    } else if (job.type === this.updateJobType) {
+      const maxUpdateZoomLevel = extractMaxUpdateZoomLevel(job);
+      if (maxUpdateZoomLevel + 1 <= this.tilesSeedingConfig.maxZoom) {
+        const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdateZoomLevel + 1);
         activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
 
         const taskParams = this.createTaskParams(catalogId, cleanOptions);
         activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
 
-        seedTasks.push({ type: seedTaskType, parameters: taskParams });
+        return { type: seedTaskType, parameters: taskParams };
       }
     }
-
-    return seedTasks;
+    logger.debug({ msg: 'Ingestion Job is not of update type, skipping CLEAN creation' });
+    return;
   }
 
-  //TODO: use activeSpan and traces 
   private handleSeedMode(
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
     catalogId: string
-  ): { type: string; parameters: SeedTaskParams }[] {
+  ): ICreateTaskBody<SeedTaskParams>[] {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
-    const seedTasks: {
-      type: string;
-      parameters: SeedTaskParams;
-    }[] = [];
+    let seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
 
-    if (job.type !== this.config.get<string>('jobManagement.polling.jobs.update.type')) {
+    if (job.type !== this.updateJobType) {
+      this.logger.debug({ msg: 'Ingestion Job is not of update type, skipping SEED creation' });
+      activeSpan?.addEvent('handleSeedMode.skipped');
+      return [];
+    }
+
+    const seedGeometry = this.calculateGeometryByMode(SeedMode.SEED, job);
+    if (!seedGeometry) {
+      activeSpan?.addEvent('calculateSeedGeometry.empty');
+      this.logger.warn({ msg: 'No geometry found for SEED mode' });
       return [];
     }
 
     const partsData = job.parameters.partsData;
     const thresholdZoom = zoomLevelToResolutionDeg(this.zoomThreshold) as number;
     const highZoomParts = partsData.filter((p) => p.resolutionDegree < thresholdZoom);
-    const maxUpdatedZoom = extractMaximalUpdatedResolution(job);
+    const maxUpdatedZoom = extractMaxUpdateZoomLevel(job);
 
     const geometry = this.calculateGeometryByMode(SeedMode.SEED, job);
+    // Step 1: Handle all res from 0-min(maxUpdatedZoom, maxUpdated) in one seed task
     const seedOptions = this.createSeedOptions(SeedMode.SEED, geometry as Footprint, cacheName, 0, Math.min(maxUpdatedZoom, this.zoomThreshold));
     const taskParams = this.createTaskParams(catalogId, seedOptions);
     seedTasks.push({ type: seedTaskType, parameters: taskParams });
@@ -178,13 +186,15 @@ export class SeedingJobCreator {
     highZoomParts.forEach((part) => {
       const partArea = convertArea(area(part.footprint), 'meters', 'kilometers');
       const partZoomLevel = degreesPerPixelToZoomLevel(part.resolutionDegree);
-      let splittedBboxes: Feature<Polygon | MultiPolygon>[] = [];
+      let splittedIntersection: Feature<Polygon | MultiPolygon>[] = [];
+      // TODO:  this check is done twice because we want the splits from advance only id needed - think how to refactor this 
       if (partArea > this.areaThresholdKm) {
-        splittedBboxes = this.poc(part.footprint, partArea);
+        splittedIntersection = this.getSplittedIntersections(part.footprint, partArea);
       }
       for (let zoom = this.zoomThreshold + 1; zoom <= partZoomLevel; zoom++) {
+        //TODO: this is the duplication
         if (partArea > this.areaThresholdKm) {
-          splittedBboxes.forEach((bbox) => {
+          splittedIntersection.forEach((bbox) => {
             const seedOptions = this.createSeedOptions(SeedMode.SEED, bbox, cacheName, zoom, zoom);
             const taskParams = this.createTaskParams(catalogId, seedOptions);
             seedTasks.push({ type: seedTaskType, parameters: taskParams });
@@ -199,6 +209,7 @@ export class SeedingJobCreator {
 
     return seedTasks;
   }
+
 
   private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string, fromZoomLevel?: number, toZoomLevel?: number): SeedTaskOptions {
     const { grid, maxZoom, skipUncached } = this.tilesSeedingConfig;
@@ -230,7 +241,7 @@ export class SeedingJobCreator {
   ): Polygon | MultiPolygon | undefined {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
-    if (mode === SeedMode.CLEAN) {
+    if (mode === SeedMode.CLEAN && job.type === this.swapUpdateJobType) {
       const footprint = job.parameters.additionalParams.footprint;
       return footprint;
     }
@@ -251,18 +262,11 @@ export class SeedingJobCreator {
     return footprint;
   }
 
-  private poc(seedGeometry: Polygon | MultiPolygon, partArea: number): Feature<Polygon | MultiPolygon>[] {
+  private getSplittedIntersections(seedGeometry: Polygon | MultiPolygon, partArea: number): Feature<Polygon | MultiPolygon>[] {
     const seedBbox = bbox(seedGeometry);
-    //const seedAreaInKm=  this.calculateBoundingBoxArea(seedBbox);
-    //const avi = area(seedGeometry);
-    //const avi2 = convertArea(area(bboxPolygon(seedBbox)), 'meters', 'kilometers');
     const seedFeature = feature(seedGeometry);
 
-    // if (avi2 <= this.areaThresholdKm) {
-    //   return [seedFeature]; // no split needed
-    // }
     const smallBboxes = this.splitBoundingBox(seedBbox, partArea);
-    //const features: Feature<Polygon | MultiPolygon>[] = [];
 
     const intersectionFeatures: Feature<Polygon | MultiPolygon>[] = [];
 
@@ -295,19 +299,19 @@ export class SeedingJobCreator {
   }
 
 
-/**
- * Splits a large bounding box (bbox) into smaller sub-boxes (tiles) such that each tile
- * does not exceed a predefined maximum area threshold (in square kilometers). To achieve this,
- * the function first converts the bbox dimensions from geographic coordinates (degrees) into
- * real-world distances (kilometers) to calculate an accurate aspect ratio. Based on the total
- * area and the maximum tile size, it estimates how many tiles are needed and determines the
- * optimal number of horizontal (X) and vertical (Y) splits to preserve the shape of the original
- * bbox — favoring square-shaped tiles over elongated ones. It then creates a sample tile to
- * verify the actual area after conversion, and if that sample still exceeds the limit, it increases
- * the split count accordingly. Finally, it generates a grid of equally sized sub-bboxes that fully
- * cover the original bbox without overlaps or gaps, ensuring the result is efficient for downstream
- * processing like spatial tiling, rendering, or parallel computation.
- */
+  /**
+   * Splits a large bounding box (bbox) into smaller sub-boxes (tiles) such that each tile
+   * does not exceed a predefined maximum area threshold (in square kilometers). To achieve this,
+   * the function first converts the bbox dimensions from geographic coordinates (degrees) into
+   * real-world distances (kilometers) to calculate an accurate aspect ratio. Based on the total
+   * area and the maximum tile size, it estimates how many tiles are needed and determines the
+   * optimal number of horizontal (X) and vertical (Y) splits to preserve the shape of the original
+   * bbox — favoring square-shaped tiles over elongated ones. It then creates a sample tile to
+   * verify the actual area after conversion, and if that sample still exceeds the limit, it increases
+   * the split count accordingly. Finally, it generates a grid of equally sized sub-bboxes that fully
+   * cover the original bbox without overlaps or gaps, ensuring the result is efficient for downstream
+   * processing like spatial tiling, rendering, or parallel computation.
+   */
 
   private splitBoundingBox(bbox: BBox, partArea: number): BBox[] {
     const maxTileAreaKm2 = this.areaThresholdKm;
