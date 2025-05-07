@@ -6,6 +6,7 @@ import { EXPORT_FAILURE_MESSAGE } from '../../../../src/common/constants';
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
+import { createFakeAggregatedPartData } from '../../httpClients/catalogClientSetup';
 import { finalizeFailureTaskForExport, finalizeSuccessTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
 import { exportJob } from '../../mocks/jobsMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
@@ -174,7 +175,7 @@ describe('ExportJobHandler', () => {
 
     describe('when handling GPKG file modification', () => {
       it('should modify GPKG metadata and update file size', async () => {
-        const { exportJobHandler, gpkgServiceMock, fsServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, gpkgServiceMock, fsServiceMock, jobManagerClientMock, polygonPartsManagerClientMock } = setupExportJobHandlerTest();
 
         const job = {
           ...exportJob,
@@ -193,8 +194,11 @@ describe('ExportJobHandler', () => {
             gpkgModified: false,
           },
         };
+
+        const aggregatedLayerMetadata = createFakeAggregatedPartData();
         const fileSize = 1024;
 
+        polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(aggregatedLayerMetadata);
         gpkgServiceMock.createTableFromMetadata.mockReturnValue(true);
         fsServiceMock.getFileSize.mockResolvedValue(fileSize);
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
