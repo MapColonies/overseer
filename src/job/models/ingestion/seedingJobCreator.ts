@@ -149,6 +149,7 @@ export class SeedingJobCreator {
 
     if (job.type !== this.config.get<string>('jobManagement.polling.jobs.update.type')) {
       this.logger.debug({ msg: 'Ingestion Job is not of update type, skipping SEED creation' });
+      activeSpan?.addEvent('handleSeedMode.skipped');
       return [];
     }
 

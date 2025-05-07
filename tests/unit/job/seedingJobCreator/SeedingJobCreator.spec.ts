@@ -170,7 +170,7 @@ describe('SeedingJobCreator', () => {
       expect(res).toBeUndefined();
     });
 
-    it('should create seeding job successfully with seed task mode(more then 1 part)', async () => {
+    it('should create seeding job successfully with seed task mode (more than 1 part)', async () => {
       const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock } = seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
