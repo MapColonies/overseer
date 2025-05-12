@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import crypto from 'crypto';
 import path from 'path';
 import { inject, injectable } from 'tsyringe';
 import { Logger } from '@map-colonies/js-logger';
@@ -9,6 +10,44 @@ import { FSError } from '../../common/errors';
 @injectable()
 export class FSService {
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.TRACER) private readonly tracer: Tracer) {}
+
+  public async uploadJsonFile(filePath: string, data: Record<string, unknown>): Promise<string> {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.uploadJsonFile.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      try {
+        activeSpan?.setAttributes({
+          filePath,
+          operation: 'uploadJsonFile',
+        });
+
+        this.logger.info({ msg: 'Uploading JSON file', filePath });
+
+        const sha256 = this.generateSha256(data);
+        activeSpan?.addEvent('json.data.hashed', { sha256 });
+        data.sha256 = sha256;
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+
+        activeSpan?.addEvent('file.uploaded', { filePath });
+        this.logger.info({ msg: 'JSON file uploaded successfully', filePath });
+
+        return sha256;
+      } catch (err) {
+        const error = new FSError(err, `Failed to upload JSON file ${filePath}`);
+
+        this.logger.error({ msg: error.message, error });
+        activeSpan?.recordException(error);
+        activeSpan?.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error.message,
+        });
+
+        throw error;
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
 
   public async deleteFile(filePath: string): Promise<void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.deleteFile.name}`)), async () => {
@@ -154,5 +193,10 @@ export class FSService {
         activeSpan?.end();
       }
     });
+  }
+
+  private generateSha256(data: Record<string, unknown>): string {
+    const sha256 = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
+    return sha256;
   }
 }

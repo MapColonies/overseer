@@ -22,7 +22,7 @@ import {
   extendedRasterLayerMetadataSchema,
   ingestionNewExtendedJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
-import { LayerCacheType, SeedMode, SqlDataType } from './constants';
+import { LayerCacheType, SeedMode } from './constants';
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
@@ -215,17 +215,10 @@ export interface ExportTaskParameters {
 
 export type ExportTask = ICreateTaskBody<ExportTaskParameters>;
 
+export type GpkgArtifactProperties = Omit<RasterLayerMetadata, 'productStatus' | 'footprint'>;
+export type JsonArtifactProperties = Omit<RasterLayerMetadata, 'productStatus'>;
+
 //#endregion exportTask
-
-//#region gpkgClient
-
-export interface TableDefinition {
-  name: string;
-  dataType: SqlDataType;
-  value: unknown;
-}
-
-//#endregion gpkgClient
 
 //#region mapproxyApi
 export interface PublishMapLayerRequest {

@@ -22,6 +22,38 @@ describe('fsService', () => {
     fsService = new FSService(jsLogger({ enabled: false }), tracerMock);
   });
 
+  describe('uploadJsonFile', () => {
+    const testJsonPath = '/path/to/test/file.json';
+    const testJsonData = {
+      id: 'test123',
+      name: 'Test Layer',
+      properties: { resolution: 0.5, type: 'orthophoto' },
+    };
+    const expectedSha256 = 'mocked-sha256-hash';
+
+    it('should write JSON data to file and return SHA256 hash', async () => {
+      const writeFileMock = jest.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      const generateSha256Spy = jest.spyOn(fsService as unknown as { generateSha256: jest.Func }, 'generateSha256').mockReturnValue(expectedSha256);
+
+      const result = await fsService.uploadJsonFile(testJsonPath, testJsonData);
+
+      expect(result).toBe(expectedSha256);
+      expect(writeFileMock).toHaveBeenCalledWith(testJsonPath, JSON.stringify({ ...testJsonData, sha256: expectedSha256 }, null, 2));
+      expect(generateSha256Spy).toHaveBeenCalledWith(testJsonData);
+    });
+
+    it('should throw FSError when writing file fails', async () => {
+      const writeError = new Error('Write failed');
+      jest.mocked(fs.writeFile).mockRejectedValue(writeError);
+
+      jest.spyOn(fsService as unknown as { generateSha256: jest.Func }, 'generateSha256').mockReturnValue(expectedSha256);
+
+      await expect(fsService.uploadJsonFile(testJsonPath, testJsonData)).rejects.toThrow(FSError);
+      await expect(fsService.uploadJsonFile(testJsonPath, testJsonData)).rejects.toThrow(`Failed to upload JSON file ${testJsonPath}`);
+    });
+  });
+
   describe('deleteFile', () => {
     it('should delete a file successfully', async () => {
       const unlinkMock = jest.mocked(fs.unlink).mockResolvedValue(undefined);

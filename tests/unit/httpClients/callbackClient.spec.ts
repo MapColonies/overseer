@@ -51,6 +51,7 @@ describe('callbackClient', () => {
         ],
         links: {
           dataURI: 'https://download.example.com/gpkgs/test.gpkg',
+          metadataURI: 'https://download.example.com/gpkgs/test_metadata.json',
         },
       };
 
