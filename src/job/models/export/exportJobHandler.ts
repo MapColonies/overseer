@@ -13,6 +13,7 @@ import {
   EXPORT_SUCCESS_MESSAGE,
   GPKG_CONTENT_TYPE,
   GPKGS_PREFIX,
+  JSON_CONTENT_TYPE,
   SERVICES,
   StorageProvider,
 } from '../../../common/constants';
@@ -266,8 +267,6 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     //TODO In future, we will remove the json metadata file and support only gpkg
     const jsonPath = gpkgFilePath.replace(/\.gpkg$/, '.json');
     logger.info({ msg: 'Creating json metadata file', jsonPath });
-    const jsonMetadata = this.createJsonMetadata(roiMetadata);
-    const jsonSha256 = await this.fsService.uploadJsonFile(jsonPath, jsonMetadata);
 
     logger.info({ msg: 'Modify gpkg file (create table from metadata)', gpkgFilePath, gpkgMetadata });
 
@@ -280,12 +279,16 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       }
     );
 
+    const gpkgSha256 = await this.fsService.calculateFileSha256(gpkgFilePath);
+    const jsonMetadata = this.prepareJsonFileMetadata(roiMetadata, gpkgSha256);
+    await this.fsService.uploadJsonFile(jsonPath, jsonMetadata);
+
     const fileSize = await this.fsService.getFileSize(gpkgFilePath);
     const jsonFileSize = await this.fsService.getFileSize(jsonPath); //TODO: In future, we will remove the json metadata file and support only gpkg
 
     logger.info({ msg: 'Gpkg file size', fileSize });
     logger.info({ msg: 'Json file size', jsonFileSize });
-    await this.updateCallbackParams(job, OperationStatus.IN_PROGRESS, { fileSize, jsonFileData: { sha256: jsonSha256, size: jsonFileSize } });
+    await this.updateCallbackParams(job, OperationStatus.IN_PROGRESS, { fileSize, jsonFileData: { sha256: gpkgSha256, size: jsonFileSize } });
     const updatedParams = await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'gpkgModified');
     return updatedParams;
   }
@@ -306,10 +309,11 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     };
   }
 
-  private createJsonMetadata(feature: Feature<Polygon | MultiPolygon, GpkgArtifactProperties>): JsonArtifactProperties {
+  private prepareJsonFileMetadata(feature: Feature<Polygon | MultiPolygon, GpkgArtifactProperties>, gpkgSha256: string): JsonArtifactProperties {
     return {
       ...feature.properties,
       footprint: feature.geometry,
+      sha256: gpkgSha256,
     };
   }
 
@@ -334,7 +338,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
 
     await this.s3Service.uploadFiles([
       { filePath: gpkgPath, s3Key: gpkgS3Key, contentType: GPKG_CONTENT_TYPE },
-      { filePath: jsonPath, s3Key: jsonS3Key },
+      { filePath: jsonPath, s3Key: jsonS3Key, contentType: JSON_CONTENT_TYPE },
     ]);
     await this.fsService.deleteFileAndParentDir(gpkgPath);
     const updatedParams = await this.markFinalizeStepAsCompleted(jobId, taskId, taskParams, 'gpkgUploadedToS3');
@@ -419,6 +423,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
           type: ArtifactRasterType.GPKG,
           size: validCallbackParams.fileSize ?? 0,
           url: gpkgDownloadUrl,
+          sha256: validCallbackParams.jsonFileData?.sha256,
         },
         {
           //TODO: In future, we will remove the json metadata file and support only gpkg
@@ -426,7 +431,6 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
           type: ArtifactRasterType.METADATA,
           size: validCallbackParams.jsonFileData?.size ?? 0,
           url: jsonDownloadUrl,
-          sha256: validCallbackParams.jsonFileData?.sha256,
         },
       ];
 

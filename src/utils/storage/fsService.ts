@@ -1,4 +1,6 @@
 import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import { finished } from 'stream/promises'; // Promise-based stream completion
 import crypto from 'crypto';
 import path from 'path';
 import { inject, injectable } from 'tsyringe';
@@ -11,7 +13,7 @@ import { FSError } from '../../common/errors';
 export class FSService {
   public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.TRACER) private readonly tracer: Tracer) {}
 
-  public async uploadJsonFile(filePath: string, data: Record<string, unknown>): Promise<string> {
+  public async uploadJsonFile(filePath: string, data: Record<string, unknown>): Promise<void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.uploadJsonFile.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       try {
@@ -22,16 +24,11 @@ export class FSService {
 
         this.logger.info({ msg: 'Uploading JSON file', filePath });
 
-        const sha256 = this.generateSha256(data);
-        activeSpan?.addEvent('json.data.hashed', { sha256 });
-        data.sha256 = sha256;
         // eslint-disable-next-line @typescript-eslint/no-magic-numbers
         await fs.writeFile(filePath, JSON.stringify(data, null, 2));
 
         activeSpan?.addEvent('file.uploaded', { filePath });
         this.logger.info({ msg: 'JSON file uploaded successfully', filePath });
-
-        return sha256;
       } catch (err) {
         const error = new FSError(err, `Failed to upload JSON file ${filePath}`);
 
@@ -195,8 +192,44 @@ export class FSService {
     });
   }
 
-  private generateSha256(data: Record<string, unknown>): string {
-    const sha256 = crypto.createHash('sha256').update(JSON.stringify(data)).digest('hex');
-    return sha256;
+  public async calculateFileSha256(filePath: string): Promise<string> {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.calculateFileSha256.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      try {
+        activeSpan?.setAttributes({
+          filePath,
+          operation: 'calculateFileSha256',
+        });
+
+        this.logger.info({ msg: 'Calculating file SHA256', filePath });
+        await fs.access(filePath);
+
+        const hash = crypto.createHash('sha256');
+        const fileStream = createReadStream(filePath);
+
+        fileStream.on('data', (data) => {
+          hash.update(data);
+        });
+
+        await finished(fileStream);
+
+        const sha256 = hash.digest('hex');
+
+        activeSpan?.addEvent('file.sha256.calculated', { sha256 });
+        this.logger.info({ msg: 'SHA256 calculated successfully', filePath, sha256 });
+        return sha256;
+      } catch (err) {
+        const error = new FSError(err, `Failed to calculate SHA256 for ${filePath}`);
+        this.logger.error({ msg: error.message, error });
+        activeSpan?.recordException(error);
+        activeSpan?.setStatus({
+          code: SpanStatusCode.ERROR,
+          message: error.message,
+        });
+        throw error;
+      } finally {
+        activeSpan?.end();
+      }
+    });
   }
 }

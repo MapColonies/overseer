@@ -216,7 +216,7 @@ export interface ExportTaskParameters {
 export type ExportTask = ICreateTaskBody<ExportTaskParameters>;
 
 export type GpkgArtifactProperties = Omit<RasterLayerMetadata, 'productStatus' | 'footprint'>;
-export type JsonArtifactProperties = Omit<RasterLayerMetadata, 'productStatus'>;
+export type JsonArtifactProperties = Omit<RasterLayerMetadata, 'productStatus'> & { sha256: string };
 
 //#endregion exportTask
 

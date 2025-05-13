@@ -1,7 +1,10 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import fs from 'fs/promises';
-import { Dirent, Stats } from 'fs';
+import fsPromises from 'fs/promises';
+import fs, { Dirent, ReadStream, Stats } from 'fs';
+import streamPromises from 'stream/promises';
 import path from 'path';
+import { Readable } from 'stream';
+import crypto from 'crypto';
 import jsLogger from '@map-colonies/js-logger';
 import { FSService } from '../../../src/utils/storage/fsService';
 import { tracerMock } from '../mocks/tracerMock';
@@ -29,25 +32,18 @@ describe('fsService', () => {
       name: 'Test Layer',
       properties: { resolution: 0.5, type: 'orthophoto' },
     };
-    const expectedSha256 = 'mocked-sha256-hash';
 
-    it('should write JSON data to file and return SHA256 hash', async () => {
-      const writeFileMock = jest.mocked(fs.writeFile).mockResolvedValue(undefined);
+    it('should write JSON data to file', async () => {
+      const writeFileMock = jest.mocked(fsPromises.writeFile).mockResolvedValue(undefined);
 
-      const generateSha256Spy = jest.spyOn(fsService as unknown as { generateSha256: jest.Func }, 'generateSha256').mockReturnValue(expectedSha256);
+      await fsService.uploadJsonFile(testJsonPath, testJsonData);
 
-      const result = await fsService.uploadJsonFile(testJsonPath, testJsonData);
-
-      expect(result).toBe(expectedSha256);
-      expect(writeFileMock).toHaveBeenCalledWith(testJsonPath, JSON.stringify({ ...testJsonData, sha256: expectedSha256 }, null, 2));
-      expect(generateSha256Spy).toHaveBeenCalledWith(testJsonData);
+      expect(writeFileMock).toHaveBeenCalledWith(testJsonPath, JSON.stringify(testJsonData, null, 2));
     });
 
     it('should throw FSError when writing file fails', async () => {
       const writeError = new Error('Write failed');
-      jest.mocked(fs.writeFile).mockRejectedValue(writeError);
-
-      jest.spyOn(fsService as unknown as { generateSha256: jest.Func }, 'generateSha256').mockReturnValue(expectedSha256);
+      jest.mocked(fsPromises.writeFile).mockRejectedValue(writeError);
 
       await expect(fsService.uploadJsonFile(testJsonPath, testJsonData)).rejects.toThrow(FSError);
       await expect(fsService.uploadJsonFile(testJsonPath, testJsonData)).rejects.toThrow(`Failed to upload JSON file ${testJsonPath}`);
@@ -56,7 +52,7 @@ describe('fsService', () => {
 
   describe('deleteFile', () => {
     it('should delete a file successfully', async () => {
-      const unlinkMock = jest.mocked(fs.unlink).mockResolvedValue(undefined);
+      const unlinkMock = jest.mocked(fsPromises.unlink).mockResolvedValue(undefined);
 
       await fsService.deleteFile(testFilePath);
 
@@ -65,7 +61,7 @@ describe('fsService', () => {
 
     it('should throw FSError when file deletion fails', async () => {
       const deleteError = new Error('File not found');
-      jest.mocked(fs.unlink).mockRejectedValue(deleteError);
+      jest.mocked(fsPromises.unlink).mockRejectedValue(deleteError);
 
       await expect(fsService.deleteFile(testFilePath)).rejects.toThrow(FSError);
     });
@@ -73,41 +69,41 @@ describe('fsService', () => {
 
   describe('deleteDirectory', () => {
     it('should delete an empty directory successfully', async () => {
-      jest.mocked(fs.readdir).mockResolvedValue(mockEmptyList);
-      const rmdirMock = jest.mocked(fs.rmdir).mockResolvedValue(undefined);
+      jest.mocked(fsPromises.readdir).mockResolvedValue(mockEmptyList);
+      const rmdirMock = jest.mocked(fsPromises.rmdir).mockResolvedValue(undefined);
 
       const result = await fsService.deleteDirectory(testDirPath);
 
       expect(result).toBe(true);
-      expect(fs.readdir).toHaveBeenCalledWith(testDirPath);
+      expect(fsPromises.readdir).toHaveBeenCalledWith(testDirPath);
       expect(rmdirMock).toHaveBeenCalledWith(testDirPath);
     });
 
     it('should not delete a non-empty directory without force option', async () => {
-      jest.mocked(fs.readdir).mockResolvedValue(mockFilesList);
+      jest.mocked(fsPromises.readdir).mockResolvedValue(mockFilesList);
 
       const result = await fsService.deleteDirectory(testDirPath);
 
       expect(result).toBe(false);
-      expect(fs.readdir).toHaveBeenCalledWith(testDirPath);
-      expect(fs.rmdir).not.toHaveBeenCalled();
-      expect(fs.rm).not.toHaveBeenCalled();
+      expect(fsPromises.readdir).toHaveBeenCalledWith(testDirPath);
+      expect(fsPromises.rmdir).not.toHaveBeenCalled();
+      expect(fsPromises.rm).not.toHaveBeenCalled();
     });
 
     it('should delete a non-empty directory when force option is true', async () => {
-      jest.mocked(fs.readdir).mockResolvedValue(mockFilesList);
-      const rmMock = jest.mocked(fs.rm).mockResolvedValue(undefined);
+      jest.mocked(fsPromises.readdir).mockResolvedValue(mockFilesList);
+      const rmMock = jest.mocked(fsPromises.rm).mockResolvedValue(undefined);
 
       const result = await fsService.deleteDirectory(testDirPath, { force: true });
 
       expect(result).toBe(true);
-      expect(fs.readdir).toHaveBeenCalledWith(testDirPath);
+      expect(fsPromises.readdir).toHaveBeenCalledWith(testDirPath);
       expect(rmMock).toHaveBeenCalledWith(testDirPath, { recursive: true, force: true });
     });
 
     it('should throw FSError when directory deletion fails', async () => {
       const readError = new Error('Directory not found');
-      jest.mocked(fs.readdir).mockRejectedValue(readError);
+      jest.mocked(fsPromises.readdir).mockRejectedValue(readError);
 
       await expect(fsService.deleteDirectory(testDirPath)).rejects.toThrow(FSError);
     });
@@ -116,39 +112,39 @@ describe('fsService', () => {
   describe('deleteFileAndParentDir', () => {
     it('should delete file and its parent directory if empty', async () => {
       jest.mocked(path.dirname).mockReturnValue(testDirPath);
-      jest.mocked(fs.unlink).mockResolvedValue(undefined);
-      jest.mocked(fs.readdir).mockResolvedValue(mockEmptyList);
-      jest.mocked(fs.rmdir).mockResolvedValue(undefined);
+      jest.mocked(fsPromises.unlink).mockResolvedValue(undefined);
+      jest.mocked(fsPromises.readdir).mockResolvedValue(mockEmptyList);
+      jest.mocked(fsPromises.rmdir).mockResolvedValue(undefined);
 
       await fsService.deleteFileAndParentDir(testFilePath);
 
-      expect(fs.unlink).toHaveBeenCalledWith(testFilePath);
+      expect(fsPromises.unlink).toHaveBeenCalledWith(testFilePath);
       expect(path.dirname).toHaveBeenCalledWith(testFilePath);
-      expect(fs.readdir).toHaveBeenCalledWith(testDirPath);
-      expect(fs.rmdir).toHaveBeenCalledWith(testDirPath);
+      expect(fsPromises.readdir).toHaveBeenCalledWith(testDirPath);
+      expect(fsPromises.rmdir).toHaveBeenCalledWith(testDirPath);
     });
 
     it('should delete file but not parent directory if not empty', async () => {
       jest.mocked(path.dirname).mockReturnValue(testDirPath);
-      jest.mocked(fs.unlink).mockResolvedValue(undefined);
-      jest.mocked(fs.readdir).mockResolvedValue(mockFilesList);
+      jest.mocked(fsPromises.unlink).mockResolvedValue(undefined);
+      jest.mocked(fsPromises.readdir).mockResolvedValue(mockFilesList);
 
       await fsService.deleteFileAndParentDir(testFilePath);
 
-      expect(fs.unlink).toHaveBeenCalledWith(testFilePath);
+      expect(fsPromises.unlink).toHaveBeenCalledWith(testFilePath);
       expect(path.dirname).toHaveBeenCalledWith(testFilePath);
-      expect(fs.readdir).toHaveBeenCalledWith(testDirPath);
-      expect(fs.rmdir).not.toHaveBeenCalled();
+      expect(fsPromises.readdir).toHaveBeenCalledWith(testDirPath);
+      expect(fsPromises.rmdir).not.toHaveBeenCalled();
     });
 
     it('should throw FSError when file deletion fails', async () => {
       const deleteError = new Error('File not found');
-      jest.mocked(fs.unlink).mockRejectedValue(deleteError);
+      jest.mocked(fsPromises.unlink).mockRejectedValue(deleteError);
 
       await expect(fsService.deleteFileAndParentDir(testFilePath)).rejects.toThrow(FSError);
 
-      expect(fs.readdir).not.toHaveBeenCalled();
-      expect(fs.rmdir).not.toHaveBeenCalled();
+      expect(fsPromises.readdir).not.toHaveBeenCalled();
+      expect(fsPromises.rmdir).not.toHaveBeenCalled();
     });
 
     it('should wrap non-FSError in FSError when an error occurs', async () => {
@@ -160,21 +156,21 @@ describe('fsService', () => {
       await expect(result).rejects.toThrow(FSError);
       await expect(result).rejects.toThrow(`Failed to delete file and parent directory for ${testFilePath}`);
 
-      expect(fs.readdir).not.toHaveBeenCalled();
-      expect(fs.rmdir).not.toHaveBeenCalled();
+      expect(fsPromises.readdir).not.toHaveBeenCalled();
+      expect(fsPromises.rmdir).not.toHaveBeenCalled();
     });
 
     it('should throw FSError when directory operation fails', async () => {
       jest.mocked(path.dirname).mockReturnValue(testDirPath);
-      jest.mocked(fs.unlink).mockResolvedValue(undefined);
+      jest.mocked(fsPromises.unlink).mockResolvedValue(undefined);
 
       const dirError = new Error('Directory not found');
-      jest.mocked(fs.readdir).mockRejectedValue(dirError);
+      jest.mocked(fsPromises.readdir).mockRejectedValue(dirError);
 
       await expect(fsService.deleteFileAndParentDir(testFilePath)).rejects.toThrow(FSError);
 
-      expect(fs.unlink).toHaveBeenCalledWith(testFilePath);
-      expect(fs.rmdir).not.toHaveBeenCalled();
+      expect(fsPromises.unlink).toHaveBeenCalledWith(testFilePath);
+      expect(fsPromises.rmdir).not.toHaveBeenCalled();
     });
   });
 
@@ -187,20 +183,20 @@ describe('fsService', () => {
         isDirectory: jest.fn().mockReturnValue(false),
       } as unknown as Stats;
 
-      jest.mocked(fs.stat).mockResolvedValue(statsMock);
+      jest.mocked(fsPromises.stat).mockResolvedValue(statsMock);
 
       const result = await fsService.getFileSize(testFilePath);
 
       expect(result).toBe(testFileSize);
-      expect(fs.stat).toHaveBeenCalledWith(testFilePath);
+      expect(fsPromises.stat).toHaveBeenCalledWith(testFilePath);
     });
 
     it('should throw FSError when stat operation fails', async () => {
       const statError = new Error('File not found');
-      jest.mocked(fs.stat).mockRejectedValue(statError);
+      jest.mocked(fsPromises.stat).mockRejectedValue(statError);
 
       await expect(fsService.getFileSize(testFilePath)).rejects.toThrow(FSError);
-      expect(fs.stat).toHaveBeenCalledWith(testFilePath);
+      expect(fsPromises.stat).toHaveBeenCalledWith(testFilePath);
     });
 
     it('should handle very large file sizes', async () => {
@@ -211,12 +207,68 @@ describe('fsService', () => {
         isDirectory: jest.fn().mockReturnValue(false),
       } as unknown as Stats;
 
-      jest.mocked(fs.stat).mockResolvedValue(statsMock);
+      jest.mocked(fsPromises.stat).mockResolvedValue(statsMock);
 
       const result = await fsService.getFileSize(testFilePath);
 
       expect(result).toBe(largeFileSize);
-      expect(fs.stat).toHaveBeenCalledWith(testFilePath);
+      expect(fsPromises.stat).toHaveBeenCalledWith(testFilePath);
+    });
+  });
+  describe('calculateFileSha256', () => {
+    const testFilePath = '/path/to/test/file.data';
+    const expectedSha256 = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
+
+    it('should calculate SHA256 hash of file correctly', async () => {
+      const accessSpy = jest.spyOn(fsPromises, 'access').mockResolvedValue(undefined);
+
+      // Mock crypto hash functions
+      const mockHash = {
+        update: jest.fn(),
+        digest: jest.fn().mockReturnValue(expectedSha256),
+      };
+      const createHashSpy = jest.spyOn(crypto, 'createHash').mockReturnValue(mockHash as unknown as crypto.Hash);
+
+      const mockStream = new Readable();
+      mockStream._read = () => {}; // Required implementation
+
+      const createReadStreamSpy = jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as unknown as ReadStream);
+
+      const finishedSpy = jest.spyOn(streamPromises, 'finished').mockReturnValue(Promise.resolve());
+
+      const result = await fsService.calculateFileSha256(testFilePath);
+
+      expect(result).toBe(expectedSha256);
+      expect(accessSpy).toHaveBeenCalledWith(testFilePath);
+      expect(createHashSpy).toHaveBeenCalledWith('sha256');
+      expect(createReadStreamSpy).toHaveBeenCalledWith(testFilePath);
+      expect(mockHash.digest).toHaveBeenCalledWith('hex');
+      expect(finishedSpy).toHaveBeenCalled();
+    });
+
+    it('should throw FSError when file does not exist', async () => {
+      const accessError = new Error('File not found');
+      jest.mocked(fsPromises.access).mockRejectedValue(accessError);
+
+      await expect(fsService.calculateFileSha256(testFilePath)).rejects.toThrow(FSError);
+      await expect(fsService.calculateFileSha256(testFilePath)).rejects.toThrow(`Failed to calculate SHA256 for ${testFilePath}`);
+    });
+
+    it('should throw FSError when hashing process fails', async () => {
+      jest.mocked(fsPromises.access).mockResolvedValue(undefined);
+
+      const mockStream = {
+        on: jest.fn().mockImplementation(() => {
+          return mockStream;
+        }),
+      };
+      jest.spyOn(fs, 'createReadStream').mockReturnValue(mockStream as never);
+
+      const streamError = new Error('Stream processing failed');
+      jest.spyOn(streamPromises, 'finished').mockRejectedValue(streamError);
+
+      await expect(fsService.calculateFileSha256(testFilePath)).rejects.toThrow(FSError);
+      expect(fsPromises.access).toHaveBeenCalledWith(testFilePath);
     });
   });
 });

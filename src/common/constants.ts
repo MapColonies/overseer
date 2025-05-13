@@ -6,6 +6,7 @@ export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const SERVICE_VERSION = readPackageJsonSync().version ?? 'unknown_version';
 export const DEFAULT_SERVER_PORT = 80;
 export const GPKG_CONTENT_TYPE = 'application/geopackage+sqlite3';
+export const JSON_CONTENT_TYPE = 'application/json';
 export const GPKGS_PREFIX = 'gpkgs';
 export const EXPORT_FAILURE_MESSAGE = 'The export process could not be completed. Error occurred.';
 export const EXPORT_SUCCESS_MESSAGE = 'The export process completed successfully.';

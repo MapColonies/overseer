@@ -46,6 +46,7 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     deleteFileAndParentDir: jest.fn(),
     getFileSize: jest.fn(),
     uploadJsonFile: jest.fn(),
+    calculateFileSha256: jest.fn(),
   } as unknown as jest.Mocked<FSService>;
 
   const callbackClientMock = {

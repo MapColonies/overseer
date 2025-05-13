@@ -3,7 +3,7 @@ import path from 'path';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { faker } from '@faker-js/faker';
 import { ogr2ogr } from 'ogr2ogr';
-import { EXPORT_FAILURE_MESSAGE } from '../../../../src/common/constants';
+import { EXPORT_FAILURE_MESSAGE, GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE } from '../../../../src/common/constants';
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
@@ -210,10 +210,11 @@ describe('ExportJobHandler', () => {
 
         polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(aggregatedLayerMetadata);
         catalogClientMock.findLayer.mockResolvedValue(layerRecord);
-        fsServiceMock.uploadJsonFile.mockResolvedValue(jsonSha256);
+        fsServiceMock.uploadJsonFile.mockResolvedValue(undefined);
         fsServiceMock.getFileSize.mockImplementation(async (path) => {
           return Promise.resolve(path === gpkgFilePath ? fileSize : jsonFileSize);
         });
+        fsServiceMock.calculateFileSha256.mockResolvedValue(jsonSha256);
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -317,12 +318,13 @@ describe('ExportJobHandler', () => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             s3Key: expect.stringContaining(gpkgRelativePath),
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            contentType: expect.any(String),
+            contentType: GPKG_CONTENT_TYPE,
           },
           {
             filePath: jsonFilePath,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             s3Key: expect.stringContaining(gpkgRelativePath.replace('.gpkg', '.json')),
+            contentType: JSON_CONTENT_TYPE,
           },
         ]);
 
@@ -424,10 +426,10 @@ describe('ExportJobHandler', () => {
             artifacts: expect.arrayContaining([
               expect.objectContaining({
                 type: 'GPKG',
+                sha256: 'test-sha256',
               }),
               expect.objectContaining({
                 type: 'METADATA',
-                sha256: 'test-sha256',
               }),
             ]),
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
