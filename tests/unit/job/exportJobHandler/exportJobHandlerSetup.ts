@@ -9,7 +9,6 @@ import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../
 import { tracerMock } from '../../mocks/tracerMock';
 import { configMock } from '../../mocks/configMock';
 import { S3Service } from '../../../../src/utils/storage/s3Service';
-import { GeoPackageClient } from '../../../../src/utils/db/geoPackageClient';
 import { FSService } from '../../../../src/utils/storage/fsService';
 import { CallbackClient } from '../../../../src/httpClients/callbackClient';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
@@ -23,7 +22,6 @@ export interface ExportJobHandlerTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   catalogClientMock: jest.Mocked<CatalogClient>;
   s3ServiceMock: jest.Mocked<S3Service>;
-  gpkgServiceMock: jest.Mocked<GeoPackageClient>;
   fsServiceMock: jest.Mocked<FSService>;
   callbackClientMock: jest.Mocked<CallbackClient>;
   jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
@@ -39,15 +37,16 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
   const catalogClientMock = { findLayer: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
 
   const s3ServiceMock = {
-    uploadFile: jest.fn(),
+    uploadFiles: jest.fn(),
   } as unknown as jest.Mocked<S3Service>;
-  const gpkgServiceMock = { createTableFromMetadata: jest.fn() } as unknown as jest.Mocked<GeoPackageClient>;
 
   const fsServiceMock = {
     deleteFile: jest.fn(),
     deleteDirectory: jest.fn(),
     deleteFileAndParentDir: jest.fn(),
     getFileSize: jest.fn(),
+    uploadJsonFile: jest.fn(),
+    calculateFileSha256: jest.fn(),
   } as unknown as jest.Mocked<FSService>;
 
   const callbackClientMock = {
@@ -69,7 +68,6 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     s3ServiceMock,
     fsServiceMock,
     callbackClientMock,
-    gpkgServiceMock,
     taskMetricsMock,
     polygonPartsManagerClientMock
   );
@@ -82,7 +80,6 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
     catalogClientMock,
     configMock,
     s3ServiceMock,
-    gpkgServiceMock,
     fsServiceMock,
     callbackClientMock,
     jobTrackerClientMock,

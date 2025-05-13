@@ -1,4 +1,6 @@
 import path from 'path';
+import { Feature, MultiPolygon, Polygon } from 'geojson';
+import { ogr2ogr } from 'ogr2ogr';
 import { inject, injectable } from 'tsyringe';
 import { CallbackExportResponse, callbackExportResponseSchema, CallbacksStatus, CleanupData, RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
@@ -11,12 +13,22 @@ import {
   EXPORT_SUCCESS_MESSAGE,
   GPKG_CONTENT_TYPE,
   GPKGS_PREFIX,
+  JSON_CONTENT_TYPE,
   SERVICES,
   StorageProvider,
 } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
-import { ExportTask, ExportTaskParameters, IConfig, IJobHandler, JobAndTaskTelemetry } from '../../../common/interfaces';
+import {
+  AggregationLayerMetadata,
+  ExportTask,
+  ExportTaskParameters,
+  GpkgArtifactProperties,
+  IConfig,
+  IJobHandler,
+  JobAndTaskTelemetry,
+  JsonArtifactProperties,
+} from '../../../common/interfaces';
 import {
   ExportJob,
   ExportInitTask,
@@ -29,12 +41,12 @@ import { S3Service } from '../../../utils/storage/s3Service';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { ExportTaskManager } from '../../../task/models/exportTaskManager';
-import { GeoPackageClient } from '../../../utils/db/geoPackageClient';
 import { FSService } from '../../../utils/storage/fsService';
 import { createExpirationDate } from '../../../utils/dateUtil';
 import { CallbackClient } from '../../../httpClients/callbackClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
+import { convertObjectKeysToSnakeCase } from '../../../utils/db/dbUtils';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
@@ -54,7 +66,6 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     private readonly s3Service: S3Service,
     private readonly fsService: FSService,
     private readonly callbackClient: CallbackClient,
-    private readonly gpkgService: GeoPackageClient,
     private readonly taskMetrics: TaskMetrics,
     private readonly polygonPartsManagerClient: PolygonPartsMangerClient
   ) {
@@ -236,38 +247,100 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     taskId: string,
     taskParams: ExportFinalizeSuccessTaskParams
   ): Promise<ExportFinalizeSuccessTaskParams> {
-    this.logger.info({ msg: 'Modify gpkg file (create table from metadata)', jobId: job.id, taskId, gpkgFilePath });
+    const logger = this.logger.child({ jobId: job.id, taskId });
 
+    const validInternalId = internalIdSchema.parse(job).internalId;
+    logger.debug({ msg: 'internalId validation passed', internalId: validInternalId });
+
+    const layerName = job.parameters.additionalParams.polygonPartsEntityName;
     const featureCollectionFilter = job.parameters.exportInputParams.roi;
     const aggregatedMetadata = await this.polygonPartsManagerClient.getAggregatedLayerMetadata(
       job.parameters.additionalParams.polygonPartsEntityName,
       featureCollectionFilter
     );
-    this.logger.info({ msg: 'Received Aggregated layer metadata', jobId: job.id, taskId, aggregatedMetadata });
+    logger.info({ msg: 'Received Aggregated layer metadata', aggregatedMetadata });
+    const { metadata } = await this.catalogClient.findLayer(validInternalId);
 
-    const isTableCreated = this.gpkgService.createTableFromMetadata(gpkgFilePath, aggregatedMetadata);
-    if (isTableCreated) {
-      const fileSize = await this.fsService.getFileSize(gpkgFilePath);
-      await this.updateCallbackParams(job, OperationStatus.IN_PROGRESS, { fileSize });
-      const updatedParams = await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'gpkgModified');
-      return updatedParams;
-    }
-    return taskParams;
+    const roiMetadata = this.createRoiMetadata(metadata, aggregatedMetadata);
+    const gpkgMetadata = this.createGpkgMetadata(roiMetadata);
+
+    //TODO In future, we will remove the json metadata file and support only gpkg
+    const jsonPath = gpkgFilePath.replace(/\.gpkg$/, '.json');
+    logger.info({ msg: 'Creating json metadata file', jsonPath });
+
+    logger.info({ msg: 'Modify gpkg file (create table from metadata)', gpkgFilePath, gpkgMetadata });
+
+    await ogr2ogr(
+      { ...gpkgMetadata },
+      {
+        format: 'GPKG',
+        destination: gpkgFilePath,
+        options: ['-nln', `${layerName}_metadata`, '-overwrite'],
+      }
+    );
+
+    const gpkgSha256 = await this.fsService.calculateFileSha256(gpkgFilePath);
+    const jsonMetadata = this.prepareJsonFileMetadata(roiMetadata, gpkgSha256);
+    await this.fsService.uploadJsonFile(jsonPath, jsonMetadata);
+
+    const fileSize = await this.fsService.getFileSize(gpkgFilePath);
+    const jsonFileSize = await this.fsService.getFileSize(jsonPath); //TODO: In future, we will remove the json metadata file and support only gpkg
+
+    logger.info({ msg: 'Gpkg file size', fileSize });
+    logger.info({ msg: 'Json file size', jsonFileSize });
+    await this.updateCallbackParams(job, OperationStatus.IN_PROGRESS, { fileSize, jsonFileData: { sha256: gpkgSha256, size: jsonFileSize } });
+    const updatedParams = await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'gpkgModified');
+    return updatedParams;
+  }
+
+  private createRoiMetadata(
+    layerMetadata: RasterLayerMetadata,
+    aggregatedMetadata: AggregationLayerMetadata
+  ): Feature<Polygon | MultiPolygon, GpkgArtifactProperties> {
+    const { footprint: layerFootprint, productStatus, ...relevantMetadata } = layerMetadata;
+    const { footprint: aggregatedFootprint, ...relevantAggregatedMetadata } = aggregatedMetadata;
+    return {
+      type: 'Feature',
+      properties: {
+        ...relevantMetadata,
+        ...relevantAggregatedMetadata,
+      },
+      geometry: aggregatedFootprint,
+    };
+  }
+
+  private prepareJsonFileMetadata(feature: Feature<Polygon | MultiPolygon, GpkgArtifactProperties>, gpkgSha256: string): JsonArtifactProperties {
+    return {
+      ...feature.properties,
+      footprint: feature.geometry,
+      sha256: gpkgSha256,
+    };
+  }
+
+  private createGpkgMetadata(feature: Feature<Polygon | MultiPolygon, GpkgArtifactProperties>): Feature<Polygon | MultiPolygon> {
+    const snakeCaseProps = convertObjectKeysToSnakeCase(feature.properties);
+    return {
+      ...feature,
+      properties: snakeCaseProps,
+    };
   }
 
   private async uploadGpkgToS3(
-    gpkgFilePath: string,
+    gpkgPath: string,
     gpkgRelativePath: string,
     jobId: string,
     taskId: string,
     taskParams: ExportFinalizeSuccessTaskParams
   ): Promise<ExportFinalizeSuccessTaskParams> {
-    const logger = this.logger.child({ jobId, taskId });
+    const gpkgS3Key = `${GPKGS_PREFIX}/${gpkgRelativePath}`;
+    const jsonS3Key = gpkgS3Key.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
+    const jsonPath = gpkgPath.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
 
-    const s3Key = `${GPKGS_PREFIX}/${gpkgRelativePath}`;
-    logger.info({ msg: 'Upload gpkg file to S3', gpkgFilePath, s3Key, contentType: GPKG_CONTENT_TYPE });
-    await this.s3Service.uploadFile(gpkgFilePath, s3Key, GPKG_CONTENT_TYPE);
-    await this.fsService.deleteFileAndParentDir(gpkgFilePath);
+    await this.s3Service.uploadFiles([
+      { filePath: gpkgPath, s3Key: gpkgS3Key, contentType: GPKG_CONTENT_TYPE },
+      { filePath: jsonPath, s3Key: jsonS3Key, contentType: JSON_CONTENT_TYPE },
+    ]);
+    await this.fsService.deleteFileAndParentDir(gpkgPath);
     const updatedParams = await this.markFinalizeStepAsCompleted(jobId, taskId, taskParams, 'gpkgUploadedToS3');
     return updatedParams;
   }
@@ -329,9 +402,9 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     const { additionalParams, callbackParams } = job.parameters;
     const { packageRelativePath, fileNamesTemplates } = additionalParams;
     const validCallbackParams = callbackExportResponseSchema.parse(callbackParams);
-
+    const { jsonFileData, ...clientsCallbackParams } = validCallbackParams;
     const callbackResponse: CallbackExportResponse = {
-      ...validCallbackParams,
+      ...clientsCallbackParams,
       status,
       expirationTime: expirationDate,
       artifacts: [],
@@ -341,7 +414,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     if (status === OperationStatus.COMPLETED) {
       const gpkgDownloadUrl = this.isS3GpkgProvider
         ? `${this.downloadUrl}/${GPKGS_PREFIX}/${packageRelativePath}`
-        : `${this.downloadUrl}/${packageRelativePath}`; // later when we change download server mount directory, the path for s3 and fs should be the same
+        : `${this.downloadUrl}/${packageRelativePath}`; //TODO: later when we change download server mount directory, the path for s3 and fs should be the same
+      const jsonDownloadUrl = gpkgDownloadUrl.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
 
       callbackResponse.artifacts = [
         {
@@ -349,10 +423,18 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
           type: ArtifactRasterType.GPKG,
           size: validCallbackParams.fileSize ?? 0,
           url: gpkgDownloadUrl,
+          sha256: validCallbackParams.jsonFileData?.sha256,
+        },
+        {
+          //TODO: In future, we will remove the json metadata file and support only gpkg
+          name: fileNamesTemplates.packageName,
+          type: ArtifactRasterType.METADATA,
+          size: validCallbackParams.jsonFileData?.size ?? 0,
+          url: jsonDownloadUrl,
         },
       ];
 
-      callbackResponse.links = { dataURI: gpkgDownloadUrl };
+      callbackResponse.links = { dataURI: gpkgDownloadUrl, metadataURI: jsonDownloadUrl };
       callbackResponse.description = EXPORT_SUCCESS_MESSAGE;
     }
 

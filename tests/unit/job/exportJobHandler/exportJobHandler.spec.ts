@@ -2,7 +2,8 @@
 import path from 'path';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { faker } from '@faker-js/faker';
-import { EXPORT_FAILURE_MESSAGE } from '../../../../src/common/constants';
+import { ogr2ogr } from 'ogr2ogr';
+import { EXPORT_FAILURE_MESSAGE, GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE } from '../../../../src/common/constants';
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
@@ -13,6 +14,11 @@ import { layerRecord } from '../../mocks/catalogClientMockData';
 import { ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { exportTaskSources, exportTileRangeBatches } from '../../mocks/exportTaskMockData';
 import { setupExportJobHandlerTest } from './exportJobHandlerSetup';
+
+// Mock ogr2ogr
+jest.mock('ogr2ogr', () => ({
+  ogr2ogr: jest.fn().mockResolvedValue(undefined),
+}));
 
 describe('ExportJobHandler', () => {
   beforeEach(() => {
@@ -108,6 +114,7 @@ describe('ExportJobHandler', () => {
     const gpkgsPath = '/gpkgs';
     const gpkgRelativePath = 'package.gpkg';
     const gpkgFilePath = `${gpkgsPath}/${gpkgRelativePath}`;
+    const jsonFilePath = gpkgFilePath.replace('.gpkg', '.json');
     const gpkgDirPath = '/path/to/gpkgs';
     let joinSpy: jest.SpyInstance;
     let dirnameSpy: jest.SpyInstance;
@@ -175,7 +182,8 @@ describe('ExportJobHandler', () => {
 
     describe('when handling GPKG file modification', () => {
       it('should modify GPKG metadata and update file size', async () => {
-        const { exportJobHandler, gpkgServiceMock, fsServiceMock, jobManagerClientMock, polygonPartsManagerClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, fsServiceMock, jobManagerClientMock, polygonPartsManagerClientMock, catalogClientMock } =
+          setupExportJobHandlerTest();
 
         const job = {
           ...exportJob,
@@ -197,10 +205,16 @@ describe('ExportJobHandler', () => {
 
         const aggregatedLayerMetadata = createFakeAggregatedPartData();
         const fileSize = 1024;
+        const jsonFileSize = 512;
+        const jsonSha256 = 'test-sha256';
 
         polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(aggregatedLayerMetadata);
-        gpkgServiceMock.createTableFromMetadata.mockReturnValue(true);
-        fsServiceMock.getFileSize.mockResolvedValue(fileSize);
+        catalogClientMock.findLayer.mockResolvedValue(layerRecord);
+        fsServiceMock.uploadJsonFile.mockResolvedValue(undefined);
+        fsServiceMock.getFileSize.mockImplementation(async (path) => {
+          return Promise.resolve(path === gpkgFilePath ? fileSize : jsonFileSize);
+        });
+        fsServiceMock.calculateFileSha256.mockResolvedValue(jsonSha256);
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -209,17 +223,31 @@ describe('ExportJobHandler', () => {
         expect(joinSpy).toHaveBeenCalledWith(gpkgsPath, gpkgRelativePath);
         expect(dirnameSpy).toHaveBeenCalledWith(gpkgFilePath);
 
-        // Verify GPKG modified
-        expect(gpkgServiceMock.createTableFromMetadata).toHaveBeenCalledWith(gpkgFilePath, expect.any(Object));
-        expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(gpkgFilePath);
+        // Verify metadata processing
+        expect(polygonPartsManagerClientMock.getAggregatedLayerMetadata).toHaveBeenCalled();
+        expect(catalogClientMock.findLayer).toHaveBeenCalled();
+        expect(fsServiceMock.uploadJsonFile).toHaveBeenCalledWith(jsonFilePath, expect.any(Object));
 
-        // Check job updated with file size
+        // Verify ogr2ogr called to modify GPKG
+        expect(ogr2ogr).toHaveBeenCalledWith(
+          expect.any(Object),
+          expect.objectContaining({
+            format: 'GPKG',
+            destination: gpkgFilePath,
+          })
+        );
+
+        expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(gpkgFilePath);
+        expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(jsonFilePath);
+
+        // Check job updated with file size and json metadata
         expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
           parameters: {
             ...job.parameters,
             callbackParams: {
               ...job.parameters.callbackParams,
               fileSize,
+              jsonFileData: { sha256: jsonSha256, size: jsonFileSize },
               status: OperationStatus.IN_PROGRESS,
             },
           },
@@ -235,16 +263,19 @@ describe('ExportJobHandler', () => {
       });
 
       it('should not proceed with S3 upload if GPKG modification fails', async () => {
-        const { exportJobHandler, gpkgServiceMock, s3ServiceMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, s3ServiceMock, polygonPartsManagerClientMock, catalogClientMock } = setupExportJobHandlerTest();
         const job = exportJob;
         const task = finalizeSuccessTaskForExport;
 
-        gpkgServiceMock.createTableFromMetadata.mockReturnValue(false);
+        polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
+        catalogClientMock.findLayer.mockResolvedValue(layerRecord);
+
+        (ogr2ogr as unknown as jest.Mock).mockRejectedValue(new Error('GPKG modification failed'));
 
         await exportJobHandler.handleJobFinalize(job, task);
 
         // Verify S3 upload not called
-        expect(s3ServiceMock.uploadFile).not.toHaveBeenCalled();
+        expect(s3ServiceMock.uploadFiles).not.toHaveBeenCalled();
       });
     });
 
@@ -273,22 +304,30 @@ describe('ExportJobHandler', () => {
           },
         };
 
-        s3ServiceMock.uploadFile.mockResolvedValue('');
+        s3ServiceMock.uploadFiles.mockResolvedValue([]);
         fsServiceMock.deleteFileAndParentDir.mockResolvedValue(undefined);
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
 
-        // Verify path methods were called correctly
         expect(joinSpy).toHaveBeenCalledWith(gpkgsPath, gpkgRelativePath);
 
-        // Verify S3 upload
-        expect(s3ServiceMock.uploadFile).toHaveBeenCalledWith(gpkgFilePath, expect.stringContaining(gpkgRelativePath), expect.any(String));
+        expect(s3ServiceMock.uploadFiles).toHaveBeenCalledWith([
+          {
+            filePath: gpkgFilePath,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            s3Key: expect.stringContaining(gpkgRelativePath),
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            contentType: GPKG_CONTENT_TYPE,
+          },
+          {
+            filePath: jsonFilePath,
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            s3Key: expect.stringContaining(gpkgRelativePath.replace('.gpkg', '.json')),
+            contentType: JSON_CONTENT_TYPE,
+          },
+        ]);
 
-        // Check local file deleted after upload
-        expect(fsServiceMock.deleteFileAndParentDir).toHaveBeenCalledWith(gpkgFilePath);
-
-        // Check gpkgUploadedToS3 flag set to true
         expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
           parameters: {
             ...task.parameters,
@@ -313,7 +352,7 @@ describe('ExportJobHandler', () => {
         await exportJobHandler.handleJobFinalize(job, task);
 
         // Verify S3 upload not called
-        expect(s3ServiceMock.uploadFile).not.toHaveBeenCalled();
+        expect(s3ServiceMock.uploadFiles).not.toHaveBeenCalled();
       });
 
       it('should skip S3 upload if GPKG was not modified', async () => {
@@ -332,7 +371,7 @@ describe('ExportJobHandler', () => {
         await exportJobHandler.handleJobFinalize(job, task);
 
         // Verify S3 upload not called
-        expect(s3ServiceMock.uploadFile).not.toHaveBeenCalled();
+        expect(s3ServiceMock.uploadFiles).not.toHaveBeenCalled();
       });
     });
 
@@ -355,6 +394,10 @@ describe('ExportJobHandler', () => {
               jobId: exportJob.id,
               roi: exportJob.parameters.exportInputParams.roi,
               fileSize: faker.number.int({ min: 0 }),
+              jsonFileData: {
+                sha256: 'test-sha256',
+                size: faker.number.int({ min: 0 }),
+              },
             },
           },
         };
@@ -374,14 +417,28 @@ describe('ExportJobHandler', () => {
 
         await exportJobHandler.handleJobFinalize(job, task);
 
+        // Check callback contains new metadata artifact and links
         expect(callbackClientMock.send).toHaveBeenCalledWith(
           callbackUrl,
           expect.objectContaining({
             status: OperationStatus.COMPLETED,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            artifacts: expect.any(Array),
+            artifacts: expect.arrayContaining([
+              expect.objectContaining({
+                type: 'GPKG',
+                sha256: 'test-sha256',
+              }),
+              expect.objectContaining({
+                type: 'METADATA',
+              }),
+            ]),
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-            links: expect.any(Object),
+            links: expect.objectContaining({
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              dataURI: expect.any(String),
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              metadataURI: expect.any(String),
+            }),
           })
         );
 
@@ -454,14 +511,12 @@ describe('ExportJobHandler', () => {
 
     describe('when handling errors', () => {
       it('should handle and report errors during GPKG modification', async () => {
-        const { exportJobHandler, gpkgServiceMock, queueClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, polygonPartsManagerClientMock, queueClientMock } = setupExportJobHandlerTest();
         const job = exportJob;
         const task = finalizeSuccessTaskForExport;
         const error = new Error('GPKG modification failed');
 
-        gpkgServiceMock.createTableFromMetadata.mockImplementation(() => {
-          throw error;
-        });
+        polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockRejectedValue(error);
         queueClientMock.reject.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -472,7 +527,7 @@ describe('ExportJobHandler', () => {
       it('should handle and report errors during S3 upload', async () => {
         setValue('gpkgStorageProvider', 'S3');
 
-        const { exportJobHandler, gpkgServiceMock, s3ServiceMock, queueClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, s3ServiceMock, queueClientMock } = setupExportJobHandlerTest();
 
         const job = exportJob;
         const task = {
@@ -484,8 +539,7 @@ describe('ExportJobHandler', () => {
         };
         const error = new Error('S3 upload failed');
 
-        gpkgServiceMock.createTableFromMetadata.mockReturnValue(true);
-        s3ServiceMock.uploadFile.mockRejectedValue(error);
+        s3ServiceMock.uploadFiles.mockRejectedValue(error);
         queueClientMock.reject.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -494,7 +548,7 @@ describe('ExportJobHandler', () => {
       });
 
       it('should handle and report errors during callback sending', async () => {
-        const { exportJobHandler, gpkgServiceMock, callbackClientMock, queueClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, callbackClientMock, queueClientMock } = setupExportJobHandlerTest();
         const job: ExportJob = {
           ...exportJob,
           parameters: {
@@ -522,7 +576,6 @@ describe('ExportJobHandler', () => {
         };
         const error = new Error('Callback sending failed');
 
-        gpkgServiceMock.createTableFromMetadata.mockReturnValue(true);
         callbackClientMock.send.mockRejectedValue(error);
         queueClientMock.reject.mockResolvedValue(undefined);
 
