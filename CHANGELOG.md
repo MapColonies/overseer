@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.0.0](https://github.com/MapColonies/overseer/compare/v1.9.0...v2.0.0) (2025-05-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* JSON file handling and multi-file upload support (#54)
+
+### Features
+
+* JSON file handling and multi-file upload support ([#54](https://github.com/MapColonies/overseer/issues/54)) ([f385533](https://github.com/MapColonies/overseer/commit/f3855337d1e2fbd713716c9be942dc7a65588575))
+
 ## [1.9.0](https://github.com/MapColonies/overseer/compare/v1.8.1...v1.9.0) (2025-05-07)
 
 
