@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.1](https://github.com/MapColonies/overseer/compare/v2.0.0...v2.0.1) (2025-05-14)
+
+
+### Bug Fixes
+
+* **seeding-job:** reverted producer name to check for undefinied if null value ([#55](https://github.com/MapColonies/overseer/issues/55)) ([3536c3a](https://github.com/MapColonies/overseer/commit/3536c3a81737004bf3c1009b8673eb6f08920ce6))
+
 ## [2.0.0](https://github.com/MapColonies/overseer/compare/v1.9.0...v2.0.0) (2025-05-13)
 
 
