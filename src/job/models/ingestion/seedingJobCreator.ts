@@ -81,7 +81,7 @@ export class SeedingJobCreator {
           type: this.seedJobType,
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
-          producerName: producerName,
+          producerName: producerName ?? undefined,
           productType,
           domain,
           tasks: seedTasks,
