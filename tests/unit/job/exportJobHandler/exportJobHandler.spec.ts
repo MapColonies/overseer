@@ -2,16 +2,17 @@
 import path from 'path';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { faker } from '@faker-js/faker';
+import { ExportFinalizeType } from '@map-colonies/raster-shared';
 import { ogr2ogr } from 'ogr2ogr';
-import { EXPORT_FAILURE_MESSAGE, GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE } from '../../../../src/common/constants';
+import { GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE } from '../../../../src/common/constants';
 import { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { createFakeAggregatedPartData } from '../../httpClients/catalogClientSetup';
-import { finalizeFailureTaskForExport, finalizeSuccessTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
+import { finalizeSuccessTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
 import { exportJob } from '../../mocks/jobsMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
-import { ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
+import { ExportFinalizeTask, ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { exportTaskSources, exportTileRangeBatches } from '../../mocks/exportTaskMockData';
 import { setupExportJobHandlerTest } from './exportJobHandlerSetup';
 
@@ -122,63 +123,6 @@ describe('ExportJobHandler', () => {
       joinSpy = jest.spyOn(path, 'join').mockReturnValue(gpkgFilePath);
       dirnameSpy = jest.spyOn(path, 'dirname').mockReturnValue(gpkgDirPath);
     });
-    describe('when handling failed finalization', () => {
-      it('should send callbacks when task fails and notify jobTracker', async () => {
-        const { exportJobHandler, jobManagerClientMock, queueClientMock, callbackClientMock, jobTrackerClientMock } = setupExportJobHandlerTest();
-        const callbackUrl = 'http://callback-url.com';
-
-        const job: ExportJob = {
-          ...exportJob,
-          parameters: {
-            ...exportJob.parameters,
-            additionalParams: {
-              ...exportJob.parameters.additionalParams,
-              packageRelativePath: gpkgRelativePath,
-            },
-            exportInputParams: {
-              ...exportJob.parameters.exportInputParams,
-              callbackUrls: [{ url: callbackUrl }],
-            },
-          },
-        };
-        const task = finalizeFailureTaskForExport;
-
-        jobManagerClientMock.updateJob.mockResolvedValue(undefined);
-        callbackClientMock.send.mockResolvedValue(undefined);
-        queueClientMock.ack.mockResolvedValue(undefined);
-
-        await exportJobHandler.handleJobFinalize(job, task);
-
-        // Verify path methods were called correctly
-        expect(joinSpy).toHaveBeenCalledWith(gpkgsPath, gpkgRelativePath);
-        expect(dirnameSpy).toHaveBeenCalledWith(gpkgFilePath);
-
-        // Check callback params were updated
-        expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
-          parameters: {
-            ...job.parameters,
-            callbackParams: {
-              ...job.parameters.callbackParams,
-              status: OperationStatus.FAILED,
-              errorReason: EXPORT_FAILURE_MESSAGE,
-            },
-          },
-        });
-
-        // Check callback was sent
-        expect(callbackClientMock.send).toHaveBeenCalledWith(
-          callbackUrl,
-          expect.objectContaining({
-            status: OperationStatus.FAILED,
-            errorReason: EXPORT_FAILURE_MESSAGE,
-          })
-        );
-
-        // Check task was acknowledged
-        expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
-        expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
-      });
-    });
 
     describe('when handling GPKG file modification', () => {
       it('should modify GPKG metadata and update file size', async () => {
@@ -208,6 +152,7 @@ describe('ExportJobHandler', () => {
         const jsonFileSize = 512;
         const jsonSha256 = 'test-sha256';
 
+        jobManagerClientMock.getJob.mockResolvedValue(job);
         polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(aggregatedLayerMetadata);
         catalogClientMock.findLayer.mockResolvedValue(layerRecord);
         fsServiceMock.uploadJsonFile.mockResolvedValue(undefined);
@@ -263,7 +208,8 @@ describe('ExportJobHandler', () => {
       });
 
       it('should not proceed with S3 upload if GPKG modification fails', async () => {
-        const { exportJobHandler, s3ServiceMock, polygonPartsManagerClientMock, catalogClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, s3ServiceMock, polygonPartsManagerClientMock, catalogClientMock, jobManagerClientMock } =
+          setupExportJobHandlerTest();
         const job = exportJob;
         const task = finalizeSuccessTaskForExport;
 
@@ -271,6 +217,7 @@ describe('ExportJobHandler', () => {
         catalogClientMock.findLayer.mockResolvedValue(layerRecord);
 
         (ogr2ogr as unknown as jest.Mock).mockRejectedValue(new Error('GPKG modification failed'));
+        jobManagerClientMock.getJob.mockResolvedValue(job);
 
         await exportJobHandler.handleJobFinalize(job, task);
 
@@ -307,6 +254,7 @@ describe('ExportJobHandler', () => {
         s3ServiceMock.uploadFiles.mockResolvedValue([]);
         fsServiceMock.deleteFileAndParentDir.mockResolvedValue(undefined);
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
+        jobManagerClientMock.getJob.mockResolvedValue(job);
 
         await exportJobHandler.handleJobFinalize(job, task);
 
@@ -338,7 +286,7 @@ describe('ExportJobHandler', () => {
 
       it('should skip S3 upload when storage provider is not S3', async () => {
         setValue('gpkgStorageProvider', 'FS');
-        const { exportJobHandler, s3ServiceMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, s3ServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
 
         const job = exportJob;
         const task = {
@@ -349,6 +297,8 @@ describe('ExportJobHandler', () => {
           },
         };
 
+        jobManagerClientMock.getJob.mockResolvedValue(job);
+
         await exportJobHandler.handleJobFinalize(job, task);
 
         // Verify S3 upload not called
@@ -357,7 +307,7 @@ describe('ExportJobHandler', () => {
 
       it('should skip S3 upload if GPKG was not modified', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        const { exportJobHandler, s3ServiceMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, s3ServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
 
         const job = exportJob;
         const task = {
@@ -367,6 +317,8 @@ describe('ExportJobHandler', () => {
             gpkgModified: false,
           },
         };
+
+        jobManagerClientMock.getJob.mockResolvedValue(job);
 
         await exportJobHandler.handleJobFinalize(job, task);
 
@@ -413,6 +365,7 @@ describe('ExportJobHandler', () => {
         };
 
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
+        jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.COMPLETED });
         callbackClientMock.send.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -451,7 +404,7 @@ describe('ExportJobHandler', () => {
       });
 
       it('should skip callbacks when no callback URLs provided', async () => {
-        const { exportJobHandler, callbackClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, callbackClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job: ExportJob = {
           ...exportJob,
           parameters: {
@@ -478,9 +431,45 @@ describe('ExportJobHandler', () => {
           },
         };
 
+        jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.COMPLETED });
+
         await exportJobHandler.handleJobFinalize(job, task);
 
         expect(callbackClientMock.send).not.toHaveBeenCalled();
+      });
+
+      it(`should skip full processing and send callbacks when finalize type is ${ExportFinalizeType.Error_Callback}`, async () => {
+        const { exportJobHandler, callbackClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
+        const job: ExportJob = {
+          ...exportJob,
+          parameters: {
+            ...exportJob.parameters,
+            exportInputParams: {
+              ...exportJob.parameters.exportInputParams,
+              callbackUrls: [{ url: 'http://callback-url.com' }],
+            },
+            callbackParams: {
+              status: OperationStatus.IN_PROGRESS,
+              recordCatalogId: exportJob.internalId!,
+              jobId: exportJob.id,
+              roi: exportJob.parameters.exportInputParams.roi,
+              fileSize: faker.number.int({ min: 0 }),
+            },
+          },
+        };
+        const task: ExportFinalizeTask = {
+          ...finalizeSuccessTaskForExport,
+          parameters: {
+            type: ExportFinalizeType.Error_Callback,
+            callbacksSent: false,
+          },
+        };
+
+        jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.FAILED });
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        expect(callbackClientMock.send).toHaveBeenCalled();
       });
     });
 
@@ -500,6 +489,7 @@ describe('ExportJobHandler', () => {
 
         jobManagerClientMock.updateJob.mockResolvedValue(undefined);
         queueClientMock.ack.mockResolvedValue(undefined);
+        jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.COMPLETED });
 
         const completeTaskSpy = jest.spyOn(exportJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
 
@@ -511,12 +501,13 @@ describe('ExportJobHandler', () => {
 
     describe('when handling errors', () => {
       it('should handle and report errors during GPKG modification', async () => {
-        const { exportJobHandler, polygonPartsManagerClientMock, queueClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, polygonPartsManagerClientMock, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job = exportJob;
         const task = finalizeSuccessTaskForExport;
         const error = new Error('GPKG modification failed');
 
         polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockRejectedValue(error);
+        jobManagerClientMock.getJob.mockResolvedValue(job);
         queueClientMock.reject.mockResolvedValue(undefined);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -527,7 +518,7 @@ describe('ExportJobHandler', () => {
       it('should handle and report errors during S3 upload', async () => {
         setValue('gpkgStorageProvider', 'S3');
 
-        const { exportJobHandler, s3ServiceMock, queueClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, s3ServiceMock, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
 
         const job = exportJob;
         const task = {
@@ -541,6 +532,7 @@ describe('ExportJobHandler', () => {
 
         s3ServiceMock.uploadFiles.mockRejectedValue(error);
         queueClientMock.reject.mockResolvedValue(undefined);
+        jobManagerClientMock.getJob.mockResolvedValue(job);
 
         await exportJobHandler.handleJobFinalize(job, task);
 
@@ -548,7 +540,7 @@ describe('ExportJobHandler', () => {
       });
 
       it('should handle and report errors during callback sending', async () => {
-        const { exportJobHandler, callbackClientMock, queueClientMock } = setupExportJobHandlerTest();
+        const { exportJobHandler, callbackClientMock, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job: ExportJob = {
           ...exportJob,
           parameters: {
@@ -578,6 +570,7 @@ describe('ExportJobHandler', () => {
 
         callbackClientMock.send.mockRejectedValue(error);
         queueClientMock.reject.mockResolvedValue(undefined);
+        jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.COMPLETED });
 
         await exportJobHandler.handleJobFinalize(job, task);
 

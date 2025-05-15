@@ -3,12 +3,14 @@
 import { finalizeTaskForIngestionNew, initTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
 import { MergeTaskParameters } from '../../../../src/common/interfaces';
+import { registerDefaultConfig } from '../../mocks/configMock';
 import { PublishLayerError } from '../../../../src/common/errors';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
 
 describe('NewJobHandler', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    registerDefaultConfig();
   });
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
