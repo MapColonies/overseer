@@ -1,5 +1,6 @@
 import { ZodError } from 'zod';
 import { JobAndTaskTelemetry } from '../../../../src/common/interfaces';
+import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import { initTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { setupJobHandlerTest } from './jobHandlerSetup';
@@ -7,6 +8,7 @@ import { setupJobHandlerTest } from './jobHandlerSetup';
 describe('JobHandler', () => {
   beforeEach(() => {
     jest.resetAllMocks();
+    registerDefaultConfig();
   });
 
   describe('handleError', () => {

@@ -120,7 +120,7 @@ export class JobProcessor {
             continue;
           }
 
-          const job = await this.getJob(task.jobId);
+          const job = await this.getJob(task.jobId, taskType);
           this.logger.info({ msg: `got job and task response`, jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
 
           return { job, task };
@@ -134,13 +134,17 @@ export class JobProcessor {
     }
   }
 
-  private async getJob(jobId: string): Promise<IJobResponse<unknown, unknown>> {
+  private async getJob(jobId: string, taskType: string): Promise<IJobResponse<unknown, unknown>> {
     const logger = this.logger.child({ jobId });
 
     logger.info({ msg: `updating job status to ${OperationStatus.IN_PROGRESS}` });
-    await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
 
     const job = await this.queueClient.jobManagerClient.getJob(jobId);
+
+    if (taskType === this.pollingConfig.tasks.init) {
+      await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
+    }
+
     logger.info({ msg: `got job ${job.id}`, jobType: job.type });
 
     return job;

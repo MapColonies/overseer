@@ -9,6 +9,7 @@ import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import { configMock } from '../../mocks/configMock';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
@@ -33,6 +34,7 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
 
   const swapJobHandler = new SwapJobHandler(
     jsLogger({ enabled: false }),
+    configMock,
     tracerMock,
     queueClientMock,
     taskBuilderMock,

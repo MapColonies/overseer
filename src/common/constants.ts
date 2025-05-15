@@ -1,5 +1,3 @@
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { CallbacksStatus } from '@map-colonies/raster-shared';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
@@ -55,6 +53,3 @@ export const SeedMode = {
 } as const;
 
 export type SeedMode = (typeof SeedMode)[keyof typeof SeedMode];
-
-export type CompletedOrFailedStatus = Exclude<CallbacksStatus, OperationStatus.IN_PROGRESS>;
-/* eslint-enable @typescript-eslint/naming-convention */

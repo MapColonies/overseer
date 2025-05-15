@@ -29,8 +29,8 @@ export class UpdateJobHandler
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
+    @inject(SERVICES.CONFIG) protected readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
-    @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
@@ -38,7 +38,7 @@ export class UpdateJobHandler
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    super(logger, queueClient, jobTrackerClient);
+    super(logger, config, queueClient, jobTrackerClient);
   }
 
   public async handleJobInit(job: IngestionUpdateInitJob, task: IngestionInitTask): Promise<void> {

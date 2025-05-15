@@ -34,8 +34,8 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
   const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
   const updateJobHandler = new UpdateJobHandler(
     jsLogger({ enabled: false }),
-    tracerMock,
     configMock,
+    tracerMock,
     taskBuilderMock,
     queueClientMock,
     catalogClientMock,
