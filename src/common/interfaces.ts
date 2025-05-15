@@ -15,7 +15,7 @@ import {
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
 import type { Span, SpanContext } from '@opentelemetry/api';
-import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
+import type { ExportFinalizeTask, ExportJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import {
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
@@ -23,6 +23,7 @@ import {
   ingestionNewExtendedJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
+import { Logger } from '@map-colonies/js-logger';
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
@@ -219,6 +220,24 @@ export type GpkgArtifactProperties = Omit<RasterLayerMetadata, 'productStatus' |
 export type JsonArtifactProperties = Omit<RasterLayerMetadata, 'productStatus'> & { sha256: string };
 
 //#endregion exportTask
+
+//#region exportFinalizeTask
+
+export interface ExportFinalizeExecutionContext {
+  job: ExportJob;
+  task: ExportFinalizeTask;
+  paths: ExportFinalizeGpkgPaths;
+  telemetry: JobAndTaskTelemetry;
+  logger: Logger;
+}
+
+export interface ExportFinalizeGpkgPaths {
+  gpkgFilePath: string;
+  gpkgRelativePath: string;
+  gpkgDirPath: string;
+}
+
+//#endregion exportFinalizeTask
 
 //#region mapproxyApi
 export interface PublishMapLayerRequest {

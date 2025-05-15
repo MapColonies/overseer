@@ -28,6 +28,7 @@ import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import {
   AggregationLayerMetadata,
+  ExportFinalizeExecutionContext,
   ExportTask,
   ExportTaskParameters,
   GpkgArtifactProperties,
@@ -121,82 +122,125 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     await context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobFinalize.name}`)),
       async () => {
-        const activeSpan = trace.getActiveSpan();
-        const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
-        const logger = this.logger.child(monitorAttributes);
-        const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
-        const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
-        const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
-        const gpkgDirPath = path.dirname(gpkgFilePath);
+        const context = this.createFinalizeExecutionContext(job, task);
+        const { logger, telemetry, paths } = context;
+        const { tracingSpan } = telemetry;
 
         let finalizeParams: ExportFinalizeTaskParams = task.parameters;
         try {
-          activeSpan?.setAttributes(monitorAttributes);
+          logger.info({ msg: `Handling ${job.type} job finalization`, taskType: task.type, finalizeParams });
 
-          logger.info({ msg: `Handling ${job.type} job finalization`, taskType: task.type });
+          switch (finalizeParams.type) {
+            case ExportFinalizeType.Error_Callback:
+              logger.warn({ msg: `Finalize task type is ${task.parameters.type}, skipping finalize steps and sending failure callbacks` });
+              break;
 
-          if (task.parameters.type === ExportFinalizeType.Error_Callback) {
-            logger.warn({ msg: `Finalize task type is ${task.parameters.type}, skipping finalize steps and sending failure callbacks` });
-          }
-
-          if (task.parameters.type === ExportFinalizeType.Full_Processing) {
-            let fullProcessingParams = task.parameters;
-            let gpkgProcessingComplete = false;
-            if (!fullProcessingParams.gpkgModified) {
-              activeSpan?.addEvent('gpkg.modification.started');
-              fullProcessingParams = await this.modifyGpkgFile(gpkgFilePath, job, task.id, fullProcessingParams);
-              activeSpan?.addEvent('gpkg.modification.completed', { success: fullProcessingParams.gpkgModified });
-            }
-
-            const shouldUploadToS3 = this.isS3GpkgProvider && fullProcessingParams.gpkgModified && !fullProcessingParams.gpkgUploadedToS3;
-
-            logger.info({
-              msg: 'Should upload to S3',
-              shouldUploadToS3,
-              isS3GpkgProvider: this.isS3GpkgProvider,
-              gpkgModified: fullProcessingParams.gpkgModified,
-              gpkgUploadedToS3: fullProcessingParams.gpkgUploadedToS3,
-            });
-
-            if (shouldUploadToS3) {
-              activeSpan?.addEvent('s3.upload.started');
-              fullProcessingParams = await this.uploadGpkgToS3(gpkgFilePath, gpkgRelativePath, job.id, task.id, fullProcessingParams);
-              activeSpan?.addEvent('s3.upload.completed', { success: fullProcessingParams.gpkgUploadedToS3 });
-            }
-
-            const bypassS3OrUploaded = !this.isS3GpkgProvider || fullProcessingParams.gpkgUploadedToS3;
-            gpkgProcessingComplete = fullProcessingParams.gpkgModified && bypassS3OrUploaded;
-
-            logger.info({
-              msg: 'GPKG processing completed',
-              success: gpkgProcessingComplete,
-              gpkgModified: fullProcessingParams.gpkgModified,
-              bypassS3OrUploaded,
-            });
-
-            if (gpkgProcessingComplete) {
-              activeSpan?.addEvent('all.steps.completed');
-              logger.info({ msg: 'All finalize steps completed successfully' });
-              await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
-            }
-            finalizeParams = fullProcessingParams;
+            case ExportFinalizeType.Full_Processing:
+              finalizeParams = await this.handleFullProcessing(context, finalizeParams);
+              break;
           }
         } catch (err) {
-          await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+          await this.handleError(err, job, task, telemetry);
         } finally {
           const updatedJob = await this.queueClient.jobManagerClient.getJob(job.id);
           const validJob = exportJobSchema.parse(updatedJob);
-          const shouldSendCallbacks =
-            (validJob.status === OperationStatus.COMPLETED || validJob.status === OperationStatus.FAILED) && !finalizeParams.callbacksSent;
+          const isTerminalStatus = validJob.status === OperationStatus.COMPLETED || validJob.status === OperationStatus.FAILED;
+          const isErrorCallback = finalizeParams.type === ExportFinalizeType.Error_Callback;
+          const shouldSendCallbacks = (isTerminalStatus || isErrorCallback) && !finalizeParams.callbacksSent;
+          logger.info({ msg: 'should send callbacks', shouldSendCallbacks, isTerminalStatus, isErrorCallback });
           if (shouldSendCallbacks) {
-            activeSpan?.addEvent('callbacks.sending.started');
-            await this.sendCallbacks(validJob, task.id, finalizeParams, gpkgDirPath);
-            activeSpan?.addEvent('callbacks.sending.completed');
+            tracingSpan?.addEvent('callbacks.sending.started');
+            await this.sendCallbacks(validJob, task.id, finalizeParams, paths.gpkgDirPath);
+            tracingSpan?.addEvent('callbacks.sending.completed');
+            if (isErrorCallback) {
+              logger.info({ msg: 'Finalize task type is Error_Callback, Completing after callbacks sends' });
+              await this.completeTask(job, task, telemetry);
+            }
           }
-          activeSpan?.end();
+          tracingSpan?.end();
         }
       }
     );
+  }
+
+  private createFinalizeExecutionContext(job: ExportJob, task: ExportFinalizeTask): ExportFinalizeExecutionContext {
+    const activeSpan = trace.getActiveSpan();
+    const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
+    const taskTracker = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+    const logger = this.logger.child(monitorAttributes);
+
+    activeSpan?.setAttributes(monitorAttributes);
+
+    const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
+    const gpkgDirPath = path.dirname(gpkgFilePath);
+
+    return {
+      job,
+      task,
+      paths: {
+        gpkgFilePath,
+        gpkgRelativePath,
+        gpkgDirPath,
+      },
+      telemetry: {
+        taskTracker,
+        tracingSpan: activeSpan,
+      },
+      logger,
+    };
+  }
+
+  private async handleFullProcessing(
+    context: ExportFinalizeExecutionContext,
+    taskParams: ExportFinalizeFullProcessingParams
+  ): Promise<ExportFinalizeTaskParams> {
+    const { job, task, paths, telemetry, logger } = context;
+    const { taskTracker, tracingSpan: activeSpan } = telemetry;
+    const { gpkgFilePath, gpkgRelativePath } = paths;
+
+    let fullProcessingParams = taskParams;
+    let gpkgProcessingComplete = false;
+
+    if (!fullProcessingParams.gpkgModified) {
+      activeSpan?.addEvent('gpkg.modification.started');
+      fullProcessingParams = await this.modifyGpkgFile(gpkgFilePath, job, task.id, fullProcessingParams);
+      activeSpan?.addEvent('gpkg.modification.completed', { success: fullProcessingParams.gpkgModified });
+    }
+
+    const shouldUploadToS3 = this.isS3GpkgProvider && fullProcessingParams.gpkgModified && !fullProcessingParams.gpkgUploadedToS3;
+
+    logger.info({
+      msg: 'Should upload to S3',
+      shouldUploadToS3,
+      isS3GpkgProvider: this.isS3GpkgProvider,
+      gpkgModified: fullProcessingParams.gpkgModified,
+      gpkgUploadedToS3: fullProcessingParams.gpkgUploadedToS3,
+    });
+
+    if (shouldUploadToS3) {
+      activeSpan?.addEvent('s3.upload.started');
+      fullProcessingParams = await this.uploadGpkgToS3(gpkgFilePath, gpkgRelativePath, job.id, task.id, fullProcessingParams);
+      activeSpan?.addEvent('s3.upload.completed', { success: fullProcessingParams.gpkgUploadedToS3 });
+    }
+
+    const bypassS3OrUploaded = !this.isS3GpkgProvider || fullProcessingParams.gpkgUploadedToS3;
+    gpkgProcessingComplete = fullProcessingParams.gpkgModified && bypassS3OrUploaded;
+
+    logger.info({
+      msg: 'GPKG processing completed',
+      success: gpkgProcessingComplete,
+      gpkgModified: fullProcessingParams.gpkgModified,
+      bypassS3OrUploaded,
+    });
+
+    if (gpkgProcessingComplete) {
+      activeSpan?.addEvent('all.steps.completed');
+      logger.info({ msg: 'All finalize steps completed successfully' });
+      await this.completeTask(job, task, { taskTracker, tracingSpan: activeSpan });
+    }
+
+    return fullProcessingParams;
   }
 
   private createExportTask(job: ExportJob, metadata: RasterLayerMetadata): ExportTask {
