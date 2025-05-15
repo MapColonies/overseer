@@ -1,5 +1,3 @@
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { CallbacksStatus } from '@map-colonies/raster-shared';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';

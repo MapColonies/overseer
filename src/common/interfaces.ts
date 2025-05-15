@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { Logger } from '@map-colonies/js-logger';
 import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import {
   type InputFiles,
@@ -23,7 +24,6 @@ import {
   ingestionNewExtendedJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
-import { Logger } from '@map-colonies/js-logger';
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 

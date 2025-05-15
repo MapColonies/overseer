@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { z } from 'zod';
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import {
   createJobResponseSchema,
   createTaskResponseSchema,
