@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.2](https://github.com/MapColonies/overseer/compare/v2.0.1...v2.0.2) (2025-05-18)
+
+
+### Bug Fixes
+
+* callbacks sending in export finalize ([#56](https://github.com/MapColonies/overseer/issues/56)) ([48194d5](https://github.com/MapColonies/overseer/commit/48194d5d7e9f5accc6762127ea7d6ced4b1ee8ad))
+
 ### [2.0.1](https://github.com/MapColonies/overseer/compare/v2.0.0...v2.0.1) (2025-05-14)
 
 
