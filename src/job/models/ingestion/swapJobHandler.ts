@@ -5,7 +5,7 @@ import { context, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
-import type { IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
+import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
 import { Grid } from '../../../common/interfaces';
 import type {
   IngestionInitTask,
@@ -31,6 +31,8 @@ export class SwapJobHandler
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
+    @inject(SERVICES.CONFIG) protected readonly config: IConfig,
+
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
@@ -40,7 +42,7 @@ export class SwapJobHandler
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    super(logger, queueClient, jobTrackerClient);
+    super(logger, config, queueClient, jobTrackerClient);
   }
 
   public async handleJobInit(job: IngestionSwapUpdateInitJob, task: IngestionInitTask): Promise<void> {

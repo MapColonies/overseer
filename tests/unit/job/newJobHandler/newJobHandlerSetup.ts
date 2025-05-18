@@ -9,6 +9,7 @@ import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import { configMock } from '../../mocks/configMock';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
@@ -33,6 +34,7 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
 
   const newJobHandler = new NewJobHandler(
     jsLogger({ enabled: false }),
+    configMock,
     tracerMock,
     taskBuilderMock,
     queueClientMock,

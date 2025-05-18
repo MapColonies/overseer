@@ -2,13 +2,20 @@ import path from 'path';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { ogr2ogr } from 'ogr2ogr';
 import { inject, injectable } from 'tsyringe';
-import { CallbackExportResponse, callbackExportResponseSchema, CallbacksStatus, CleanupData, RasterLayerMetadata } from '@map-colonies/raster-shared';
+import {
+  CallbackExportResponse,
+  callbackExportResponseSchema,
+  CallbacksStatus,
+  CleanupData,
+  ExportFinalizeFullProcessingParams,
+  ExportFinalizeType,
+  RasterLayerMetadata,
+} from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import {
-  CompletedOrFailedStatus,
   EXPORT_FAILURE_MESSAGE,
   EXPORT_SUCCESS_MESSAGE,
   GPKG_CONTENT_TYPE,
@@ -21,22 +28,15 @@ import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import {
   AggregationLayerMetadata,
+  ExportFinalizeExecutionContext,
   ExportTask,
   ExportTaskParameters,
   GpkgArtifactProperties,
   IConfig,
   IJobHandler,
-  JobAndTaskTelemetry,
   JsonArtifactProperties,
 } from '../../../common/interfaces';
-import {
-  ExportJob,
-  ExportInitTask,
-  ExportFinalizeTask,
-  ExportFinalizeTaskParams,
-  ExportFinalizeSuccessTaskParams,
-  ExportFinalizeFailureTaskParams,
-} from '../../../utils/zod/schemas/job.schema';
+import { ExportJob, ExportInitTask, ExportFinalizeTask, ExportFinalizeTaskParams, exportJobSchema } from '../../../utils/zod/schemas/job.schema';
 import { S3Service } from '../../../utils/storage/s3Service';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
@@ -69,7 +69,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     private readonly taskMetrics: TaskMetrics,
     private readonly polygonPartsManagerClient: PolygonPartsMangerClient
   ) {
-    super(logger, queueClient, jobTrackerClient);
+    super(logger, config, queueClient, jobTrackerClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
     this.gpkgsPath = config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -122,92 +122,125 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     await context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobFinalize.name}`)),
       async () => {
-        const activeSpan = trace.getActiveSpan();
-        const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
-        const logger = this.logger.child(monitorAttributes);
-        const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+        const context = this.createFinalizeExecutionContext(job, task);
+        const { logger, telemetry, paths } = context;
+        const { tracingSpan } = telemetry;
 
+        let finalizeParams: ExportFinalizeTaskParams = task.parameters;
         try {
-          activeSpan?.setAttributes(monitorAttributes);
+          logger.info({ msg: `Handling ${job.type} job finalization`, taskType: task.type, finalizeParams });
 
-          const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
-          const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
-          const gpkgDirPath = path.dirname(gpkgFilePath);
-          let finalizeParams = task.parameters;
+          switch (finalizeParams.type) {
+            case ExportFinalizeType.Error_Callback:
+              logger.warn({ msg: `Finalize task type is ${task.parameters.type}, skipping finalize steps and sending failure callbacks` });
+              break;
 
-          logger.info({ msg: `Handling ${job.type} job finalization`, taskType: task.type });
-
-          if (finalizeParams.status === OperationStatus.FAILED) {
-            await this.handleFailedFinalizeTask(job, task, finalizeParams, gpkgDirPath, {
-              taskTracker: taskProcessTracking,
-              tracingSpan: activeSpan,
-            });
-            return;
-          }
-
-          if (!finalizeParams.gpkgModified) {
-            activeSpan?.addEvent('gpkg.modification.started');
-            finalizeParams = await this.modifyGpkgFile(gpkgFilePath, job, task.id, finalizeParams);
-            activeSpan?.addEvent('gpkg.modification.completed', { success: finalizeParams.gpkgModified });
-          }
-
-          const shouldUploadToS3 = this.isS3GpkgProvider && finalizeParams.gpkgModified && !finalizeParams.gpkgUploadedToS3;
-
-          logger.info({
-            msg: 'Should upload to S3',
-            shouldUploadToS3,
-            isS3GpkgProvider: this.isS3GpkgProvider,
-            gpkgModified: finalizeParams.gpkgModified,
-            gpkgUploadedToS3: finalizeParams.gpkgUploadedToS3,
-          });
-
-          if (shouldUploadToS3) {
-            activeSpan?.addEvent('s3.upload.started');
-            finalizeParams = await this.uploadGpkgToS3(gpkgFilePath, gpkgRelativePath, job.id, task.id, finalizeParams);
-            activeSpan?.addEvent('s3.upload.completed', { success: finalizeParams.gpkgUploadedToS3 });
-          }
-
-          const bypassS3OrUploaded = !this.isS3GpkgProvider || finalizeParams.gpkgUploadedToS3;
-          const gpkgProcessingComplete = finalizeParams.gpkgModified && bypassS3OrUploaded;
-
-          logger.info({
-            msg: 'GPKG processing completed',
-            success: gpkgProcessingComplete,
-            gpkgModified: finalizeParams.gpkgModified,
-            bypassS3OrUploaded,
-          });
-
-          if (gpkgProcessingComplete && !finalizeParams.callbacksSent) {
-            activeSpan?.addEvent('callbacks.sending.started');
-            await this.sendCallbacks(job, task.id, finalizeParams, gpkgDirPath);
-            activeSpan?.addEvent('callbacks.sending.completed');
-          }
-
-          if (gpkgProcessingComplete) {
-            activeSpan?.addEvent('all.steps.completed');
-            logger.info({ msg: 'All finalize steps completed successfully' });
-            await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+            case ExportFinalizeType.Full_Processing:
+              finalizeParams = await this.handleFullProcessing(context, finalizeParams);
+              break;
           }
         } catch (err) {
-          await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+          await this.handleError(err, job, task, telemetry);
         } finally {
-          activeSpan?.end();
+          const updatedJob = await this.queueClient.jobManagerClient.getJob(job.id);
+          const validJob = exportJobSchema.parse(updatedJob);
+          const isTerminalStatus = validJob.status === OperationStatus.COMPLETED || validJob.status === OperationStatus.FAILED;
+          const isErrorCallback = finalizeParams.type === ExportFinalizeType.Error_Callback;
+          const shouldSendCallbacks = (isTerminalStatus || isErrorCallback) && !finalizeParams.callbacksSent;
+          logger.info({ msg: 'should send callbacks', shouldSendCallbacks, isTerminalStatus, isErrorCallback });
+          if (shouldSendCallbacks) {
+            tracingSpan?.addEvent('callbacks.sending.started');
+            await this.sendCallbacks(validJob, task.id, finalizeParams, paths.gpkgDirPath);
+            tracingSpan?.addEvent('callbacks.sending.completed');
+            if (isErrorCallback) {
+              logger.info({ msg: 'Finalize task type is Error_Callback, Completing after callbacks sends' });
+              await this.completeTask(job, task, telemetry);
+            }
+          }
+          tracingSpan?.end();
         }
       }
     );
   }
 
-  private async handleFailedFinalizeTask(
-    job: ExportJob,
-    task: ExportFinalizeTask,
-    finalizeParams: ExportFinalizeFailureTaskParams,
-    gpkgDirPath: string,
-    telemetry: JobAndTaskTelemetry
-  ): Promise<void> {
-    this.logger.info({ msg: 'Processing failed finalize task' });
-    await this.updateCallbackParams(job, OperationStatus.FAILED, { errorReason: EXPORT_FAILURE_MESSAGE });
-    await this.sendCallbacks(job, task.id, finalizeParams, gpkgDirPath);
-    await this.completeTask(job, task, telemetry);
+  private createFinalizeExecutionContext(job: ExportJob, task: ExportFinalizeTask): ExportFinalizeExecutionContext {
+    const activeSpan = trace.getActiveSpan();
+    const monitorAttributes = { jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type };
+    const taskTracker = this.taskMetrics.trackTaskProcessing(job.type, task.type);
+    const logger = this.logger.child(monitorAttributes);
+
+    activeSpan?.setAttributes(monitorAttributes);
+
+    const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
+    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
+    const gpkgDirPath = path.dirname(gpkgFilePath);
+
+    return {
+      job,
+      task,
+      paths: {
+        gpkgFilePath,
+        gpkgRelativePath,
+        gpkgDirPath,
+      },
+      telemetry: {
+        taskTracker,
+        tracingSpan: activeSpan,
+      },
+      logger,
+    };
+  }
+
+  private async handleFullProcessing(
+    context: ExportFinalizeExecutionContext,
+    taskParams: ExportFinalizeFullProcessingParams
+  ): Promise<ExportFinalizeTaskParams> {
+    const { job, task, paths, telemetry, logger } = context;
+    const { taskTracker, tracingSpan: activeSpan } = telemetry;
+    const { gpkgFilePath, gpkgRelativePath } = paths;
+
+    let fullProcessingParams = taskParams;
+    let gpkgProcessingComplete = false;
+
+    if (!fullProcessingParams.gpkgModified) {
+      activeSpan?.addEvent('gpkg.modification.started');
+      fullProcessingParams = await this.modifyGpkgFile(gpkgFilePath, job, task.id, fullProcessingParams);
+      activeSpan?.addEvent('gpkg.modification.completed', { success: fullProcessingParams.gpkgModified });
+    }
+
+    const shouldUploadToS3 = this.isS3GpkgProvider && fullProcessingParams.gpkgModified && !fullProcessingParams.gpkgUploadedToS3;
+
+    logger.info({
+      msg: 'Should upload to S3',
+      shouldUploadToS3,
+      isS3GpkgProvider: this.isS3GpkgProvider,
+      gpkgModified: fullProcessingParams.gpkgModified,
+      gpkgUploadedToS3: fullProcessingParams.gpkgUploadedToS3,
+    });
+
+    if (shouldUploadToS3) {
+      activeSpan?.addEvent('s3.upload.started');
+      fullProcessingParams = await this.uploadGpkgToS3(gpkgFilePath, gpkgRelativePath, job.id, task.id, fullProcessingParams);
+      activeSpan?.addEvent('s3.upload.completed', { success: fullProcessingParams.gpkgUploadedToS3 });
+    }
+
+    const bypassS3OrUploaded = !this.isS3GpkgProvider || fullProcessingParams.gpkgUploadedToS3;
+    gpkgProcessingComplete = fullProcessingParams.gpkgModified && bypassS3OrUploaded;
+
+    logger.info({
+      msg: 'GPKG processing completed',
+      success: gpkgProcessingComplete,
+      gpkgModified: fullProcessingParams.gpkgModified,
+      bypassS3OrUploaded,
+    });
+
+    if (gpkgProcessingComplete) {
+      activeSpan?.addEvent('all.steps.completed');
+      logger.info({ msg: 'All finalize steps completed successfully' });
+      await this.completeTask(job, task, { taskTracker, tracingSpan: activeSpan });
+    }
+
+    return fullProcessingParams;
   }
 
   private createExportTask(job: ExportJob, metadata: RasterLayerMetadata): ExportTask {
@@ -245,8 +278,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     gpkgFilePath: string,
     job: ExportJob,
     taskId: string,
-    taskParams: ExportFinalizeSuccessTaskParams
-  ): Promise<ExportFinalizeSuccessTaskParams> {
+    taskParams: ExportFinalizeFullProcessingParams
+  ): Promise<ExportFinalizeFullProcessingParams> {
     const logger = this.logger.child({ jobId: job.id, taskId });
 
     const validInternalId = internalIdSchema.parse(job).internalId;
@@ -330,8 +363,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     gpkgRelativePath: string,
     jobId: string,
     taskId: string,
-    taskParams: ExportFinalizeSuccessTaskParams
-  ): Promise<ExportFinalizeSuccessTaskParams> {
+    taskParams: ExportFinalizeFullProcessingParams
+  ): Promise<ExportFinalizeFullProcessingParams> {
     const gpkgS3Key = `${GPKGS_PREFIX}/${gpkgRelativePath}`;
     const jsonS3Key = gpkgS3Key.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
     const jsonPath = gpkgPath.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
@@ -357,11 +390,11 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { ...job.parameters } });
   }
 
-  private async sendCallbacks(job: ExportJob, taskId: string, taskParams: ExportFinalizeTaskParams, dirPath: string): Promise<boolean> {
+  private async sendCallbacks(job: ExportJob, taskId: string, taskParams: ExportFinalizeTaskParams, dirPath: string): Promise<void> {
     try {
       const cleanupExpirationTimeUTC = createExpirationDate(this.cleanupExpirationDays);
       const cleanupDataParams: CleanupData = { cleanupExpirationTimeUTC, directoryPath: dirPath };
-      const callbackParams = this.createCallbacksParams(job, taskParams.status, cleanupExpirationTimeUTC);
+      const callbackParams = this.createCallbacksParams(job, cleanupExpirationTimeUTC);
 
       await this.queueClient.jobManagerClient.updateJob(job.id, {
         parameters: { ...job.parameters, cleanupDataParams, callbackParams },
@@ -370,11 +403,11 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       const targetCallbacks = job.parameters.exportInputParams.callbackUrls;
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!targetCallbacks?.length) {
-        this.logger.info({ msg: 'No callbacks url provided, skipping callbacks sending', jobId: job.id });
-        return false;
+        this.logger.warn({ msg: 'No callbacks url provided, skipping callbacks sending', jobId: job.id });
+        return;
       }
 
-      this.logger.info({ msg: 'Sending callbacks', jobId: job.id, status: taskParams.status, callbackCount: targetCallbacks.length });
+      this.logger.info({ msg: 'Sending callbacks', jobId: job.id, callbackCount: targetCallbacks.length });
 
       await Promise.all(
         targetCallbacks.map(async (callback) =>
@@ -390,28 +423,28 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
         )
       );
 
-      const updatedParams = await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'callbacksSent');
-      return updatedParams.callbacksSent;
+      await this.markFinalizeStepAsCompleted(job.id, taskId, taskParams, 'callbacksSent');
     } catch (err) {
       this.logger.error({ msg: 'Sending callbacks has failed', err });
-      throw err;
     }
   }
 
-  private createCallbacksParams(job: ExportJob, status: CompletedOrFailedStatus, expirationDate: Date): CallbackExportResponse {
+  private createCallbacksParams(job: ExportJob, expirationDate: Date): CallbackExportResponse {
     const { additionalParams, callbackParams } = job.parameters;
     const { packageRelativePath, fileNamesTemplates } = additionalParams;
     const validCallbackParams = callbackExportResponseSchema.parse(callbackParams);
     const { jsonFileData, ...clientsCallbackParams } = validCallbackParams;
+
     const callbackResponse: CallbackExportResponse = {
       ...clientsCallbackParams,
-      status,
+      status: OperationStatus.FAILED,
       expirationTime: expirationDate,
       artifacts: [],
       links: undefined,
+      description: EXPORT_FAILURE_MESSAGE,
     };
 
-    if (status === OperationStatus.COMPLETED) {
+    if (job.status === OperationStatus.COMPLETED) {
       const gpkgDownloadUrl = this.isS3GpkgProvider
         ? `${this.downloadUrl}/${GPKGS_PREFIX}/${packageRelativePath}`
         : `${this.downloadUrl}/${packageRelativePath}`; //TODO: later when we change download server mount directory, the path for s3 and fs should be the same
@@ -434,8 +467,9 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
         },
       ];
 
-      callbackResponse.links = { dataURI: gpkgDownloadUrl, metadataURI: jsonDownloadUrl };
+      callbackResponse.status = OperationStatus.COMPLETED;
       callbackResponse.description = EXPORT_SUCCESS_MESSAGE;
+      callbackResponse.links = { dataURI: gpkgDownloadUrl, metadataURI: jsonDownloadUrl };
     }
 
     return callbackResponse;

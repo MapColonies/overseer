@@ -5,15 +5,19 @@ import type { LayerName } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
-import type { JobAndTaskTelemetry, StepKey } from '../../common/interfaces';
+import type { IConfig, JobAndTaskTelemetry, PollingConfig, StepKey } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 
 export class JobHandler {
+  private readonly pollingConfig: PollingConfig;
   public constructor(
     protected readonly logger: Logger,
+    protected readonly config: IConfig,
     protected readonly queueClient: QueueClient,
-    private readonly jobTrackerClient: JobTrackerClient
-  ) {}
+    private readonly jobTrackerClient: JobTrackerClient // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  ) {
+    this.pollingConfig = config.get<PollingConfig>('jobManagement.polling');
+  }
 
   protected validateAndGenerateLayerName(job: IJobResponse<unknown, unknown>): LayerName {
     const { resourceId, productType } = job;
@@ -60,10 +64,14 @@ export class JobHandler {
     const errName = error instanceof Error ? error.name : 'unknown';
     const msg = `Failed to handle ${job.type} job with ${task.type} task`;
     const reason = error instanceof Error ? error.message : String(error);
-    const isRecoverable = !(error instanceof ZodError);
+    const taskAttempts = task.attempts + 1; // rejecting the task increments the attempts
+    logger.info({ msg: 'task attempts', taskAttempts, maxAttempts: this.pollingConfig.maxTaskAttempts });
+    const reachedMaxAttempts = taskAttempts >= this.pollingConfig.maxTaskAttempts;
+    const isRecoverable = !(error instanceof ZodError) && !reachedMaxAttempts;
 
     await this.queueClient.reject(job.id, task.id, isRecoverable, reason);
-    logger.error({ msg, reason, error });
+
+    logger.error({ msg, reason, error, reachedMaxAttempts, isRecoverable });
     taskTracker?.failure(errName);
     tracingSpan?.setStatus({ code: SpanStatusCode.ERROR, message: reason });
     tracingSpan?.recordException(error instanceof Error ? error : new Error(reason));

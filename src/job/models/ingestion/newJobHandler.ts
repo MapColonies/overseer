@@ -8,7 +8,7 @@ import { lookup as mimeLookup } from '@map-colonies/types';
 import type { TilesMimeFormat } from '@map-colonies/types';
 import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata, LayerNameFormats } from '@map-colonies/raster-shared';
 import { Grid } from '../../../common/interfaces';
-import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata } from '../../../common/interfaces';
+import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IConfig } from '../../../common/interfaces';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../../common/constants';
 import type {
@@ -34,6 +34,7 @@ export class NewJobHandler
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
+    @inject(SERVICES.CONFIG) protected readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,
@@ -43,7 +44,7 @@ export class NewJobHandler
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    super(logger, queueClient, jobTrackerClient);
+    super(logger, config, queueClient, jobTrackerClient);
   }
 
   public async handleJobInit(job: IngestionNewInitJob, task: IngestionInitTask): Promise<void> {
