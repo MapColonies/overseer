@@ -2,6 +2,7 @@ import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-p
 import { JobTrackerClient } from '../../../src/httpClients/jobTrackerClient';
 
 export const jobManagerClientMock = {
+  getJobs: jest.fn(),
   updateJob: jest.fn(),
   updateTask: jest.fn(),
   createTaskForJob: jest.fn(),
@@ -12,7 +13,7 @@ export const queueClientMock = {
   jobManagerClient: jobManagerClientMock,
   ack: jest.fn(),
   reject: jest.fn(),
-} as unknown as jest.Mocked<QueueClient>;
+} as unknown as jest.MockedObjectDeep<QueueClient>;
 
 export const jobTrackerClientMock = {
   notify: jest.fn(),

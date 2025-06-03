@@ -1,17 +1,23 @@
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
-import { TileOutputFormat } from '@map-colonies/raster-shared';
-import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { IJobResponse, ITaskResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
-import { configMock } from '../../mocks/configMock';
+import { TileOutputFormat, type RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { FeatureCollection, Polygon } from 'geojson';
 import { JobManagerConfig, MergeTaskParameters } from '../../../../src/common/interfaces';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
+import type { PolygonPartsFindResponseFeatureProperties } from '../../../../src/utils/zod/schemas/polygonParts.schema';
+import { configMock } from '../../mocks/configMock';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
 export type MockUpdateJob = jest.MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
+
+export type MockFind = jest.MockedFunction<
+  (polygonPartsEntityName: string, filter?: RoiFeatureCollection) => Promise<FeatureCollection<Polygon, PolygonPartsFindResponseFeatureProperties>>
+>;
 
 export interface MergeTilesTaskBuilderContext {
   tileMergeTaskManager: TileMergeTaskManager;
@@ -32,6 +38,11 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
     },
   } as unknown as jest.Mocked<QueueClient>;
 
+  const mockFind = jest.fn() as MockFind;
+  const mockPolygonPartsMangerClient = {
+    find: mockFind,
+  } as unknown as jest.Mocked<PolygonPartsMangerClient>;
+
   const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 
   const queueClientInstance = new QueueClient(
@@ -43,7 +54,15 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
   );
 
   const queueClient = useMockQueueClient ? mockQueueClient : queueClientInstance;
-  const tileMergeTaskManager = new TileMergeTaskManager(mockLogger, tracerMock, configMock, new TileRanger(), queueClient, taskMetricsMock);
+  const tileMergeTaskManager = new TileMergeTaskManager(
+    mockLogger,
+    tracerMock,
+    configMock,
+    new TileRanger(),
+    queueClient,
+    mockPolygonPartsMangerClient,
+    taskMetricsMock
+  );
   return {
     tileMergeTaskManager,
   };

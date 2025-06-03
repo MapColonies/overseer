@@ -154,21 +154,26 @@ export class JobProcessor {
     const logger = this.logger.child({ jobType, taskType });
 
     logger.debug({ msg: `trying to dequeue task of type "${taskType}" and job of type "${jobType}"` });
-    const task = await this.queueClient.dequeue(jobType, taskType);
+    try {
+      const task = await this.queueClient.dequeue(jobType, taskType);
 
-    if (!task) {
-      logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
-      return { task: null, shouldSkipTask: true };
+      if (!task) {
+        logger.debug({ msg: `no task of type "${taskType}" and job of type "${jobType}" found` });
+        return { task: null, shouldSkipTask: true };
+      }
+      if (task.attempts >= this.pollingConfig.maxTaskAttempts) {
+        const message = `${taskType} task ${task.id} reached max attempts, rejects as unrecoverable`;
+        logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
+        await this.queueClient.reject(task.jobId, task.id, false);
+        await this.jobTrackerClient.notify(task);
+        return { task: null, shouldSkipTask: true };
+      }
+      logger.info({ msg: `dequeued task ${task.id} successfully` });
+      return { task, shouldSkipTask: false };
+    } catch (err) {
+      logger.error(err);
+      throw err;
     }
-    if (task.attempts >= this.pollingConfig.maxTaskAttempts) {
-      const message = `${taskType} task ${task.id} reached max attempts, rejects as unrecoverable`;
-      logger.warn({ msg: message, taskId: task.id, attempts: task.attempts });
-      await this.queueClient.reject(task.jobId, task.id, false);
-      await this.jobTrackerClient.notify(task);
-      return { task: null, shouldSkipTask: true };
-    }
-    logger.info({ msg: `dequeued task ${task.id} successfully` });
-    return { task, shouldSkipTask: false };
   }
 
   private validateTaskAndJob(jobAndTask: JobAndTaskResponse): void {

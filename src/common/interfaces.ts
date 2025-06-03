@@ -1,27 +1,28 @@
-import { z } from 'zod';
-import { Logger } from '@map-colonies/js-logger';
 import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import {
-  type InputFiles,
-  type PolygonPart,
-  type IngestionNewFinalizeTaskParams,
-  type IngestionUpdateFinalizeTaskParams,
-  type IngestionSwapUpdateFinalizeTaskParams,
-  type TileOutputFormat,
-  type LayerName,
-  type RasterLayerMetadata,
-  type TileFormatStrategy,
-  aggregationFeatureSchema,
-} from '@map-colonies/raster-shared';
-import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
 import type { ITileRange } from '@map-colonies/mc-utils';
-import type { Span, SpanContext } from '@opentelemetry/api';
-import type { ExportFinalizeTask, ExportJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import {
-  ingestionSwapUpdateFinalizeJobParamsSchema,
-  ingestionUpdateFinalizeJobParamsSchema,
+  aggregationFeatureSchema,
+  type IngestionNewFinalizeTaskParams,
+  type IngestionSwapUpdateFinalizeTaskParams,
+  type IngestionUpdateFinalizeTaskParams,
+  type InputFiles,
+  type LayerName,
+  type PolygonPart,
+  type PolygonPartsEntityNameObject,
+  type RasterLayerMetadata,
+  type RoiProperties,
+  type TileFormatStrategy,
+  type TileOutputFormat
+} from '@map-colonies/raster-shared';
+import type { Span, SpanContext } from '@opentelemetry/api';
+import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
+import { z } from 'zod';
+import type { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
+import {
   extendedRasterLayerMetadataSchema,
   ingestionNewExtendedJobParamsSchema,
+  ingestionSwapUpdateFinalizeJobParamsSchema,
+  ingestionUpdateFinalizeJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
@@ -127,10 +128,17 @@ export interface PolygonProperties {
   maxZoom: number;
 }
 
+export interface PolygonPartsFindFilterFeatureProperties extends RoiProperties {}
+
 export type PolygonFeature = Feature<Polygon, PolygonProperties>;
 
 export type PPFeatureCollection = FeatureCollection<Polygon, PolygonProperties>;
 
+export interface PolygonPartsFindFeatureCollectionFilter {
+  polygonPartsFindFeatureCollectionFilter: FeatureCollection<Polygon, PolygonPartsFindFilterFeatureProperties>;
+}
+
+// TODO: typo
 export interface FeatureCollectionWitZoomDefinitions {
   ppCollection: PPFeatureCollection;
   zoomDefinitions: ZoomDefinitions;
@@ -156,6 +164,12 @@ export interface MergeParameters {
   zoomDefinitions: ZoomDefinitions;
   taskMetadata: MergeTilesMetadata;
   tilesSource: TilesSource;
+}
+
+export interface MergeLowResolutionParameters extends PolygonPartsFindFeatureCollectionFilter {
+  taskMetadata: MergeTilesMetadata;
+  tilesSource: TilesSource;
+  zoom: number;
 }
 
 export interface TaskSources {
@@ -187,6 +201,8 @@ export interface MergeTilesTaskParams {
   taskMetadata: MergeTilesMetadata;
   partsData: PolygonPart[];
 }
+
+export interface MergeLowResolutionTilesTaskParams extends MergeTilesTaskParams, PolygonPartsEntityNameObject {}
 
 export interface MergeTilesMetadata {
   layerRelativePath: string;

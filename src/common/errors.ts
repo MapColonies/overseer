@@ -89,6 +89,15 @@ export class FSError extends Error {
   }
 }
 
+export class FindPolygonPartsError extends Error {
+  public constructor(err: unknown, polygonPartsEntityName: string) {
+    const message = `Failed to get find response for ${polygonPartsEntityName}: ${err instanceof Error ? err.message : 'unknown'}`;
+    super(message);
+    this.name = FindPolygonPartsError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}
+
 export class LayerMetadataAggregationError extends Error {
   public constructor(err: unknown, polygonPartsEntityName: string) {
     const message = `Failed to get aggregated layer metadata for ${polygonPartsEntityName}: ${err instanceof Error ? err.message : 'unknown'}`;

@@ -20,27 +20,28 @@ import { validateAndGetHandlersTokens } from './utils/configUtil';
 import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
 import { IConfig, IS3Config, JobManagerConfig, PollingJobs } from './common/interfaces';
 import { ExportJobHandler } from './job/models/export/exportJobHandler';
+import { queueClientFactory } from './queueClient/queueClientFactory';
 
-export const queueClientFactory = (container: DependencyContainer): QueueClient => {
-  const logger = container.resolve<Logger>(SERVICES.LOGGER);
-  const config = container.resolve<IConfig>(SERVICES.CONFIG);
-  const queueConfig = config.get<JobManagerConfig>('jobManagement.config');
-  const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
-  const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
-  const jobManagerServiceName = 'JobManager';
-  const heartbeatServiceName = 'Heartbeat';
-  return new QueueClient(
-    logger,
-    queueConfig.jobManagerBaseUrl,
-    queueConfig.heartbeat.baseUrl,
-    queueConfig.dequeueIntervalMs,
-    queueConfig.heartbeat.intervalMs,
-    httpRetryConfig,
-    jobManagerServiceName,
-    heartbeatServiceName,
-    disableHttpClientLogs
-  );
-};
+// export const queueClientFactory = (container: DependencyContainer): QueueClient => {
+//   const logger = container.resolve<Logger>(SERVICES.LOGGER);
+//   const config = container.resolve<IConfig>(SERVICES.CONFIG);
+//   const queueConfig = config.get<JobManagerConfig>('jobManagement.config');
+//   const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
+//   const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
+//   const jobManagerServiceName = 'JobManager';
+//   const heartbeatServiceName = 'Heartbeat';
+//   return new QueueClient(
+//     logger,
+//     queueConfig.jobManagerBaseUrl,
+//     queueConfig.heartbeat.baseUrl,
+//     queueConfig.dequeueIntervalMs,
+//     queueConfig.heartbeat.intervalMs,
+//     httpRetryConfig,
+//     jobManagerServiceName,
+//     heartbeatServiceName,
+//     disableHttpClientLogs
+//   );
+// };
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
   useChild?: boolean;
@@ -63,6 +64,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.CONFIG, provider: { useValue: config } },
     { token: SERVICES.LOGGER, provider: { useValue: logger } },
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
+    { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
     { token: SERVICES.QUEUE_CLIENT, provider: { useFactory: instancePerContainerCachingFactory(queueClientFactory) } },
     { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
     { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
@@ -70,7 +72,6 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
     { token: handlersTokens.Export, provider: { useClass: ExportJobHandler } },
     { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
-    { token: INJECTION_VALUES.ingestionJobTypes, provider: { useValue: handlersTokens } },
     { token: SERVICES.S3CONFIG, provider: { useValue: s3Config } },
     {
       token: SERVICES.METRICS,

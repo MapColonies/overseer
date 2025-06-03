@@ -1,22 +1,25 @@
-import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { context, trace } from '@opentelemetry/api';
+import type { IngestionUpdateFinalizeTaskParams, PolygonPartsEntityName } from '@map-colonies/raster-shared';
 import type { Tracer } from '@opentelemetry/api';
-import type { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
-import {
-  IngestionInitTask,
-  IngestionUpdateFinalizeJob,
-  IngestionUpdateFinalizeTask,
-  IngestionUpdateInitJob,
-} from '../../../utils/zod/schemas/job.schema';
-import { CatalogClient } from '../../../httpClients/catalogClient';
-import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
-import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
+import { context, trace } from '@opentelemetry/api';
+import { inject, injectable } from 'tsyringe';
+import { INJECTION_VALUES, SERVICES } from '../../../common/constants';
+import type { IConfig, IJobHandler, MergeLowResolutionTilesTaskParams, MergeTilesTaskParams } from '../../../common/interfaces';
 import { Grid } from '../../../common/interfaces';
-import { SERVICES } from '../../../common/constants';
-import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
+import { CatalogClient } from '../../../httpClients/catalogClient';
+import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
+import type { IngestionJobTypes } from '../../../utils/configUtil';
+import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
+import {
+  type IngestionInitTask,
+  ingestionNewFinalizeJobSchema,
+  type IngestionUpdateFinalizeJob,
+  type IngestionUpdateFinalizeTask,
+  type IngestionUpdateInitJob,
+  type IngestionNewFinalizeJob,
+} from '../../../utils/zod/schemas/job.schema';
 import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
@@ -36,6 +39,7 @@ export class UpdateJobHandler
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
+    @inject(INJECTION_VALUES.ingestionJobTypes) private readonly ingestionJobTypes: IngestionJobTypes,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
@@ -55,6 +59,8 @@ export class UpdateJobHandler
 
         activeSpan?.addEvent('validateAdditionalParams.success');
 
+        const polygonPartsEntityName = await this.getPolygonPartsEntityName(job.resourceId);
+
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
           taskMetadata: {
@@ -68,8 +74,23 @@ export class UpdateJobHandler
 
         logger.info({ msg: 'building tasks' });
         const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
-
         await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+
+        const lowResolutionTaskBuildParams: MergeLowResolutionTilesTaskParams = {
+          inputFiles,
+          taskMetadata: {
+            layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
+            tileOutputFormat: additionalParams.tileOutputFormat,
+            isNewTarget: false,
+            grid: Grid.TWO_ON_ONE,
+          },
+          partsData,
+          polygonPartsEntityName,
+        };
+
+        // TODO: push additional tasks
+        const lowResolutionMergeTasks = this.taskBuilder.buildLowResolutionTasks(lowResolutionTaskBuildParams);
+        await this.taskBuilder.pushTasks(job.id, job.type, lowResolutionMergeTasks);
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {
@@ -118,5 +139,30 @@ export class UpdateJobHandler
         }
       }
     );
+  }
+
+  // TODO: extract the type of resourceId in input param instead of using IngestionNewFinalizeJob['resourceId']
+  private async getPolygonPartsEntityName(resourceId: IngestionNewFinalizeJob['resourceId']): Promise<PolygonPartsEntityName> {
+    // polygon parts entity name is retrieved from an Ingestion_New job since it stores this value
+    const filteredIngestionNewJobs = await this.queueClient.jobManagerClient.getJobs({
+      resourceId,
+      type: this.ingestionJobTypes.Ingestion_New,
+    });
+    // eslint-disable-next-line no-useless-catch
+    try {
+      const ingestionNewFinalizeJobs = ingestionNewFinalizeJobSchema.array().parse(filteredIngestionNewJobs);
+      const polygonPartsEntityName = ingestionNewFinalizeJobs.at(0)?.parameters.additionalParams.polygonPartsEntityName;
+      if (polygonPartsEntityName === undefined) {
+        throw new Error(); // TODO: handle error
+      }
+      return polygonPartsEntityName;
+    } catch (error) {
+      throw error;
+    }
+    // const polygonPartsEntityName = ingestionNewFinalizeJobs.at(0)?.parameters.additionalParams.polygonPartsEntityName;
+    // if (polygonPartsEntityName === undefined) {
+    //   throw new Error(); // TODO: handle error
+    // }
+    // return polygonPartsEntityName;
   }
 }
