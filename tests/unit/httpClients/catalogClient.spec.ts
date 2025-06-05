@@ -56,11 +56,23 @@ describe('CatalogClient', () => {
       const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = ingestionUpdateJob.internalId;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200);
+      const expectedRequestBody = {
+        metadata: {
+          productVersion: "1.0",
+          classification: "6",
+          ingestionDate: new Date(),
+          displayPath: "d1e9fe74-2a8f-425f-ac46-d65bb5c5756d",
+        },
+      };
+      let requestBody;
+      nock(baseUrl).put(`/records/${recordId}`).reply(200, (omo, reqBody) => {
+        requestBody = reqBody
+      });
 
       const action = catalogClient.update(ingestionUpdateFinalizeJob);
 
       await expect(action).resolves.not.toThrow();
+      expect(requestBody).toBe(expectedRequestBody);
       expect(nock.isDone()).toBe(true);
     });
 
@@ -84,6 +96,7 @@ describe('CatalogClient', () => {
       const action = catalogClient.update(swapUpdateJob);
 
       await expect(action).resolves.not.toThrow();
+      expect(swapUpdateJob).toBe(1);
       expect(nock.isDone()).toBe(true);
     });
 
