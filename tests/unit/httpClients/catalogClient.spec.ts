@@ -61,7 +61,7 @@ describe('CatalogClient', () => {
       let requestBody;
       nock(baseUrl)
         .put(`/records/${recordId}`)
-        .reply(200, (_url, reqBody) => {
+        .reply(200, (_, reqBody) => {
           requestBody = reqBody;
         });
 
@@ -97,7 +97,7 @@ describe('CatalogClient', () => {
       let requestBody;
       nock(baseUrl)
         .put(`/records/${recordId}`)
-        .reply(200, (_url, reqBody) => {
+        .reply(200, (_, reqBody) => {
           requestBody = reqBody;
           return swapUpdateJob;
         });
