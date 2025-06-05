@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { randomUUID } from 'crypto';
+import 'jest-extended';
 import nock from 'nock';
 import type { LayerName } from '@map-colonies/raster-shared';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
@@ -56,11 +58,24 @@ describe('CatalogClient', () => {
       const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = ingestionUpdateJob.internalId;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200);
+      let requestBody;
+      nock(baseUrl)
+        .put(`/records/${recordId}`)
+        .reply(200, (_, reqBody) => {
+          requestBody = reqBody;
+        });
 
       const action = catalogClient.update(ingestionUpdateFinalizeJob);
 
       await expect(action).resolves.not.toThrow();
+      expect(requestBody).toMatchObject({
+        metadata: {
+          productVersion: expect.any(String),
+          classification: expect.any(String),
+          displayPath: expect.any(String),
+          ingestionDate: expect.toBeDateString(),
+        },
+      });
       expect(nock.isDone()).toBe(true);
     });
 
@@ -79,11 +94,25 @@ describe('CatalogClient', () => {
         },
       };
       const recordId = swapUpdateJob.internalId;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200, swapUpdateJob);
+      let requestBody;
+      nock(baseUrl)
+        .put(`/records/${recordId}`)
+        .reply(200, (_, reqBody) => {
+          requestBody = reqBody;
+          return swapUpdateJob;
+        });
 
       const action = catalogClient.update(swapUpdateJob);
 
       await expect(action).resolves.not.toThrow();
+      expect(requestBody).toMatchObject({
+        metadata: {
+          productVersion: expect.any(String),
+          classification: expect.any(String),
+          displayPath: expect.any(String),
+          ingestionDate: expect.toBeDateString(),
+        },
+      });
       expect(nock.isDone()).toBe(true);
     });
 
