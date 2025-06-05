@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.3](https://github.com/MapColonies/overseer/compare/v2.0.2...v2.0.3) (2025-06-05)
+
+
+### Bug Fixes
+
+* Send ingestion date on request (MAPCO-7846) ([#57](https://github.com/MapColonies/overseer/issues/57)) ([bf7e94e](https://github.com/MapColonies/overseer/commit/bf7e94e263b32a7fcaaae0e6e9abd7fec5d19ba8))
+
 ### [2.0.2](https://github.com/MapColonies/overseer/compare/v2.0.1...v2.0.2) (2025-05-18)
 
 
