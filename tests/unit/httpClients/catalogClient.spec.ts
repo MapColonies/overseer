@@ -76,7 +76,6 @@ describe('CatalogClient', () => {
           ingestionDate: expect.toBeDateString(),
         },
       });
-      //expect(requestBody.ingestionDate).toBeDateString();
       expect(nock.isDone()).toBe(true);
     });
 
@@ -106,7 +105,14 @@ describe('CatalogClient', () => {
       const action = catalogClient.update(swapUpdateJob);
 
       await expect(action).resolves.not.toThrow();
-      expect(requestBody).toHaveProperty('metadata.ingestionDate');
+      expect(requestBody).toMatchObject({
+        metadata: {
+          productVersion: expect.any(String),
+          classification: expect.any(String),
+          displayPath: expect.any(String),
+          ingestionDate: expect.toBeDateString(),
+        },
+      });
       expect(nock.isDone()).toBe(true);
     });
 
