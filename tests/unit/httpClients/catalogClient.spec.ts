@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { randomUUID } from 'crypto';
+import 'jest-extended';
 import nock from 'nock';
 import type { LayerName } from '@map-colonies/raster-shared';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
@@ -66,11 +68,15 @@ describe('CatalogClient', () => {
       const action = catalogClient.update(ingestionUpdateFinalizeJob);
 
       await expect(action).resolves.not.toThrow();
-      expect(requestBody).toHaveProperty('metadata');
-      expect(requestBody).toHaveProperty('metadata.productVersion');
-      expect(requestBody).toHaveProperty('metadata.classification');
-      expect(requestBody).toHaveProperty('metadata.displayPath');
-      expect(requestBody).toHaveProperty('metadata.ingestionDate');
+      expect(requestBody).toMatchObject({
+        metadata: {
+          productVersion: expect.any(String),
+          classification: expect.any(String),
+          displayPath: expect.any(String),
+          ingestionDate: expect.toBeDateString(),
+        },
+      });
+      //expect(requestBody.ingestionDate).toBeDateString();
       expect(nock.isDone()).toBe(true);
     });
 
