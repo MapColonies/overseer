@@ -57,9 +57,11 @@ describe('CatalogClient', () => {
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = ingestionUpdateJob.internalId;
       let requestBody;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200, (url, reqBody) => {
-        requestBody = reqBody
-      });
+      nock(baseUrl)
+        .put(`/records/${recordId}`)
+        .reply(200, (url, reqBody) => {
+          requestBody = reqBody;
+        });
 
       const action = catalogClient.update(ingestionUpdateFinalizeJob);
 
@@ -88,10 +90,12 @@ describe('CatalogClient', () => {
       };
       const recordId = swapUpdateJob.internalId;
       let requestBody;
-      nock(baseUrl).put(`/records/${recordId}`).reply(200, (url, reqBody) => {
-        requestBody = reqBody;
-        return swapUpdateJob;
-      });
+      nock(baseUrl)
+        .put(`/records/${recordId}`)
+        .reply(200, (url, reqBody) => {
+          requestBody = reqBody;
+          return swapUpdateJob;
+        });
 
       const action = catalogClient.update(swapUpdateJob);
 
