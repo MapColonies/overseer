@@ -1,7 +1,7 @@
 import { Logger } from '@map-colonies/js-logger';
 import { PolygonPart } from '@map-colonies/raster-shared';
-import { degreesPerPixelToZoomLevel, getUTCDate, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
-import { feature, featureCollection, union, bbox, bboxPolygon, intersect, area, convertArea, distance, point } from '@turf/turf';
+import { degreesPerPixelToZoomLevel, getUTCDate, zoomLevelToResolutionDeg, featureToTilesCount } from '@map-colonies/mc-utils';
+import { feature, featureCollection, union, bbox, bboxPolygon, intersect } from '@turf/turf';
 import { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { ICreateJobBody, ICreateTaskBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { inject, injectable } from 'tsyringe';
@@ -17,9 +17,8 @@ import { extractMaxUpdateZoomLevel } from '../../../utils/partsDataUtil';
 export class SeedingJobCreator {
   private readonly tilesSeedingConfig: TilesSeedingTaskConfig;
   private readonly seedJobType: string;
-  //TODO: add these two to config and helm
   private readonly zoomThreshold: number;
-  private readonly areaThresholdKm: number;
+  private readonly maxTilesPerTask: number;
   private readonly updateJobType: string;
   private readonly swapUpdateJobType: string;
 
@@ -32,8 +31,8 @@ export class SeedingJobCreator {
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
-    this.zoomThreshold = 2;
-    this.areaThresholdKm = 12;
+    this.zoomThreshold = this.config.get<number>('jobManagement.ingestion.tasks.tilesSeeding.zoomThreshold') ?? 16;
+    this.maxTilesPerTask = this.config.get<number>('jobManagement.ingestion.tasks.tilesSeeding.maxTilesPerTask') ?? 10000;
     this.updateJobType = this.config.get<string>('jobManagement.polling.jobs.update.type');
     this.swapUpdateJobType = this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type');
   }
@@ -156,7 +155,7 @@ export class SeedingJobCreator {
   ): ICreateTaskBody<SeedTaskParams>[] {
     const activeSpan = trace.getActiveSpan();
     const seedTaskType = this.tilesSeedingConfig.type;
-    let seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
+    const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
 
     if (job.type !== this.updateJobType) {
       this.logger.debug({ msg: 'Ingestion Job is not of update type, skipping SEED creation' });
@@ -176,40 +175,67 @@ export class SeedingJobCreator {
     const highZoomParts = partsData.filter((p) => p.resolutionDegree < thresholdZoom);
     const maxUpdatedZoom = extractMaxUpdateZoomLevel(job);
 
-    const geometry = this.calculateGeometryByMode(SeedMode.SEED, job);
-    // Step 1: Handle all res from 0-min(maxUpdatedZoom, maxUpdated) in one seed task
-    const seedOptions = this.createSeedOptions(SeedMode.SEED, geometry as Footprint, cacheName, 0, Math.min(maxUpdatedZoom, this.zoomThreshold));
+    // Step 1: Handle all res from 0 to zoomThreshold in one seed task
+    const seedOptions = this.createSeedOptions(SeedMode.SEED, seedGeometry as Footprint, cacheName, 0, Math.min(maxUpdatedZoom, this.zoomThreshold));
     const taskParams = this.createTaskParams(catalogId, seedOptions);
     seedTasks.push({ type: seedTaskType, parameters: taskParams });
 
     // Step 2: Handle high-res parts individually by zoom level
-    highZoomParts.forEach((part) => {
-      const partArea = convertArea(area(part.footprint), 'meters', 'kilometers');
+    for (const part of highZoomParts) {
       const partZoomLevel = degreesPerPixelToZoomLevel(part.resolutionDegree);
-      let splittedIntersection: Feature<Polygon | MultiPolygon>[] = [];
-      // TODO:  this check is done twice because we want the splits from advance only id needed - think how to refactor this 
-      if (partArea > this.areaThresholdKm) {
-        splittedIntersection = this.getSplittedIntersections(part.footprint, partArea);
-      }
-      for (let zoom = this.zoomThreshold + 1; zoom <= partZoomLevel; zoom++) {
-        //TODO: this is the duplication
-        if (partArea > this.areaThresholdKm) {
-          splittedIntersection.forEach((bbox) => {
-            const seedOptions = this.createSeedOptions(SeedMode.SEED, bbox, cacheName, zoom, zoom);
-            const taskParams = this.createTaskParams(catalogId, seedOptions);
-            seedTasks.push({ type: seedTaskType, parameters: taskParams });
-          });
-        } else {
+      for (let zoom = this.zoomThreshold + 1; zoom <= Math.min(partZoomLevel, maxUpdatedZoom); zoom++) {
+        const estimatedTiles = featureToTilesCount(feature(part.footprint), zoom);
+
+        if (estimatedTiles <= this.maxTilesPerTask) {
+          // If tiles count is within limit, create a single task
           const seedOptions = this.createSeedOptions(SeedMode.SEED, part.footprint, cacheName, zoom, zoom);
           const taskParams = this.createTaskParams(catalogId, seedOptions);
           seedTasks.push({ type: seedTaskType, parameters: taskParams });
+        } else {
+          // If tiles count exceeds limit, split the geometry
+          const splitGeometries = this.splitGeometryByTileCount(part.footprint, zoom, this.maxTilesPerTask);
+          for (const geometry of splitGeometries) {
+            const seedOptions = this.createSeedOptions(SeedMode.SEED, geometry, cacheName, zoom, zoom);
+            const taskParams = this.createTaskParams(catalogId, seedOptions);
+            seedTasks.push({ type: seedTaskType, parameters: taskParams });
+          }
         }
       }
-    });
+    }
 
     return seedTasks;
   }
 
+  private splitGeometryByTileCount(geometry: Polygon | MultiPolygon, zoomLevel: number, maxTiles: number): Feature<Polygon | MultiPolygon>[] {
+    const geometryBbox = bbox(geometry);
+    const [minX, minY, maxX, maxY] = geometryBbox;
+
+    // Calculate total tiles in the bbox
+    const totalTiles = featureToTilesCount(feature(geometry), zoomLevel);
+    const splitFactor = Math.ceil(Math.sqrt(totalTiles / maxTiles));
+
+    // Calculate step sizes for splitting
+    const xStep = (maxX - minX) / splitFactor;
+    const yStep = (maxY - minY) / splitFactor;
+
+    const splitGeometries: Feature<Polygon | MultiPolygon>[] = [];
+
+    // Create grid of sub-geometries
+    for (let i = 0; i < splitFactor; i++) {
+      for (let j = 0; j < splitFactor; j++) {
+        const subBbox: BBox = [minX + i * xStep, minY + j * yStep, minX + (i + 1) * xStep, minY + (j + 1) * yStep];
+
+        const subPolygon = bboxPolygon(subBbox);
+        const intersection = intersect(featureCollection([subPolygon, feature(geometry)]));
+
+        if (intersection) {
+          splitGeometries.push(intersection);
+        }
+      }
+    }
+
+    return splitGeometries;
+  }
 
   private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string, fromZoomLevel?: number, toZoomLevel?: number): SeedTaskOptions {
     const { grid, maxZoom, skipUncached } = this.tilesSeedingConfig;
@@ -262,42 +288,41 @@ export class SeedingJobCreator {
     return footprint;
   }
 
-  private getSplittedIntersections(seedGeometry: Polygon | MultiPolygon, partArea: number): Feature<Polygon | MultiPolygon>[] {
-    const seedBbox = bbox(seedGeometry);
-    const seedFeature = feature(seedGeometry);
+  // private getSplittedIntersections(seedGeometry: Polygon | MultiPolygon, partArea: number): Feature<Polygon | MultiPolygon>[] {
+  //   const seedBbox = bbox(seedGeometry);
+  //   const seedFeature = feature(seedGeometry);
 
-    const smallBboxes = this.splitBoundingBox(seedBbox, partArea);
+  //   const smallBboxes = this.splitBoundingBox(seedBbox, partArea);
 
-    const intersectionFeatures: Feature<Polygon | MultiPolygon>[] = [];
+  //   const intersectionFeatures: Feature<Polygon | MultiPolygon>[] = [];
 
-    for (const tileBbox of smallBboxes) {
-      // Create a polygon from the small bbox
-      const tilePolygon = bboxPolygon(tileBbox);
+  //   for (const tileBbox of smallBboxes) {
+  //     // Create a polygon from the small bbox
+  //     const tilePolygon = bboxPolygon(tileBbox);
 
-      // Find the intersection with the original geometry
-      try {
-        const intersection = intersect(featureCollection([tilePolygon, seedFeature]));
+  //     // Find the intersection with the original geometry
+  //     try {
+  //       const intersection = intersect(featureCollection([tilePolygon, seedFeature]));
 
-        // Only add the intersection if it exists (they might not intersect if the original
-        // geometry had a complex shape and the bbox was just a rough envelope)
-        if (intersection) {
-          intersectionFeatures.push(intersection);
-        }
-      } catch (error) {
-        // Handle any turf.js intersection errors
-        console.warn('Error calculating intersection for tile:', tileBbox, error);
-        // Skip this tile if there's an error
-      }
-    }
+  //       // Only add the intersection if it exists (they might not intersect if the original
+  //       // geometry had a complex shape and the bbox was just a rough envelope)
+  //       if (intersection) {
+  //         intersectionFeatures.push(intersection);
+  //       }
+  //     } catch (error) {
+  //       // Handle any turf.js intersection errors
+  //       console.warn('Error calculating intersection for tile:', tileBbox, error);
+  //       // Skip this tile if there's an error
+  //     }
+  //   }
 
-    return intersectionFeatures;
-  }
-  private calculateDistanceInKm(point1: [number, number], point2: [number, number]): number {
-    const from = point(point1);
-    const to = point(point2);
-    return distance(from, to, { units: 'kilometers' });
-  }
-
+  //   return intersectionFeatures;
+  // }
+  // private calculateDistanceInKm(point1: [number, number], point2: [number, number]): number {
+  //   const from = point(point1);
+  //   const to = point(point2);
+  //   return distance(from, to, { units: 'kilometers' });
+  // }
 
   /**
    * Splits a large bounding box (bbox) into smaller sub-boxes (tiles) such that each tile
@@ -313,7 +338,7 @@ export class SeedingJobCreator {
    * processing like spatial tiling, rendering, or parallel computation.
    */
 
-  private splitBoundingBox(bbox: BBox, partArea: number): BBox[] {
+  /**  private splitBoundingBox(bbox: BBox, partArea: number): BBox[] {
     const maxTileAreaKm2 = this.areaThresholdKm;
 
     // We'll determine an appropriate number of splits based on the area ratio
@@ -336,7 +361,7 @@ export class SeedingJobCreator {
 
     /* If it's wider than tall, split more horizontally.
 If it's taller than wide, split more vertically.
-*/
+
     if (aspectRatio >= 1) {
       // Width is greater than or equal to height
       numXSplits = Math.ceil(Math.sqrt(totalTilesNeeded * aspectRatio));
@@ -392,5 +417,5 @@ If it's taller than wide, split more vertically.
     }
 
     return resultBBoxes;
-  }
+  }*/
 }

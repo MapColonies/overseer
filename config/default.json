@@ -113,7 +113,9 @@
           "type": "tiles-seeding",
           "grid": "WorldCRS84",
           "maxZoom": 21,
-          "skipUncached": true
+          "skipUncached": true,
+          "zoomThreshold": 16,
+          "maxTilesPerTask": 10000
         }
       }
     },
