@@ -9,6 +9,12 @@ import { SERVICES } from '../../common/constants';
 import { IS3Config } from '../../common/interfaces';
 import { S3Error } from '../../common/errors';
 
+export interface UploadFile {
+  filePath: string;
+  s3Key: string;
+  contentType?: string;
+}
+
 @injectable()
 export class S3Service {
   private readonly client: S3Client;
@@ -28,46 +34,61 @@ export class S3Service {
       },
       endpoint: endpointUrl,
       region: 'us-east-1', //For MinIo the region has no significance but it is required for the S3Client
+      forcePathStyle: true,
     });
   }
 
-  public async uploadFile(filePath: string, s3Key: string, contentType?: string): Promise<string> {
-    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${S3Service.name}.${this.uploadFile.name}`)), async () => {
+  public async uploadFiles(files: UploadFile[]): Promise<string[]> {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${S3Service.name}.${this.uploadFiles.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
+      const { bucket, endpointUrl } = this.s3Config;
+      const logger = this.logger.child({ bucket, endpointUrl });
       try {
-        const { bucket, endpointUrl } = this.s3Config;
-
         activeSpan?.setAttributes({
           endpointUrl,
           bucket,
-          s3Key,
-          filePath,
-          contentType: contentType ?? 'unknown',
+          fileCount: files.length,
         });
 
-        const upload = new Upload({
-          client: this.client,
-          params: {
-            Key: s3Key,
-            Bucket: bucket,
-            ContentType: contentType,
-            Body: fs.createReadStream(filePath),
-          },
+        logger.info({ msg: `Uploading ${files.length} files to S3` });
+
+        // eslint-disable-next-line @typescript-eslint/promise-function-async
+        const uploadPromises = files.map((file) => {
+          const { filePath, s3Key, contentType } = file;
+
+          logger.info({ msg: 'Uploading file to S3', filePath, s3Key, contentType });
+
+          activeSpan?.addEvent('s3.upload.start', {
+            filePath,
+            s3Key,
+            contentType: contentType ?? 'unknown',
+          });
+
+          const upload = new Upload({
+            client: this.client,
+            params: {
+              Key: s3Key,
+              Bucket: bucket,
+              ContentType: contentType,
+              Body: fs.createReadStream(filePath),
+            },
+          });
+
+          return upload.done();
         });
 
-        this.logger.info({ msg: 'Uploading file to S3', bucket, s3Key });
-        const result = await upload.done();
-        activeSpan?.addEvent('s3.upload.complete');
+        const results = await Promise.all(uploadPromises);
+        activeSpan?.addEvent('s3.upload.complete.all');
 
-        const url = `${endpointUrl}/${result.Bucket}/${result.Key}`;
-        this.logger.info({ msg: 'File uploaded to S3', url });
-        activeSpan?.setAttributes({ s3Url: url });
+        const urls = results.map((result) => `${endpointUrl}/${result.Bucket}/${result.Key}`);
+        logger.info({ msg: 'Files uploaded to S3', urls });
+        activeSpan?.setAttributes({ s3UrlCount: urls.length });
 
-        return url;
+        return urls;
       } catch (err) {
-        const error = new S3Error(err, 'Failed to upload file to S3');
+        const error = new S3Error(err, 'Failed to upload files to S3');
 
-        this.logger.error({ msg: error.message, error });
+        logger.error({ msg: error.message, error });
         activeSpan?.recordException(error);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,

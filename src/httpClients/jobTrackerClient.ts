@@ -37,10 +37,12 @@ export class JobTrackerClient extends HttpClient {
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Notification sent successfully' });
       } catch (err) {
         if (err instanceof Error) {
+          const message = 'Failed to notify job tracker';
+          const error = new Error(`${message}: ${err.message}`);
           logger.error({ msg: 'Failed to notify job tracker', error: err });
-          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
-          activeSpan?.recordException(err);
-          throw err;
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+          activeSpan?.recordException(error);
+          throw error;
         }
       } finally {
         activeSpan?.end();

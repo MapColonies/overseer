@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.0.3](https://github.com/MapColonies/overseer/compare/v2.0.2...v2.0.3) (2025-06-05)
+
+
+### Bug Fixes
+
+* Send ingestion date on request (MAPCO-7846) ([#57](https://github.com/MapColonies/overseer/issues/57)) ([bf7e94e](https://github.com/MapColonies/overseer/commit/bf7e94e263b32a7fcaaae0e6e9abd7fec5d19ba8))
+
+### [2.0.2](https://github.com/MapColonies/overseer/compare/v2.0.1...v2.0.2) (2025-05-18)
+
+
+### Bug Fixes
+
+* callbacks sending in export finalize ([#56](https://github.com/MapColonies/overseer/issues/56)) ([48194d5](https://github.com/MapColonies/overseer/commit/48194d5d7e9f5accc6762127ea7d6ced4b1ee8ad))
+
+### [2.0.1](https://github.com/MapColonies/overseer/compare/v2.0.0...v2.0.1) (2025-05-14)
+
+
+### Bug Fixes
+
+* **seeding-job:** reverted producer name to check for undefinied if null value ([#55](https://github.com/MapColonies/overseer/issues/55)) ([3536c3a](https://github.com/MapColonies/overseer/commit/3536c3a81737004bf3c1009b8673eb6f08920ce6))
+
+## [2.0.0](https://github.com/MapColonies/overseer/compare/v1.9.0...v2.0.0) (2025-05-13)
+
+
+### ⚠ BREAKING CHANGES
+
+* JSON file handling and multi-file upload support (#54)
+
+### Features
+
+* JSON file handling and multi-file upload support ([#54](https://github.com/MapColonies/overseer/issues/54)) ([f385533](https://github.com/MapColonies/overseer/commit/f3855337d1e2fbd713716c9be942dc7a65588575))
+
+## [1.9.0](https://github.com/MapColonies/overseer/compare/v1.8.1...v1.9.0) (2025-05-07)
+
+
+### Features
+
+* add featureCollection filter to aggregation and getAggregation metadata in export process ([#51](https://github.com/MapColonies/overseer/issues/51)) ([6dea8f7](https://github.com/MapColonies/overseer/commit/6dea8f7d9c32f37ab4efbe4ed926e83c5e35db68))
+* implement multi ‘tilesSeeding’ tasks creation upon ingestion updates(MAPCO-5747) ([#52](https://github.com/MapColonies/overseer/issues/52)) ([8a7bd85](https://github.com/MapColonies/overseer/commit/8a7bd853fd6fbdcafc4f262c8754129a900d304a))
+
 ### [1.8.1](https://github.com/MapColonies/overseer/compare/v1.8.0...v1.8.1) (2025-03-30)
 
 

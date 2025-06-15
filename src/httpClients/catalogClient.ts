@@ -198,6 +198,7 @@ export class CatalogClient extends HttpClient {
             metadata: {
               productVersion: version,
               classification: metadata.classification,
+              ingestionDate: new Date(),
               ...(displayPath != undefined && { displayPath }),
               ...aggregatedLayerMetadata,
             },
