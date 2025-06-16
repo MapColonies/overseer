@@ -167,8 +167,12 @@
             "__name": "TILES_SEEDING_ZOOM_THRESHOLD",
             "__format": "number"
           },
-          "maxTilesPerTask": {
-            "__name": "TILES_SEEDING_MAX_TILES_PER_TASK",
+          "maxTilesPerSeedTask": {
+            "__name": "TILES_SEEDING_MAX_TILES_PER_SEED_TASK",
+            "__format": "number"
+          },
+          "maxTilesPerCleanTask": {
+            "__name": "TILES_SEEDING_MAX_TILES_PER_CLEAN_TASK",
             "__format": "number"
           }
         }

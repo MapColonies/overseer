@@ -68,7 +68,8 @@ data:
   TILES_SEEDING_MAX_ZOOM: {{ $jobDefinitions.tasks.seed.maxZoom | quote }}
   TILES_SEEDING_SKIP_UNCACHED: {{ $jobDefinitions.tasks.seed.skipUncached | quote }}
   TILES_SEEDING_ZOOM_THRESHOLD: {{ $jobDefinitions.tasks.seed.zoomThreshold | quote }}
-  TILES_SEEDING_MAX_TILES_PER_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerTask | quote }}
+  TILES_SEEDING_MAX_TILES_PER_SEED_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerSeedTask | quote }}
+  TILES_SEEDING_MAX_TILES_PER_CLEAN_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerCleanTask | quote }}
   TILES_EXPORTING_TASK_TYPE: {{ $jobDefinitions.tasks.export.type | quote }}
   MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
   GEOSERVER_API_URL: {{ $serviceUrls.geoserverApiUrl | quote }}

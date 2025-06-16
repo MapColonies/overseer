@@ -115,7 +115,8 @@
           "maxZoom": 21,
           "skipUncached": true,
           "zoomThreshold": 16,
-          "maxTilesPerTask": 10000
+          "maxTilesPerSeedTask": 200000,
+          "maxTilesPerCleanTask": 500000
         }
       }
     },
