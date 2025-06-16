@@ -31,8 +31,8 @@ export class SeedingJobCreator {
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
-    this.zoomThreshold = this.config.get<number>('jobManagement.ingestion.tasks.tilesSeeding.zoomThreshold') ?? 16;
-    this.maxTilesPerTask = this.config.get<number>('jobManagement.ingestion.tasks.tilesSeeding.maxTilesPerTask') ?? 10000;
+    this.zoomThreshold = this.config.get<number>('jobManagement.ingestion.tasks.tilesSeeding.zoomThreshold');
+    this.maxTilesPerTask = this.config.get<number>('jobManagement.ingestion.tasks.tilesSeeding.maxTilesPerTask');
     this.updateJobType = this.config.get<string>('jobManagement.polling.jobs.update.type');
     this.swapUpdateJobType = this.config.get<string>('jobManagement.polling.jobs.swapUpdate.type');
   }
