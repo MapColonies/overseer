@@ -133,9 +133,32 @@ export class SeedingJobCreator {
 
     activeSpan?.addEvent('calculateCleanGeometry.success', { geometry: JSON.stringify(cleanGeometry) });
 
-    const maxUpdatedZoom = extractMaxUpdateZoomLevel(job);
-    const startCleanZoom: number = job.type === this.swapUpdateJobType ? this.zoomThreshold + 1 : maxUpdatedZoom + 1;
+    if (job.type === this.swapUpdateJobType) {
+      const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName);
+      activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
 
+      const taskParams = this.createTaskParams(catalogId, cleanOptions);
+      activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+
+      seedTasks.push({ type: seedTaskType, parameters: taskParams });
+    } else if (job.type === this.updateJobType) {
+      const maxUpdateZoomLevel = extractMaxUpdateZoomLevel(job);
+      if (maxUpdateZoomLevel + 1 <= this.maxZoom) {
+        const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdateZoomLevel + 1);
+        activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
+
+        const taskParams = this.createTaskParams(catalogId, cleanOptions);
+        activeSpan?.addEvent('createTaskParams.success', { taskParams: JSON.stringify(taskParams) });
+
+        seedTasks.push({ type: seedTaskType, parameters: taskParams });
+      }
+    }
+    return seedTasks;
+
+    //TODO: add this when we would want to seperate both clean tasks by zoom and maxTilesCount
+    /** 
+     *  const maxUpdatedZoom = extractMaxUpdateZoomLevel(job);
+    const startCleanZoom: number = job.type === this.swapUpdateJobType ? this.zoomThreshold + 1 : maxUpdatedZoom + 1;
 
     // For swap update, create a base task from 0 to zoomThreshold
     if (job.type === this.swapUpdateJobType) {
@@ -168,6 +191,7 @@ export class SeedingJobCreator {
     }
 
     return seedTasks;
+     */
   }
 
   private handleSeedMode(
@@ -205,7 +229,8 @@ export class SeedingJobCreator {
     // Step 2: Handle high-res parts individually by zoom level
     for (const part of highZoomParts) {
       const partZoomLevel = degreesPerPixelToZoomLevel(part.resolutionDegree);
-      for (let zoom = this.zoomThreshold + 1; zoom <= Math.min(partZoomLevel, this.maxZoom); zoom++) { // the min between the parts updated zoom level and the max allowed zoom
+      for (let zoom = this.zoomThreshold + 1; zoom <= Math.min(partZoomLevel, this.maxZoom); zoom++) {
+        // the min between the parts updated zoom level and the max allowed zoom
         const estimatedTiles = featureToTilesCount(feature(part.footprint), zoom);
 
         if (estimatedTiles <= this.maxTilesPerSeedTask) {
