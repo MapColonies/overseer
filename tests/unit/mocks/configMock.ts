@@ -159,6 +159,8 @@ const registerDefaultConfig = (): void => {
           grid: 'WorldCRS84',
           maxZoom: 21,
           skipUncached: true,
+          zoomThreshold: 16,
+          maxTilesPerSeedTask: 250000,
         },
       },
       export: {

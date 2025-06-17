@@ -9,7 +9,7 @@ import type {
   IngestionUpdateInitJob,
 } from '../../../src/utils/zod/schemas/job.schema';
 import { Grid } from '../../../src/common/interfaces';
-import { partsData } from './partsMockData';
+import { partsData, partsDataHighRes, partsDataHighResMaxTiles } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
@@ -142,6 +142,30 @@ export const ingestionUpdateJob: IngestionUpdateInitJob = {
   abortedTasks: 0,
   created: '2024-07-21T10:59:23.510Z',
   updated: '2024-07-21T10:59:23.510Z',
+};
+
+export const ingestionUpdateJobHighRes: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    partsData: partsDataHighRes,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
+};
+
+export const ingestionUpdateJobHighResMaxTiles: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    partsData: partsDataHighResMaxTiles,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
 };
 
 export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
@@ -280,6 +304,17 @@ export const exportJob: ExportJob = {
 };
 
 export const ingestionUpdateFinalizeJob: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
+};
+
+export const ingestionUpdateFinalizeJobHighRes: IngestionUpdateFinalizeJob = {
   ...ingestionUpdateJob,
   parameters: {
     ...ingestionUpdateJob.parameters,

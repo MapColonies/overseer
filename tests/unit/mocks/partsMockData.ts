@@ -181,3 +181,113 @@ export const multiPartDataWithDifferentResolution: PolygonPart[] = [
     },
   },
 ];
+
+export const partsDataHighRes: PolygonPart[] = [
+  {
+    sourceId: 'avi',
+    sourceName: 'string',
+    cities: ['string'],
+    sensors: ['string'],
+    footprint: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [34.85149443279957, 32.30543192283443],
+          [34.85149443279957, 32.29430955805424],
+          [34.86824157112912, 32.29430955805424],
+          [34.86824157112912, 32.30543192283443],
+          [34.85149443279957, 32.30543192283443],
+        ],
+      ],
+    },
+    countries: ['string'],
+    description: 'string',
+    resolutionMeter: 8000,
+    resolutionDegree: 0.00000536441802978516,
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    sourceResolutionMeter: 8000,
+    horizontalAccuracyCE90: 10,
+  },
+  {
+    sourceId: 'avi1',
+    sourceName: 'string',
+    cities: ['string'],
+    sensors: ['string'],
+    footprint: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [34.85149443279957, 32.30543192283443],
+          [34.85149443279957, 32.29430955805424],
+          [34.86824157112912, 32.29430955805424],
+          [34.86824157112912, 32.30543192283443],
+          [34.85149443279957, 32.30543192283443],
+        ],
+      ],
+    },
+    countries: ['string'],
+    description: 'string',
+    resolutionMeter: 8000,
+    resolutionDegree: 0.001373291015625,
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    sourceResolutionMeter: 8000,
+    horizontalAccuracyCE90: 10,
+  },
+];
+
+export const partsDataHighResMaxTiles: PolygonPart[] = [
+  {
+    sourceId: 'avi',
+    sourceName: 'string',
+    cities: ['string'],
+    sensors: ['string'],
+    footprint: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [34.542379117579, 32.459145474031416],
+          [34.19456437377718, 31.793454002720082],
+          [35.41196976684111, 31.37860833792577],
+          [35.57880709465729, 32.4297856844493],
+          [34.542379117579, 32.459145474031416],
+        ],
+      ],
+    },
+    countries: ['string'],
+    description: 'string',
+    resolutionMeter: 8000,
+    resolutionDegree: 0.00000536441802978516,
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    sourceResolutionMeter: 8000,
+    horizontalAccuracyCE90: 10,
+  },
+  {
+    sourceId: 'avi1',
+    sourceName: 'string',
+    cities: ['string'],
+    sensors: ['string'],
+    footprint: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [34.85149443279957, 32.30543192283443],
+          [34.85149443279957, 32.29430955805424],
+          [34.86824157112912, 32.29430955805424],
+          [34.86824157112912, 32.30543192283443],
+          [34.85149443279957, 32.30543192283443],
+        ],
+      ],
+    },
+    countries: ['string'],
+    description: 'string',
+    resolutionMeter: 8000,
+    resolutionDegree: 0.001373291015625,
+    imagingTimeEndUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    imagingTimeBeginUTC: '2024-01-28T13:47:43.427Z' as unknown as Date,
+    sourceResolutionMeter: 8000,
+    horizontalAccuracyCE90: 10,
+  },
+];
