@@ -67,10 +67,10 @@ export class SeedingJobCreator {
         const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
 
         // Handle different modes
-        const clearModeTasks = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
+        const cleanModeTasks = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
         const seedModeTasks = this.handleSeedMode(ingestionJob, cacheName, validCatalogId);
 
-        seedTasks.push(...clearModeTasks);
+        seedTasks.push(...cleanModeTasks);
         seedTasks.push(...seedModeTasks);
 
         if (seedTasks.length === 0) {
@@ -293,135 +293,4 @@ export class SeedingJobCreator {
 
     return geometry;
   }
-
-  // private getSplittedIntersections(seedGeometry: Polygon | MultiPolygon, partArea: number): Feature<Polygon | MultiPolygon>[] {
-  //   const seedBbox = bbox(seedGeometry);
-  //   const seedFeature = feature(seedGeometry);
-
-  //   const smallBboxes = this.splitBoundingBox(seedBbox, partArea);
-
-  //   const intersectionFeatures: Feature<Polygon | MultiPolygon>[] = [];
-
-  //   for (const tileBbox of smallBboxes) {
-  //     // Create a polygon from the small bbox
-  //     const tilePolygon = bboxPolygon(tileBbox);
-
-  //     // Find the intersection with the original geometry
-  //     try {
-  //       const intersection = intersect(featureCollection([tilePolygon, seedFeature]));
-
-  //       // Only add the intersection if it exists (they might not intersect if the original
-  //       // geometry had a complex shape and the bbox was just a rough envelope)
-  //       if (intersection) {
-  //         intersectionFeatures.push(intersection);
-  //       }
-  //     } catch (error) {
-  //       // Handle any turf.js intersection errors
-  //       console.warn('Error calculating intersection for tile:', tileBbox, error);
-  //       // Skip this tile if there's an error
-  //     }
-  //   }
-
-  //   return intersectionFeatures;
-  // }
-  // private calculateDistanceInKm(point1: [number, number], point2: [number, number]): number {
-  //   const from = point(point1);
-  //   const to = point(point2);
-  //   return distance(from, to, { units: 'kilometers' });
-  // }
-
-  /**
-   * Splits a large bounding box (bbox) into smaller sub-boxes (tiles) such that each tile
-   * does not exceed a predefined maximum area threshold (in square kilometers). To achieve this,
-   * the function first converts the bbox dimensions from geographic coordinates (degrees) into
-   * real-world distances (kilometers) to calculate an accurate aspect ratio. Based on the total
-   * area and the maximum tile size, it estimates how many tiles are needed and determines the
-   * optimal number of horizontal (X) and vertical (Y) splits to preserve the shape of the original
-   * bbox — favoring square-shaped tiles over elongated ones. It then creates a sample tile to
-   * verify the actual area after conversion, and if that sample still exceeds the limit, it increases
-   * the split count accordingly. Finally, it generates a grid of equally sized sub-bboxes that fully
-   * cover the original bbox without overlaps or gaps, ensuring the result is efficient for downstream
-   * processing like spatial tiling, rendering, or parallel computation.
-   */
-
-  /**  private splitBoundingBox(bbox: BBox, partArea: number): BBox[] {
-    const maxTileAreaKm2 = this.areaThresholdKm;
-
-    // We'll determine an appropriate number of splits based on the area ratio
-    // and the shape of the bounding box
-
-    // Calculate aspect ratio of the bbox (in terms of distance, not degrees)
-    const bboxWidth = this.calculateDistanceInKm([bbox[0], bbox[1]], [bbox[2], bbox[1]]);
-
-    const bboxHeight = this.calculateDistanceInKm([bbox[0], bbox[1]], [bbox[0], bbox[3]]);
-
-    const aspectRatio = bboxWidth / bboxHeight;
-
-    // Calculate how many tiles we need in total
-    // Add a buffer by multiplying by 1.2 to ensure we have enough tiles
-    const totalTilesNeeded = Math.ceil((partArea / maxTileAreaKm2) * 1.2);
-
-    // Distribute splits according to aspect ratio to maintain roughly square tiles
-    // We want more splits along the longer dimension
-    let numYSplits, numXSplits;
-
-    /* If it's wider than tall, split more horizontally.
-If it's taller than wide, split more vertically.
-
-    if (aspectRatio >= 1) {
-      // Width is greater than or equal to height
-      numXSplits = Math.ceil(Math.sqrt(totalTilesNeeded * aspectRatio));
-      numYSplits = Math.ceil(totalTilesNeeded / numXSplits);
-    } else {
-      // Height is greater than width
-      numYSplits = Math.ceil(Math.sqrt(totalTilesNeeded / aspectRatio));
-      numXSplits = Math.ceil(totalTilesNeeded / numYSplits);
-    }
-
-    // Make sure we have at least one split in each dimension
-    numXSplits = Math.max(1, numXSplits);
-    numYSplits = Math.max(1, numYSplits);
-
-    // To guarantee we don't exceed the area threshold without recursion,
-    // we might need to add more splits if our initial estimation isn't sufficient
-
-    // First check if our initial split estimate is enough
-    const xStep = (bbox[2] - bbox[0]) / numXSplits;
-    const yStep = (bbox[3] - bbox[1]) / numYSplits;
-
-    // Check the area of a single tile with our current split configuration
-    const sampleBBox: BBox = [bbox[0], bbox[1], bbox[0] + xStep, bbox[1] + yStep];
-    const samplePolygon = bboxPolygon(sampleBBox);
-    const sampleArea = area(samplePolygon) / 1000000; // km²
-
-    // If our sample tile is still too large, increase the number of splits
-    if (sampleArea > maxTileAreaKm2) {
-      const areaRatio = sampleArea / maxTileAreaKm2;
-      const additionalSplitFactor = Math.ceil(Math.sqrt(areaRatio));
-
-      numXSplits *= additionalSplitFactor;
-      numYSplits *= additionalSplitFactor;
-    }
-
-    // Recalculate steps with potentially adjusted split counts
-    const finalXStep = (bbox[2] - bbox[0]) / numXSplits;
-    const finalYStep = (bbox[3] - bbox[1]) / numYSplits;
-
-    // Generate all sub-bboxes
-    const resultBBoxes: BBox[] = [];
-
-    for (let yi = 0; yi < numYSplits; yi++) {
-      for (let xi = 0; xi < numXSplits; xi++) {
-        const minX = bbox[0] + xi * finalXStep;
-        const minY = bbox[1] + yi * finalYStep;
-        const maxX = Math.min(bbox[2], bbox[0] + (xi + 1) * finalXStep);
-        const maxY = Math.min(bbox[3], bbox[1] + (yi + 1) * finalYStep);
-
-        const subBBox: BBox = [minX, minY, maxX, maxY];
-        resultBBoxes.push(subBBox);
-      }
-    }
-
-    return resultBBoxes;
-  }*/
 }

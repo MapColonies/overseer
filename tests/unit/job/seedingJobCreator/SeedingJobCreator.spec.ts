@@ -305,11 +305,7 @@ describe('SeedingJobCreator', () => {
 
         // Get unified geometry from all parts
         const unifiedGeometry = unifyParts(ingestionUpdateJobHighRes.parameters.partsData);
-        const seedGeometry = unifiedGeometry?.geometry;
-
-        if (!seedGeometry) {
-          throw new Error('Failed to unify parts geometry');
-        }
+        const seedGeometry = unifiedGeometry?.geometry ?? (() => { throw new Error('Failed to unify parts geometry'); })();
 
         // Base task from 0 to zoomThreshold
         const baseSeedTaskOptions: SeedTaskOptions = {
@@ -418,11 +414,8 @@ describe('SeedingJobCreator', () => {
 
         // Get unified geometry from all parts
         const unifiedGeometry = unifyParts(ingestionUpdateJobHighResMaxTiles.parameters.partsData);
-        const seedGeometry = unifiedGeometry?.geometry;
+        const seedGeometry = unifiedGeometry?.geometry ?? (() => { throw new Error('Failed to unify parts geometry'); })();
 
-        if (!seedGeometry) {
-          throw new Error('Failed to unify parts geometry');
-        }
 
         // Get the first part's geometry for high-res splitting
         const firstPartGeometry = ingestionUpdateJobHighResMaxTiles.parameters.partsData[0].footprint;
