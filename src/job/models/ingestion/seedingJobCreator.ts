@@ -213,7 +213,7 @@ export class SeedingJobCreator {
     const partsData = job.parameters.partsData;
     const thresholdZoom =
       zoomLevelToResolutionDeg(this.zoomThreshold) ??
-      ((): number => {
+      ((): never => {
         throw new Error(`Failed to calculate resolution for zoom threshold: ${this.zoomThreshold}`);
       })();
     const highZoomParts = partsData.filter((p) => p.resolutionDegree < thresholdZoom);
