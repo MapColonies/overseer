@@ -118,12 +118,6 @@ export class SeedingJobCreator {
     const seedTaskType = this.tilesSeedingConfig.type;
     const logger = this.logger.child({ mode: SeedMode.CLEAN, jobId: job.id, catalogId: job.internalId });
 
-    if (job.type !== this.updateJobType && job.type !== this.swapUpdateJobType) {
-      this.logger.debug({ msg: 'Ingestion Job is not of update or swap type, skipping CLEAN creation' });
-      activeSpan?.addEvent('handleSeedMode.skipped');
-      return [];
-    }
-
     const cleanGeometry = this.calculateGeometryByMode(SeedMode.CLEAN, job);
     if (!cleanGeometry) {
       activeSpan?.addEvent('calculateCleanGeometry.empty');
