@@ -13,6 +13,10 @@ import {
   ingestionUpdateJob,
   ingestionUpdateJobHighRes,
   ingestionUpdateJobHighResMaxTiles,
+  createBaseSeedTaskOptions,
+  createHighResSeedTaskOptions,
+  createCleanTaskOptions,
+  createSeedJob,
 } from '../../mocks/jobsMockData';
 import { unifyParts, splitGeometryByTileCount } from '../../../../src/utils/seedingUtils';
 import { SeedingJobCreatorTestContext, seedJobParameters, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
@@ -305,7 +309,11 @@ describe('SeedingJobCreator', () => {
 
         // Get unified geometry from all parts
         const unifiedGeometry = unifyParts(ingestionUpdateJobHighRes.parameters.partsData);
-        const seedGeometry = unifiedGeometry?.geometry ?? (() => { throw new Error('Failed to unify parts geometry'); })();
+        const seedGeometry =
+          unifiedGeometry?.geometry ??
+          (() => {
+            throw new Error('Failed to unify parts geometry');
+          })();
 
         // Base task from 0 to zoomThreshold
         const baseSeedTaskOptions: SeedTaskOptions = {
@@ -342,46 +350,11 @@ describe('SeedingJobCreator', () => {
           mode: SeedMode.CLEAN,
         };
 
-        const seedJob = {
-          resourceId: ingestionUpdateJobHighRes.resourceId,
-          internalId: ingestionUpdateJobHighRes.internalId,
-          version: ingestionUpdateJobHighRes.version,
-          type: seedJobType,
-          parameters: {},
-          status: OperationStatus.IN_PROGRESS,
-          producerName: ingestionUpdateJobHighRes.producerName,
-          productType: ingestionUpdateJobHighRes.productType,
-          domain: ingestionUpdateJobHighRes.domain,
-          tasks: [
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighRes.internalId,
-                seedTasks: [cleanTaskOptions],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighRes.internalId,
-                seedTasks: [baseSeedTaskOptions],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighRes.internalId,
-                seedTasks: [highResSeedTaskOptions],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-          ],
-        };
+        const seedJob = createSeedJob(ingestionUpdateJobHighRes, seedJobType, tilesSeedingConfig.type, [
+          cleanTaskOptions,
+          baseSeedTaskOptions,
+          highResSeedTaskOptions,
+        ]);
 
         jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
         mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
@@ -391,7 +364,6 @@ describe('SeedingJobCreator', () => {
           .post('/jobs')
           .reply(200, { id: seedJobId, taskIds: [taskId] });
 
-
         const action = async () => {
           await seedingJobCreator.create(seedJobParams);
         };
@@ -399,7 +371,6 @@ describe('SeedingJobCreator', () => {
         await expect(action()).resolves.not.toThrow();
         expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
         expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
-
       });
 
       it('should create multiple seed tasks when high-res parts exceed maxTilesPerSeedTask', async () => {
@@ -418,8 +389,11 @@ describe('SeedingJobCreator', () => {
 
         // Get unified geometry from all parts
         const unifiedGeometry = unifyParts(ingestionUpdateJobHighResMaxTiles.parameters.partsData);
-        const seedGeometry = unifiedGeometry?.geometry ?? (() => { throw new Error('Failed to unify parts geometry'); })();
-
+        const seedGeometry =
+          unifiedGeometry?.geometry ??
+          (() => {
+            throw new Error('Failed to unify parts geometry');
+          })();
 
         // Get the first part's geometry for high-res splitting
         const firstPartGeometry = ingestionUpdateJobHighResMaxTiles.parameters.partsData[0].footprint;
@@ -429,140 +403,24 @@ describe('SeedingJobCreator', () => {
         const splitGeometries = splitGeometryByTileCount(firstPartGeometry, 17, maxTilesPerSeedTask);
 
         // Base task from 0 to zoomThreshold
-        const baseSeedTaskOptions: SeedTaskOptions = {
-          fromZoomLevel: 0,
-          toZoomLevel: 16,
-          skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: seedGeometry,
-          refreshBefore: '2024-11-05T13:50:27',
-          layerId: layerCacheName,
-          grid: tilesSeedingConfig.grid,
-          mode: SeedMode.SEED,
-        };
+        const baseSeedTaskOptions = createBaseSeedTaskOptions(seedGeometry, layerCacheName, 16);
 
         // High-res tasks using the split geometries
-        const highResSeedTaskOptions1: SeedTaskOptions = {
-          fromZoomLevel: 17,
-          toZoomLevel: 17,
-          skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: splitGeometries[0],
-          refreshBefore: '2024-11-05T13:50:27',
-          layerId: layerCacheName,
-          grid: tilesSeedingConfig.grid,
-          mode: SeedMode.SEED,
-        };
+        const highResSeedTaskOptions1 = createHighResSeedTaskOptions(splitGeometries[0], layerCacheName);
+        const highResSeedTaskOptions2 = createHighResSeedTaskOptions(splitGeometries[1], layerCacheName);
+        const highResSeedTaskOptions3 = createHighResSeedTaskOptions(splitGeometries[2], layerCacheName);
+        const highResSeedTaskOptions4 = createHighResSeedTaskOptions(splitGeometries[3], layerCacheName);
 
-        const highResSeedTaskOptions2: SeedTaskOptions = {
-          fromZoomLevel: 17,
-          toZoomLevel: 17,
-          skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: splitGeometries[1],
-          refreshBefore: '2024-11-05T13:50:27',
-          layerId: layerCacheName,
-          grid: tilesSeedingConfig.grid,
-          mode: SeedMode.SEED,
-        };
+        const cleanTaskOptions = createCleanTaskOptions(seedGeometry, layerCacheName, 18, tilesSeedingConfig.maxZoom);
 
-        const highResSeedTaskOptions3: SeedTaskOptions = {
-          fromZoomLevel: 17,
-          toZoomLevel: 17,
-          skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: splitGeometries[2],
-          refreshBefore: '2024-11-05T13:50:27',
-          layerId: layerCacheName,
-          grid: tilesSeedingConfig.grid,
-          mode: SeedMode.SEED,
-        };
-
-        const highResSeedTaskOptions4: SeedTaskOptions = {
-          fromZoomLevel: 17,
-          toZoomLevel: 17,
-          skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: splitGeometries[3],
-          refreshBefore: '2024-11-05T13:50:27',
-          layerId: layerCacheName,
-          grid: tilesSeedingConfig.grid,
-          mode: SeedMode.SEED,
-        };
-
-        const cleanTaskOptions: SeedTaskOptions = {
-          fromZoomLevel: 18,
-          toZoomLevel: tilesSeedingConfig.maxZoom,
-          skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: seedGeometry,
-          refreshBefore: '2024-11-05T13:50:27',
-          layerId: layerCacheName,
-          grid: tilesSeedingConfig.grid,
-          mode: SeedMode.CLEAN,
-        };
-
-        const seedJob = {
-          resourceId: ingestionUpdateJobHighResMaxTiles.resourceId,
-          internalId: ingestionUpdateJobHighResMaxTiles.internalId,
-          version: ingestionUpdateJobHighRes.version,
-          type: seedJobType,
-          parameters: {},
-          status: OperationStatus.IN_PROGRESS,
-          producerName: ingestionUpdateJobHighResMaxTiles.producerName,
-          productType: ingestionUpdateJobHighResMaxTiles.productType,
-          domain: ingestionUpdateJobHighResMaxTiles.domain,
-          tasks: [
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighResMaxTiles.internalId,
-                seedTasks: [cleanTaskOptions],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighResMaxTiles.internalId,
-                seedTasks: [baseSeedTaskOptions],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighResMaxTiles.internalId,
-                seedTasks: [highResSeedTaskOptions1],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighResMaxTiles.internalId,
-                seedTasks: [highResSeedTaskOptions2],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighResMaxTiles.internalId,
-                seedTasks: [highResSeedTaskOptions3],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-            {
-              type: tilesSeedingConfig.type,
-              parameters: {
-                cacheType: LayerCacheType.REDIS,
-                catalogId: ingestionUpdateJobHighResMaxTiles.internalId,
-                seedTasks: [highResSeedTaskOptions4],
-                traceParentContext: undefined,
-              } as SeedTaskParams,
-            },
-          ],
-        };
+        const seedJob = createSeedJob(ingestionUpdateJobHighResMaxTiles, seedJobType, tilesSeedingConfig.type, [
+          cleanTaskOptions,
+          baseSeedTaskOptions,
+          highResSeedTaskOptions1,
+          highResSeedTaskOptions2,
+          highResSeedTaskOptions3,
+          highResSeedTaskOptions4,
+        ]);
 
         jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
         mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
@@ -572,7 +430,6 @@ describe('SeedingJobCreator', () => {
           .post('/jobs')
           .reply(200, { id: seedJobId, taskIds: [taskId] });
 
-       
         const action = async () => {
           await seedingJobCreator.create(seedJobParams);
         };
@@ -580,7 +437,6 @@ describe('SeedingJobCreator', () => {
         await expect(action()).resolves.not.toThrow();
         expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
         expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
-    
       });
     });
   });

@@ -162,7 +162,6 @@ const registerDefaultConfig = (): void => {
             maxTilesPerSeedTask: 500000,
           },
         },
-       
       },
       export: {
         tasks: {
