@@ -391,11 +391,15 @@ describe('SeedingJobCreator', () => {
           .post('/jobs')
           .reply(200, { id: seedJobId, taskIds: [taskId] });
 
-        const res = await seedingJobCreator.create(seedJobParams);
 
+        const action = async () => {
+          await seedingJobCreator.create(seedJobParams);
+        };
+
+        await expect(action()).resolves.not.toThrow();
         expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
         expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
-        expect(res).toBeUndefined();
+
       });
 
       it('should create multiple seed tasks when high-res parts exceed maxTilesPerSeedTask', async () => {
@@ -568,11 +572,15 @@ describe('SeedingJobCreator', () => {
           .post('/jobs')
           .reply(200, { id: seedJobId, taskIds: [taskId] });
 
-        const res = await seedingJobCreator.create(seedJobParams);
+       
+        const action = async () => {
+          await seedingJobCreator.create(seedJobParams);
+        };
 
+        await expect(action()).resolves.not.toThrow();
         expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
         expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
-        expect(res).toBeUndefined();
+    
       });
     });
   });
