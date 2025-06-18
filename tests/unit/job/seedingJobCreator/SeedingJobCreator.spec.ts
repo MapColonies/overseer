@@ -18,7 +18,7 @@ import {
   createCleanTaskOptions,
   createSeedJob,
 } from '../../mocks/jobsMockData';
-import { unifyParts, splitGeometryByTileCount } from '../../../../src/utils/seedingUtils';
+import { unifyParts, splitGeometryByTileCount } from '../../../../src/utils/geoUtils';
 import { SeedingJobCreatorTestContext, seedJobParameters, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
 
 describe('SeedingJobCreator', () => {

@@ -11,7 +11,7 @@ import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
 import { extractMaxUpdateZoomLevel } from '../../../utils/partsDataUtil';
-import { unifyParts, splitGeometryByTileCount } from '../../../utils/seedingUtils';
+import { unifyParts, splitGeometryByTileCount } from '../../../utils/geoUtils';
 
 @injectable()
 export class SeedingJobCreator {
@@ -142,7 +142,7 @@ export class SeedingJobCreator {
 
       seedTasks.push({ type: seedTaskType, parameters: taskParams });
     } else if (job.type === this.updateJobType) {
-      const maxUpdateZoomLevel = extractMaxUpdateZoomLevel(job);
+      const maxUpdateZoomLevel = extractMaxUpdateZoomLevel(job.parameters.partsData);
       if (maxUpdateZoomLevel + 1 <= this.maxZoom) {
         const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdateZoomLevel + 1);
         activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
@@ -217,12 +217,17 @@ export class SeedingJobCreator {
     }
 
     const partsData = job.parameters.partsData;
-    const thresholdZoom = zoomLevelToResolutionDeg(this.zoomThreshold) as number;
+    const thresholdZoom =
+      zoomLevelToResolutionDeg(this.zoomThreshold) ??
+      ((): number => {
+        throw new Error(`Failed to calculate resolution for zoom threshold: ${this.zoomThreshold}`);
+      })();
     const highZoomParts = partsData.filter((p) => p.resolutionDegree < thresholdZoom);
-    const maxUpdatedZoom = extractMaxUpdateZoomLevel(job);
+    const maxUpdatedZoom = extractMaxUpdateZoomLevel(partsData);
 
     // Step 1: Handle all res from 0 to zoomThreshold in one seed task
-    const seedOptions = this.createSeedOptions(SeedMode.SEED, seedGeometry as Footprint, cacheName, 0, Math.min(maxUpdatedZoom, this.zoomThreshold));
+    const baseZoomLevel = 0;
+    const seedOptions = this.createSeedOptions(SeedMode.SEED, seedGeometry, cacheName, baseZoomLevel, Math.min(maxUpdatedZoom, this.zoomThreshold));
     const taskParams = this.createTaskParams(catalogId, seedOptions);
     seedTasks.push({ type: seedTaskType, parameters: taskParams });
 
@@ -253,14 +258,20 @@ export class SeedingJobCreator {
     return seedTasks;
   }
 
-  private createSeedOptions(mode: SeedMode, geometry: Footprint, cacheName: string, fromZoomLevel?: number, toZoomLevel?: number): SeedTaskOptions {
-    const { grid, maxZoom, skipUncached } = this.tilesSeedingConfig;
+  private createSeedOptions(
+    mode: SeedMode,
+    geometry: Footprint,
+    cacheName: string,
+    fromZoomLevel: number = 0,
+    toZoomLevel: number = this.maxZoom
+  ): SeedTaskOptions {
+    const { grid, skipUncached } = this.tilesSeedingConfig;
     const refreshBefore = getUTCDate().toISOString().replace(/\..+/, '');
     return {
       mode,
       grid,
-      fromZoomLevel: fromZoomLevel ?? 0,
-      toZoomLevel: toZoomLevel ?? maxZoom,
+      fromZoomLevel: fromZoomLevel,
+      toZoomLevel: toZoomLevel,
       geometry,
       skipUncached,
       layerId: cacheName,
