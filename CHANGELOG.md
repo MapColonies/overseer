@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com-personal/MapColonies/overseer/compare/v2.0.3...v2.1.0) (2025-06-19)
+
+
+### Features
+
+* add clean mod to update and separate zoom levels ([2a4e817](https://github.com-personal/MapColonies/overseer/commit/2a4e81705e7df86235981706be54d9401edf2eb7))
+* add seperation to clean tasks ([7e56207](https://github.com-personal/MapColonies/overseer/commit/7e56207bdb5959d3f05e2ec5d028583df56510f9))
+* added tests ([d428a54](https://github.com-personal/MapColonies/overseer/commit/d428a5438dbab47d8e5fc6d165b7f4a05d3a2c06))
+
+
+### Bug Fixes
+
+* pr ([a5aa57d](https://github.com-personal/MapColonies/overseer/commit/a5aa57da52704b4eaf2ea52f1c674cbf8667f837))
+* pr changes ([defaf7a](https://github.com-personal/MapColonies/overseer/commit/defaf7af240bb4ffe9d0a3adbe5787fa57c64298))
+* pr changes ([1bd5f84](https://github.com-personal/MapColonies/overseer/commit/1bd5f841cac34ccf5cf852a01486bce80c05816a))
+* pr changes ([abb92db](https://github.com-personal/MapColonies/overseer/commit/abb92db5bd2291d7fe2b2057eacafb7dddce0f11))
+* remove ternary ([4cd053c](https://github.com-personal/MapColonies/overseer/commit/4cd053caa79aa1ece86c05fba388816fd9d2d0d8))
+* return type never ([8b4f7b2](https://github.com-personal/MapColonies/overseer/commit/8b4f7b2ad31562ce7a932611014c5bf074f7624b))
+* revert to one clean task ([f3c019d](https://github.com-personal/MapColonies/overseer/commit/f3c019db71ea49d329efeca1205ece1537938c38))
+* tests ([2ace7e6](https://github.com-personal/MapColonies/overseer/commit/2ace7e6b42161e0c7ed1f5f74a30419bdf7d4fbd))
+
 ### [2.0.3](https://github.com/MapColonies/overseer/compare/v2.0.2...v2.0.3) (2025-06-05)
 
 
