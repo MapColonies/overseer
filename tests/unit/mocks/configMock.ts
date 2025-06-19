@@ -153,12 +153,14 @@ const registerDefaultConfig = (): void => {
             tileBatchSize: 10000,
             taskBatchSize: 2,
           },
-        },
-        tilesSeeding: {
-          type: 'tilesSeeding',
-          grid: 'WorldCRS84',
-          maxZoom: 21,
-          skipUncached: true,
+          tilesSeeding: {
+            type: 'tilesSeeding',
+            grid: 'WorldCRS84',
+            maxZoom: 21,
+            skipUncached: true,
+            zoomThreshold: 16,
+            maxTilesPerSeedTask: 500000,
+          },
         },
       },
       export: {

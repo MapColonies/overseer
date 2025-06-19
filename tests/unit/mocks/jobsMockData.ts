@@ -1,5 +1,5 @@
 import { Transparency, TileOutputFormat, RasterProductTypes, RASTER_DOMAIN } from '@map-colonies/raster-shared';
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
+import { OperationStatus, ICreateJobBody } from '@map-colonies/mc-priority-queue';
 import type {
   ExportJob,
   IngestionNewFinalizeJob,
@@ -8,8 +8,9 @@ import type {
   IngestionUpdateFinalizeJob,
   IngestionUpdateInitJob,
 } from '../../../src/utils/zod/schemas/job.schema';
-import { Grid } from '../../../src/common/interfaces';
-import { partsData } from './partsMockData';
+import { Grid, SeedTaskOptions, Footprint, SeedTaskParams } from '../../../src/common/interfaces';
+import { SeedMode, LayerCacheType } from '../../../src/common/constants';
+import { partsData, partsDataHighRes, partsDataHighResMaxTiles } from './partsMockData';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
@@ -142,6 +143,30 @@ export const ingestionUpdateJob: IngestionUpdateInitJob = {
   abortedTasks: 0,
   created: '2024-07-21T10:59:23.510Z',
   updated: '2024-07-21T10:59:23.510Z',
+};
+
+export const ingestionUpdateJobHighRes: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    partsData: partsDataHighRes,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
+};
+
+export const ingestionUpdateJobHighResMaxTiles: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    partsData: partsDataHighResMaxTiles,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
 };
 
 export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
@@ -290,6 +315,17 @@ export const ingestionUpdateFinalizeJob: IngestionUpdateFinalizeJob = {
   },
 };
 
+export const ingestionUpdateFinalizeJobHighRes: IngestionUpdateFinalizeJob = {
+  ...ingestionUpdateJob,
+  parameters: {
+    ...ingestionUpdateJob.parameters,
+    additionalParams: {
+      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+      ...ingestionUpdateJob.parameters.additionalParams,
+    },
+  },
+};
+
 export const ingestionSwapUpdateFinalizeJob: IngestionSwapUpdateFinalizeJob = {
   ...ingestionSwapUpdateJob,
   parameters: {
@@ -301,3 +337,69 @@ export const ingestionSwapUpdateFinalizeJob: IngestionSwapUpdateFinalizeJob = {
     },
   },
 };
+
+// Seed Task Options Mock Functions
+export const createBaseSeedTaskOptions = (seedGeometry: Footprint, layerCacheName: string, toZoomLevel: number = 16): SeedTaskOptions => ({
+  fromZoomLevel: 0,
+  toZoomLevel,
+  skipUncached: true,
+  geometry: seedGeometry,
+  refreshBefore: '2024-11-05T13:50:27',
+  layerId: layerCacheName,
+  grid: 'WorldCRS84',
+  mode: SeedMode.SEED,
+});
+
+export const createHighResSeedTaskOptions = (geometry: Footprint, layerCacheName: string, zoomLevel: number = 17): SeedTaskOptions => ({
+  fromZoomLevel: zoomLevel,
+  toZoomLevel: zoomLevel,
+  skipUncached: true,
+  geometry,
+  refreshBefore: '2024-11-05T13:50:27',
+  layerId: layerCacheName,
+  grid: 'WorldCRS84',
+  mode: SeedMode.SEED,
+});
+
+export const createCleanTaskOptions = (
+  seedGeometry: Footprint,
+  layerCacheName: string,
+  fromZoomLevel: number = 18,
+  maxZoom: number = 18
+): SeedTaskOptions => ({
+  fromZoomLevel,
+  toZoomLevel: maxZoom,
+  skipUncached: true,
+  geometry: seedGeometry,
+  refreshBefore: '2024-11-05T13:50:27',
+  layerId: layerCacheName,
+  grid: 'WorldCRS84',
+  mode: SeedMode.CLEAN,
+});
+
+// Seed Job Mock Function
+export const createSeedJob = (
+  ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
+  seedJobType: string,
+  tilesSeedingConfigType: string,
+  seedTaskOptionsList: SeedTaskOptions[]
+): ICreateJobBody<unknown, SeedTaskParams> => ({
+  resourceId: ingestionJob.resourceId,
+  internalId: ingestionJob.internalId,
+  version: ingestionJob.version,
+  type: seedJobType,
+  parameters: {},
+  status: OperationStatus.IN_PROGRESS,
+  producerName: ingestionJob.producerName,
+  productType: ingestionJob.productType,
+  domain: ingestionJob.domain,
+  tasks: seedTaskOptionsList.map((seedTask) => ({
+    type: tilesSeedingConfigType,
+    parameters: {
+      cacheType: LayerCacheType.REDIS,
+      catalogId: ingestionJob.internalId,
+      seedTasks: [seedTask],
+      traceParentContext: undefined,
+    } as SeedTaskParams,
+  })),
+});

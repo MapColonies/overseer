@@ -162,6 +162,18 @@
           "skipUncached": {
             "__name": "TILES_SEEDING_SKIP_UNCACHED",
             "__format": "boolean"
+          },
+          "zoomThreshold": {
+            "__name": "TILES_SEEDING_ZOOM_THRESHOLD",
+            "__format": "number"
+          },
+          "maxTilesPerSeedTask": {
+            "__name": "TILES_SEEDING_MAX_TILES_PER_SEED_TASK",
+            "__format": "number"
+          },
+          "maxTilesPerCleanTask": {
+            "__name": "TILES_SEEDING_MAX_TILES_PER_CLEAN_TASK",
+            "__format": "number"
           }
         }
       }

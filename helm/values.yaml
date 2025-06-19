@@ -149,6 +149,9 @@ jobDefinitions:
         grid: "WorldCRS84"
         maxZoom: 21
         skipUncached: true
+        zoomThreshold: 16 #zoom level threshold for high res seeding first seeding task will be 0->zoomThreshold
+        maxTilesPerSeedTask: 250000
+        maxTilesPerCleanTask: 500000
       export: 
         type: ""
 
