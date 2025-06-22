@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.1.1](https://github.com-personal/MapColonies/overseer/compare/v2.1.0...v2.1.1) (2025-06-22)
+
+
+### Bug Fixes
+
+* productName in seed job ([88391ec](https://github.com-personal/MapColonies/overseer/commit/88391ec677f8ea950009d780a1c5e302bf80742c))
+
 ## [2.1.0](https://github.com-personal/MapColonies/overseer/compare/v2.0.3...v2.1.0) (2025-06-19)
 
 
