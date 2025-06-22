@@ -40,6 +40,7 @@ data:
   HTTP_RETRY_DELAY: {{ .Values.env.httpRetry.delay | quote }}
   HTTP_RETRY_RESET_TIMEOUT: {{ .Values.env.httpRetry.resetTimeout | quote }}
   DISABLE_HTTP_CLIENT_LOGS: {{ .Values.env.disableHttpClientLogs | quote }}
+  INSTANCE_TYPE: {{ .Values.instanceType | quote }}
   JOB_MANAGER_BASE_URL: {{ $serviceUrls.jobManager | quote}}
   HEARTBEAT_BASE_URL: {{ $serviceUrls.heartbeatManager | quote}}
   HEARTBEAT_INTERVAL_MS: {{ $jobDefinitions.config.heartBeat.intervalMs | quote }}
@@ -83,4 +84,4 @@ data:
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
   JOB_TRACKER_URL: {{ $serviceUrls.jobTracker | quote}}
 
-{{- end }}  
+{{- end }}

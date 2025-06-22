@@ -1,27 +1,28 @@
-import { z } from 'zod';
 import { Logger } from '@map-colonies/js-logger';
 import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import type { ITileRange } from '@map-colonies/mc-utils';
 import {
-  type InputFiles,
-  type PolygonPart,
   type IngestionNewFinalizeTaskParams,
-  type IngestionUpdateFinalizeTaskParams,
   type IngestionSwapUpdateFinalizeTaskParams,
-  type TileOutputFormat,
+  type IngestionUpdateFinalizeTaskParams,
+  type InputFiles,
   type LayerName,
+  type PolygonPart,
   type RasterLayerMetadata,
   type TileFormatStrategy,
+  type TileOutputFormat,
   aggregationFeatureSchema,
 } from '@map-colonies/raster-shared';
-import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
-import type { ITileRange } from '@map-colonies/mc-utils';
 import type { Span, SpanContext } from '@opentelemetry/api';
+import type { Units } from '@turf/turf';
+import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
+import { z } from 'zod';
 import type { ExportFinalizeTask, ExportJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import {
-  ingestionSwapUpdateFinalizeJobParamsSchema,
-  ingestionUpdateFinalizeJobParamsSchema,
   extendedRasterLayerMetadataSchema,
   ingestionNewExtendedJobParamsSchema,
+  ingestionSwapUpdateFinalizeJobParamsSchema,
+  ingestionUpdateFinalizeJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
@@ -44,6 +45,11 @@ export interface JobManagerConfig {
   dequeueIntervalMs: number;
 }
 
+export interface GeoserverConfig {
+  workspace: string;
+  datastore: string;
+}
+
 export interface TaskConfig {
   [key: string]: string;
 }
@@ -52,17 +58,23 @@ export interface JobConfig {
   type: string;
 }
 
-export interface IngestionJobs {
+export interface IngestionJobsConfig {
   seed: JobConfig | undefined;
 }
 
-export interface PollingJobs {
+export interface IngestionPollingJobsConfig {
   [key: string]: JobConfig | undefined;
   new: JobConfig | undefined;
   update: JobConfig | undefined;
   swapUpdate: JobConfig | undefined;
+}
+
+export interface ExportPollingJobsConfig {
+  [key: string]: JobConfig | undefined;
   export: JobConfig | undefined;
 }
+
+export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
 export interface PollingTasks {
   init: string;
@@ -71,8 +83,17 @@ export interface PollingTasks {
 
 export interface PollingConfig {
   tasks: PollingTasks;
-  jobs: PollingJobs;
   maxTaskAttempts: number;
+}
+
+export interface TilesMergingTaskConfig {
+  type: 'tiles-merging';
+  tileBatchSize: number;
+  taskBatchSize: number;
+  radiusBuffer: number;
+  radiusBufferUnits: Units;
+  truncatePrecision: number;
+  truncateCoordinates: number;
 }
 
 export interface TilesSeedingTaskConfig {
@@ -80,6 +101,22 @@ export interface TilesSeedingTaskConfig {
   grid: string;
   maxZoom: number;
   skipUncached: boolean;
+}
+
+export interface TilesExportingTaskConfig {
+  type: 'tilesExporting';
+}
+
+export interface JobManagementConfig {
+  config: JobManagerConfig;
+  geoserver: GeoserverConfig;
+  polling: PollingConfig;
+  ingestion: {
+    pollingJobs: IngestionPollingJobsConfig;
+    jobs: IngestionJobsConfig;
+    tasks: { tilesMerging: TilesMergingTaskConfig; tilesSeeding: TilesSeedingTaskConfig };
+  };
+  export: { pollingJobs: ExportPollingJobsConfig; tasks: { tilesExporting: TilesExportingTaskConfig } };
 }
 //#endregion config
 

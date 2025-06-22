@@ -9,16 +9,8 @@ import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { CatalogClient } from '../../../src/httpClients/catalogClient';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { createFakeBBox, createFakeRandomPolygonalGeometry } from '../mocks/partsMockData';
-import { IngestionJobTypes } from '../../../src/utils/configUtil';
 import { tracerMock } from '../mocks/tracerMock';
 import { AggregationLayerMetadata } from '../../../src/common/interfaces';
-
-const jobTypes: IngestionJobTypes = {
-  Ingestion_New: 'Ingestion_New',
-  Ingestion_Update: 'Ingestion_Update',
-  Ingestion_Swap_Update: 'Ingestion_Swap_Update',
-  Export: 'Export',
-};
 
 export type MockCreateLinks = jest.MockedFunction<(data: ILinkBuilderData) => Link[]>;
 
@@ -39,7 +31,7 @@ export function setupCatalogClientTest(): CatalogClientTestContext {
     getAggregatedLayerMetadata: jest.fn(),
   } as unknown as jest.Mocked<PolygonPartsMangerClient>;
 
-  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), tracerMock, jobTypes, linkBuilder, polygonPartsManagerClientMock);
+  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), tracerMock, linkBuilder, polygonPartsManagerClientMock);
 
   return {
     createLinksMock,

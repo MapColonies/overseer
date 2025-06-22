@@ -3,11 +3,12 @@ import jsLogger from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { JobProcessor } from '../../../../src/job/models/jobProcessor';
 import { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory';
-import { configMock } from '../../mocks/configMock';
+import { configMock, setValue } from '../../mocks/configMock';
 import { JobManagerConfig } from '../../../../src/common/interfaces';
 import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
+import type { InstanceType } from '../../../../src/utils/zod/schemas/instance.schema';
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -26,7 +27,13 @@ export interface JobProcessorTestContext {
   jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
 }
 
-export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQueueClient?: boolean }): JobProcessorTestContext {
+export function setupJobProcessorTest({
+  instanceType,
+  useMockQueueClient = false,
+}: {
+  useMockQueueClient?: boolean;
+  instanceType?: InstanceType;
+}): JobProcessorTestContext {
   const mockLogger = jsLogger({ enabled: false });
 
   const mockJobHandlerFactory = jest.fn();
@@ -44,6 +51,10 @@ export function setupJobProcessorTest({ useMockQueueClient = false }: { useMockQ
       updateJob: mockUpdateJob,
     },
   } as unknown as jest.Mocked<QueueClient>;
+
+  if (instanceType) {
+    setValue('instanceType', instanceType);
+  }
 
   const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 
