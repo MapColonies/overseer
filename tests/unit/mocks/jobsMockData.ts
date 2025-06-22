@@ -391,6 +391,7 @@ export const createSeedJob = (
   parameters: {},
   status: OperationStatus.IN_PROGRESS,
   producerName: ingestionJob.producerName,
+  productName: ingestionJob.productName,
   productType: ingestionJob.productType,
   domain: ingestionJob.domain,
   tasks: seedTaskOptionsList.map((seedTask) => ({

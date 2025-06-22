@@ -69,6 +69,7 @@ describe('SeedingJobCreator', () => {
         parameters: {},
         status: OperationStatus.IN_PROGRESS,
         producerName: ingestionSwapUpdateFinalizeJob.producerName,
+        productName: ingestionSwapUpdateFinalizeJob.productName,
         productType: ingestionSwapUpdateFinalizeJob.productType,
         domain: ingestionSwapUpdateFinalizeJob.domain,
         tasks: [
@@ -141,6 +142,7 @@ describe('SeedingJobCreator', () => {
         parameters: {},
         status: OperationStatus.IN_PROGRESS,
         producerName: ingestionUpdateJob.producerName,
+        productName: ingestionUpdateJob.productName,
         productType: ingestionUpdateJob.productType,
         domain: ingestionUpdateJob.domain,
         tasks: [
@@ -226,6 +228,7 @@ describe('SeedingJobCreator', () => {
         status: OperationStatus.IN_PROGRESS,
         producerName: ingestionUpdateJob.producerName,
         productType: ingestionUpdateJob.productType,
+        productName: ingestionUpdateJob.productName,
         domain: ingestionUpdateJob.domain,
         tasks: [
           {
