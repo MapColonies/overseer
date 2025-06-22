@@ -79,7 +79,7 @@ export class SeedingJobCreator {
           return;
         }
 
-        const { resourceId, version, producerName, productType, domain } = ingestionJob;
+        const { resourceId, version, producerName, productType, domain, productName } = ingestionJob;
         const createJobRequest: ICreateJobBody<unknown, SeedTaskParams> = {
           resourceId,
           internalId: validCatalogId,
@@ -88,6 +88,7 @@ export class SeedingJobCreator {
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
           producerName: producerName ?? undefined,
+          productName: productName ?? undefined,
           productType,
           domain,
           tasks: seedTasks,
