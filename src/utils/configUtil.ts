@@ -64,6 +64,6 @@ export const parseInstanceType = (instanceType: string): InstanceType => {
   try {
     return instanceTypeSchema.parse(instanceType);
   } catch (err) {
-    throw new InvalidConfigError(`Invalid configuration for "instancteType". supported values: (${INSTANCE_TYPES.join(',')})`);
+    throw new InvalidConfigError(`Invalid configuration for "instanceType". supported values: (${INSTANCE_TYPES.join(',')})`);
   }
 };
