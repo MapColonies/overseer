@@ -12,15 +12,39 @@ import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyr
 import type { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { SERVICES, SERVICE_NAME, SERVICE_VERSION } from './common/constants';
 import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
-import { IConfig, IS3Config, JobManagerConfig, PollingJobs } from './common/interfaces';
+import { IConfig, IS3Config, JobManagerConfig, type JobManagementConfig } from './common/interfaces';
 import { tracing } from './common/tracing';
 import { ExportJobHandler } from './job/models/export/exportJobHandler';
 import { NewJobHandler } from './job/models/ingestion/newJobHandler';
 import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
 import { UpdateJobHandler } from './job/models/ingestion/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
-import { parseInstanceType, validateAndGetHandlersTokens } from './utils/configUtil';
+import { getPollingJobs, parseInstanceType, validateAndGetHandlersTokens } from './utils/configUtil';
 import { InstanceType } from './utils/zod/schemas/instance.schema';
+
+const registerHandlers = (instanceType: InstanceType, handlersTokens: Record<string, string>): InjectionObject<unknown>[] => {
+  switch (instanceType) {
+    case 'ingestion':
+      return [
+        { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
+        { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
+        { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
+      ];
+    case 'export':
+      return [{ token: handlersTokens.Export, provider: { useClass: ExportJobHandler } }];
+  }
+};
+
+const registerInstanceDependencies = (instanceType: InstanceType): InjectionObject<unknown>[] => {
+  switch (instanceType) {
+    case 'ingestion':
+      return [{ token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } }];
+    case 'export': {
+      const s3Config = config.get<IS3Config>('S3');
+      return [{ token: SERVICES.S3CONFIG, provider: { useValue: s3Config } }];
+    }
+  }
+};
 
 export const queueClientFactory = (container: DependencyContainer): QueueClient => {
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
@@ -42,6 +66,7 @@ export const queueClientFactory = (container: DependencyContainer): QueueClient 
     disableHttpClientLogs
   );
 };
+
 export interface RegisterOptions {
   override?: InjectionObject<unknown>[];
   useChild?: boolean;
@@ -49,7 +74,6 @@ export interface RegisterOptions {
 
 export const registerExternalValues = (options?: RegisterOptions): DependencyContainer => {
   const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
-  const s3Config = config.get<IS3Config>('S3');
 
   const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin(), pinoCaller: loggerConfig.pinoCaller });
 
@@ -57,40 +81,9 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
   const tracer = trace.getTracer(SERVICE_NAME, SERVICE_VERSION);
 
   const instanceType = parseInstanceType(config.get<InstanceType>('instanceType'));
-  let pollingJobs: PollingJobs;
-
-  switch (instanceType) {
-    case 'ingestion':
-      pollingJobs = config.get<PollingJobs>('jobManagement.ingestion.pollingJobs');
-      break;
-    case 'export':
-      pollingJobs = config.get<PollingJobs>('jobManagement.export.pollingJobs');
-      break;
-  }
-
+  const jobManagementConfig = config.get<JobManagementConfig>('jobManagement');
+  const pollingJobs = getPollingJobs(jobManagementConfig, instanceType);
   const handlersTokens = validateAndGetHandlersTokens(pollingJobs, instanceType);
-
-  const registerHandlers = (instanceType: InstanceType): InjectionObject<unknown>[] => {
-    switch (instanceType) {
-      case 'ingestion':
-        return [
-          { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
-          { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
-          { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
-        ];
-      case 'export':
-        return [{ token: handlersTokens.Export, provider: { useClass: ExportJobHandler } }];
-    }
-  };
-
-  const registerInstanceDependencies = (instanceType: InstanceType): InjectionObject<unknown>[] => {
-    switch (instanceType) {
-      case 'ingestion':
-        return [{ token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } }];
-      case 'export':
-        return [{ token: SERVICES.S3CONFIG, provider: { useValue: s3Config } }];
-    }
-  };
 
   const dependencies: InjectionObject<unknown>[] = [
     { token: SERVICES.CONFIG, provider: { useValue: config } },
@@ -98,7 +91,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
     { token: SERVICES.QUEUE_CLIENT, provider: { useFactory: instancePerContainerCachingFactory(queueClientFactory) } },
     { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
-    ...registerHandlers(instanceType),
+    ...registerHandlers(instanceType, handlersTokens),
     ...registerInstanceDependencies(instanceType),
     {
       token: SERVICES.METRICS,
