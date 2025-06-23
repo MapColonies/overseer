@@ -52,7 +52,7 @@ export const initTestCases: JobProcessingTestCase[] = [
     job: exportJob,
     taskType: initTaskForExport.type,
     task: initTaskForExport,
-    instanceType: 'export'
+    instanceType: 'export',
   },
 ];
 export const finalizeTestCases: JobProcessingTestCase[] = [
@@ -79,6 +79,6 @@ export const finalizeTestCases: JobProcessingTestCase[] = [
     job: exportJob,
     taskType: finalizeTaskForExport.type,
     task: finalizeTaskForExport,
-    instanceType: 'export'
+    instanceType: 'export',
   },
 ];
