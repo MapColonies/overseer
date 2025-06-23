@@ -7,7 +7,7 @@ import { ZodError } from 'zod';
 import { SERVICES } from '../../common/constants';
 import { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, type JobManagementConfig } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
-import { getAvailableJobTypes, getPollingJobs, parseInstanceType } from '../../utils/configUtil';
+import { getAvailableJobTypes, getPollingJobs } from '../../utils/configUtil';
 import type { InstanceType } from '../../utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
@@ -23,6 +23,7 @@ export class JobProcessor {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
+    @inject(SERVICES.INSTANCE_TYPE) private readonly instanceType: InstanceType,
     @inject(JOB_HANDLER_FACTORY_SYMBOL) private readonly jobHandlerFactory: JobHandlerFactory,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
     @inject(JobTrackerClient) private readonly jobTrackerClient: JobTrackerClient
@@ -31,8 +32,7 @@ export class JobProcessor {
     this.pollingConfig = this.config.get<PollingConfig>('jobManagement.polling');
     const { tasks } = this.pollingConfig;
     const jobManagementConfig = this.config.get<JobManagementConfig>('jobManagement');
-    const instanceType = parseInstanceType(config.get<InstanceType>('instanceType'));
-    const jobs = getPollingJobs(jobManagementConfig, instanceType);
+    const jobs = getPollingJobs(jobManagementConfig, this.instanceType);
     this.pollingJobTypes = getAvailableJobTypes(jobs);
     this.pollingTaskTypes = [tasks.init, tasks.finalize];
   }

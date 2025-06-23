@@ -23,6 +23,7 @@ export const SERVICES = {
   S3CONFIG: Symbol('S3Config'),
   QUEUE_CLIENT: Symbol('QueueClient'),
   TILE_RANGER: Symbol('TileRanger'),
+  INSTANCE_TYPE: Symbol('InstanceType'),
 } satisfies Record<string, symbol>;
 
 export const StorageProvider = {
