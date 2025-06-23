@@ -87,7 +87,7 @@ export interface PollingConfig {
 }
 
 export interface TilesMergingTaskConfig {
-  type: 'tiles-merging';
+  type: string;
   tileBatchSize: number;
   taskBatchSize: number;
   radiusBuffer: number;
@@ -104,7 +104,7 @@ export interface TilesSeedingTaskConfig {
 }
 
 export interface TilesExportingTaskConfig {
-  type: 'tilesExporting';
+  type: string;
 }
 
 export interface JobManagementConfig {
