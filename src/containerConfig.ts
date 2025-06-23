@@ -22,7 +22,7 @@ import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobH
 import { getPollingJobs, parseInstanceType, validateAndGetHandlersTokens } from './utils/configUtil';
 import { InstanceType } from './utils/zod/schemas/instance.schema';
 
-const registerHandlers = (instanceType: InstanceType, handlersTokens: Record<string, string>): InjectionObject<unknown>[] => {
+const registerInstanceHandlers = (instanceType: InstanceType, handlersTokens: Record<string, string>): InjectionObject<unknown>[] => {
   switch (instanceType) {
     case 'ingestion':
       return [
@@ -92,7 +92,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.INSTANCE_TYPE, provider: { useValue: instanceType } },
     { token: SERVICES.QUEUE_CLIENT, provider: { useFactory: instancePerContainerCachingFactory(queueClientFactory) } },
     { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
-    ...registerHandlers(instanceType, handlersTokens),
+    ...registerInstanceHandlers(instanceType, handlersTokens),
     ...registerInstanceDependencies(instanceType),
     {
       token: SERVICES.METRICS,
