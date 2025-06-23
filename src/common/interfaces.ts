@@ -109,7 +109,6 @@ export interface TilesExportingTaskConfig {
 
 export interface JobManagementConfig {
   config: JobManagerConfig;
-  geoserver: GeoserverConfig;
   polling: PollingConfig;
   ingestion: {
     pollingJobs: IngestionPollingJobsConfig;
