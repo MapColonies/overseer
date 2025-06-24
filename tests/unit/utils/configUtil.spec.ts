@@ -10,67 +10,103 @@ describe('configUtil', () => {
   });
 
   describe('validateAndGetHandlersTokens', () => {
-    it('should return the polling job types if they are found in the config', () => {
-      const ingestionConfig: PollingJobs = {
-        new: { type: 'Ingestion_New' },
-        update: { type: 'Ingestion_Update' },
-        swapUpdate: { type: 'Ingestion_Swap_Update' },
-        export: { type: 'Export' },
-      };
+    describe('instance type is ingestion', () => {
+      const instanceType = 'ingestion';
 
-      const result = validateAndGetHandlersTokens(ingestionConfig);
+      it('should return the polling job types if they are found in the config', () => {
+        const ingestionConfig: PollingJobs = {
+          new: { type: 'Ingestion_New' },
+          update: { type: 'Ingestion_Update' },
+          swapUpdate: { type: 'Ingestion_Swap_Update' },
+        };
 
-      expect(result).toEqual({
-        Ingestion_New: ingestionConfig.new?.type,
-        Ingestion_Update: ingestionConfig.update?.type,
-        Ingestion_Swap_Update: ingestionConfig.swapUpdate?.type,
-        Export: ingestionConfig.export?.type,
+        const result = validateAndGetHandlersTokens(ingestionConfig, instanceType);
+
+        expect(result).toEqual({
+          Ingestion_New: ingestionConfig.new?.type,
+          Ingestion_Update: ingestionConfig.update?.type,
+          Ingestion_Swap_Update: ingestionConfig.swapUpdate?.type,
+        });
+      });
+
+      it('should throw an error if one of the "new" job type is not found in the config', () => {
+        const ingestionConfig = {
+          update: { type: 'Ingestion_Update' },
+          swapUpdate: { type: 'Ingestion_Swap_Update' },
+        } as unknown as PollingJobs;
+
+        const action = () => validateAndGetHandlersTokens(ingestionConfig, instanceType);
+
+        expect(action).toThrow(MissingConfigError);
+      });
+
+      it('should throw an error if one of the "update" job type is not found in the config', () => {
+        const ingestionConfig = {
+          new: { type: 'Ingestion_New' },
+          swapUpdate: { type: 'Ingestion_Swap_Update' },
+        } as unknown as PollingJobs;
+
+        const action = () => validateAndGetHandlersTokens(ingestionConfig, instanceType);
+
+        expect(action).toThrow(MissingConfigError);
+      });
+
+      it('should throw an error if one of the "swap update" job type is not found in the config', () => {
+        const ingestionConfig = {
+          new: { type: 'Ingestion_New' },
+          update: { type: 'Ingestion_Update' },
+        } as unknown as PollingJobs;
+
+        const action = () => validateAndGetHandlersTokens(ingestionConfig, instanceType);
+
+        expect(action).toThrow(MissingConfigError);
+      });
+
+      it('should throw an error if one of the job types is empty', () => {
+        const ingestionConfig = {
+          new: { type: '' },
+          update: { type: 'Ingestion_Update' },
+          swapUpdate: { type: 'Ingestion_Swap_Update' },
+        } as unknown as PollingJobs;
+
+        const action = () => validateAndGetHandlersTokens(ingestionConfig, instanceType);
+
+        expect(action).toThrow(MissingConfigError);
       });
     });
 
-    it('should throw an error if one of the "new" job type is not found in the config', () => {
-      const ingestionConfig = {
-        update: { type: 'Ingestion_Update' },
-        swapUpdate: { type: 'Ingestion_Swap_Update' },
-      } as unknown as PollingJobs;
+    describe('instance type is export', () => {
+      const instanceType = 'export';
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig);
+      it('should return the polling job types if they are found in the config', () => {
+        const ingestionConfig: PollingJobs = {
+          export: { type: 'Export' },
+        };
 
-      expect(action).toThrow(MissingConfigError);
-    });
+        const result = validateAndGetHandlersTokens(ingestionConfig, instanceType);
 
-    it('should throw an error if one of the "update" job type is not found in the config', () => {
-      const ingestionConfig = {
-        new: { type: 'Ingestion_New' },
-        swapUpdate: { type: 'Ingestion_Swap_Update' },
-      } as unknown as PollingJobs;
+        expect(result).toEqual({
+          Export: ingestionConfig.export?.type,
+        });
+      });
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig);
+      it('should throw an error if "export" job type is not found in the config', () => {
+        const ingestionConfig = {} as unknown as PollingJobs;
 
-      expect(action).toThrow(MissingConfigError);
-    });
+        const action = () => validateAndGetHandlersTokens(ingestionConfig, instanceType);
 
-    it('should throw an error if one of the "swap update" job type is not found in the config', () => {
-      const ingestionConfig = {
-        new: { type: 'Ingestion_New' },
-        update: { type: 'Ingestion_Update' },
-      } as unknown as PollingJobs;
+        expect(action).toThrow(MissingConfigError);
+      });
 
-      const action = () => validateAndGetHandlersTokens(ingestionConfig);
+      it('should throw an error if "export" job type is empty', () => {
+        const ingestionConfig = {
+          export: { type: '' },
+        } as unknown as PollingJobs;
 
-      expect(action).toThrow(MissingConfigError);
-    });
+        const action = () => validateAndGetHandlersTokens(ingestionConfig, instanceType);
 
-    it('should throw an error if one of the  job types is empty', () => {
-      const ingestionConfig = {
-        new: { type: '' },
-        update: { type: 'Ingestion_Update' },
-        swapUpdate: { type: 'Ingestion_Swap_Update' },
-      } as unknown as PollingJobs;
-
-      const action = () => validateAndGetHandlersTokens(ingestionConfig);
-
-      expect(action).toThrow(MissingConfigError);
+        expect(action).toThrow(MissingConfigError);
+      });
     });
   });
 });

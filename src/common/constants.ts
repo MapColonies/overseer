@@ -12,6 +12,8 @@ export const EXPORT_SUCCESS_MESSAGE = 'The export process completed successfully
 export const IGNORED_OUTGOING_TRACE_ROUTES = [/^.*\/v1\/metrics.*$/];
 export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];
 
+export const INSTANCE_TYPES = ['ingestion', 'export'] as const;
+
 /* eslint-disable @typescript-eslint/naming-convention */
 export const SERVICES = {
   LOGGER: Symbol('Logger'),
@@ -21,10 +23,7 @@ export const SERVICES = {
   S3CONFIG: Symbol('S3Config'),
   QUEUE_CLIENT: Symbol('QueueClient'),
   TILE_RANGER: Symbol('TileRanger'),
-} satisfies Record<string, symbol>;
-
-export const INJECTION_VALUES = {
-  ingestionJobTypes: Symbol('IngestionJobTypes'),
+  INSTANCE_TYPE: Symbol('InstanceType'),
 } satisfies Record<string, symbol>;
 
 export const StorageProvider = {

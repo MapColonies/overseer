@@ -18,12 +18,14 @@ import {
   initTaskForIngestionSwapUpdate,
   initTaskForIngestionUpdate,
 } from '../mocks/tasksMockData';
+import type { InstanceType } from '../../../src/utils/zod/schemas/instance.schema';
 
 interface JobProcessingTestCase {
   jobType: string;
   taskType: string;
   job: IJobResponse<unknown, unknown>;
   task: ITaskResponse<unknown>;
+  instanceType?: InstanceType;
 }
 
 export const initTestCases: JobProcessingTestCase[] = [
@@ -50,6 +52,7 @@ export const initTestCases: JobProcessingTestCase[] = [
     job: exportJob,
     taskType: initTaskForExport.type,
     task: initTaskForExport,
+    instanceType: 'export',
   },
 ];
 export const finalizeTestCases: JobProcessingTestCase[] = [
@@ -76,5 +79,6 @@ export const finalizeTestCases: JobProcessingTestCase[] = [
     job: exportJob,
     taskType: finalizeTaskForExport.type,
     task: finalizeTaskForExport,
+    instanceType: 'export',
   },
 ];

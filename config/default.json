@@ -60,6 +60,7 @@
     "workspace": "polygonParts",
     "dataStore": "polygonParts"
   },
+  "instanceType": "ingestion",
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "http://localhost:8081",
@@ -74,8 +75,10 @@
       "tasks": {
         "init": "init",
         "finalize": "finalize"
-      },
-      "jobs": {
+      }
+    },
+    "ingestion": {
+      "pollingJobs": {
         "new": {
           "type": "Ingestion_New"
         },
@@ -84,16 +87,8 @@
         },
         "swapUpdate": {
           "type": "Ingestion_Swap_Update"
-        },
-        "export": {
-          "type": "Export",
-          "cleanupExpirationDays": 14,
-          "gpkgsPath": "/gpkgs",
-          "downloadPath": "downloads"
         }
-      }
-    },
-    "ingestion": {
+      },
       "jobs": {
         "seed": {
           "type": "Ingestion_Seed"
@@ -121,6 +116,14 @@
       }
     },
     "export": {
+      "pollingJobs": {
+        "export": {
+          "type": "Export",
+          "cleanupExpirationDays": 14,
+          "gpkgsPath": "/gpkgs",
+          "downloadPath": "downloads"
+        }
+      },
       "tasks": {
         "tilesExporting": {
           "type": "tilesExporting"

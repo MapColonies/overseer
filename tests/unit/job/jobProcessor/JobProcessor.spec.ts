@@ -1,8 +1,10 @@
-import nock from 'nock';
 import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import nock from 'nock';
+import { IJobHandler, JobAndTaskResponse, PollingConfig, type JobManagementConfig } from '../../../../src/common/interfaces';
+import { getPollingJobs, parseInstanceType } from '../../../../src/utils/configUtil';
+import type { InstanceType } from '../../../../src/utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
-import { IJobHandler, JobAndTaskResponse, PollingConfig } from '../../../../src/common/interfaces';
 import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
 import { JobProcessorTestContext, setupJobProcessorTest } from './jobProcessorSetup';
 
@@ -38,7 +40,10 @@ describe('JobProcessor', () => {
       const { jobProcessor, mockDequeue, configMock } = testContext;
       const pollingConfig = configMock.get<PollingConfig>('jobManagement.polling');
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
-      const { jobs, tasks } = pollingConfig;
+      const { tasks } = pollingConfig;
+      const jobManagementConfig = configMock.get<JobManagementConfig>('jobManagement');
+      const instanceType = parseInstanceType(configMock.get<InstanceType>('instanceType'));
+      const jobs = getPollingJobs(jobManagementConfig, instanceType);
       const jobTypesAmount = Object.keys(jobs).length;
       const pollingTasksTypesAmount = Object.keys(tasks).length;
       const totalDequeueCalls = jobTypesAmount * pollingTasksTypesAmount;
@@ -174,10 +179,10 @@ describe('JobProcessor', () => {
   describe('getJobAndTaskResponse', () => {
     test.each([...initTestCases, ...finalizeTestCases])(
       'dequeue $taskType task and get $jobType job with corresponding taskType',
-      async ({ jobType, taskType, job, task }) => {
+      async ({ jobType, taskType, job, task, instanceType }) => {
         jest.useRealTimers();
 
-        testContext = setupJobProcessorTest({ useMockQueueClient: false });
+        testContext = setupJobProcessorTest({ useMockQueueClient: false, instanceType });
 
         const { jobProcessor, configMock, queueClient } = testContext;
         const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');

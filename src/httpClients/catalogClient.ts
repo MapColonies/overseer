@@ -9,9 +9,8 @@ import { LayerMetadata, Link } from '@map-colonies/mc-model-types';
 import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
-import type { IngestionJobTypes } from '../utils/configUtil';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
-import { INJECTION_VALUES, SERVICES } from '../common/constants';
+import { SERVICES } from '../common/constants';
 import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
@@ -26,7 +25,6 @@ export class CatalogClient extends HttpClient {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.LOGGER) protected readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
-    @inject(INJECTION_VALUES.ingestionJobTypes) protected readonly jobTypes: IngestionJobTypes,
     private readonly linkBuilder: LinkBuilder,
     private readonly polygonPartsMangerClient: PolygonPartsMangerClient
   ) {

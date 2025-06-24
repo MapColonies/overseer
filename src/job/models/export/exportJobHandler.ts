@@ -71,13 +71,13 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   ) {
     super(logger, config, queueClient, jobTrackerClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
-    this.gpkgsPath = config.get<string>('jobManagement.polling.jobs.export.gpkgsPath');
+    this.gpkgsPath = config.get<string>('jobManagement.export.pollingJobs.export.gpkgsPath');
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
     this.isS3GpkgProvider = gpkgProvider === StorageProvider.S3;
-    this.cleanupExpirationDays = config.get<number>('jobManagement.polling.jobs.export.cleanupExpirationDays');
+    this.cleanupExpirationDays = config.get<number>('jobManagement.export.pollingJobs.export.cleanupExpirationDays');
     const downloadServerUrl = config.get<string>('servicesUrl.downloadServerPublicDNS');
-    const downloadPath = config.get<string>('jobManagement.polling.jobs.export.downloadPath');
+    const downloadPath = config.get<string>('jobManagement.export.pollingJobs.export.downloadPath');
     this.downloadUrl = `${downloadServerUrl}/${downloadPath}`;
   }
   public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {

@@ -1,14 +1,15 @@
 import { setTimeout as setTimeoutPromise } from 'timers/promises';
 import { Logger } from '@map-colonies/js-logger';
+import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
-import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { ZodError } from 'zod';
-import { getAvailableJobTypes } from '../../utils/configUtil';
-import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 import { SERVICES } from '../../common/constants';
+import { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, type JobManagementConfig } from '../../common/interfaces';
+import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
+import { getAvailableJobTypes, getPollingJobs } from '../../utils/configUtil';
+import type { InstanceType } from '../../utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
-import { IConfig, PollingConfig, JobAndTaskResponse, TaskResponse } from '../../common/interfaces';
 import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
@@ -22,13 +23,16 @@ export class JobProcessor {
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
+    @inject(SERVICES.INSTANCE_TYPE) private readonly instanceType: InstanceType,
     @inject(JOB_HANDLER_FACTORY_SYMBOL) private readonly jobHandlerFactory: JobHandlerFactory,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
     @inject(JobTrackerClient) private readonly jobTrackerClient: JobTrackerClient
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
     this.pollingConfig = this.config.get<PollingConfig>('jobManagement.polling');
-    const { jobs, tasks } = this.pollingConfig;
+    const { tasks } = this.pollingConfig;
+    const jobManagementConfig = this.config.get<JobManagementConfig>('jobManagement');
+    const jobs = getPollingJobs(jobManagementConfig, this.instanceType);
     this.pollingJobTypes = getAvailableJobTypes(jobs);
     this.pollingTaskTypes = [tasks.init, tasks.finalize];
   }

@@ -110,6 +110,7 @@ const registerDefaultConfig = (): void => {
       workspace: 'testWorkspace',
       dataStore: 'testDataStore',
     },
+    instanceType: 'ingestion',
     jobManagement: {
       config: {
         jobManagerBaseUrl: 'http://job-manager',
@@ -125,7 +126,9 @@ const registerDefaultConfig = (): void => {
           init: 'init',
           finalize: 'finalize',
         },
-        jobs: {
+      },
+      ingestion: {
+        pollingJobs: {
           new: {
             type: 'Ingestion_New',
           },
@@ -135,13 +138,7 @@ const registerDefaultConfig = (): void => {
           swapUpdate: {
             type: 'Ingestion_Swap_Update',
           },
-          export: {
-            type: 'Export',
-            gpkgsPath: '/gpkgs',
-          },
         },
-      },
-      ingestion: {
         jobs: {
           seed: {
             type: 'Ingestion_Seed',
@@ -164,6 +161,12 @@ const registerDefaultConfig = (): void => {
         },
       },
       export: {
+        pollingJobs: {
+          export: {
+            type: 'Export',
+            gpkgsPath: '/gpkgs',
+          },
+        },
         tasks: {
           tilesExporting: {
             type: 'tilesExporting',

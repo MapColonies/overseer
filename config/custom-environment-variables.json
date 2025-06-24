@@ -78,6 +78,7 @@
     "downloadServerPublicDNS": "DOWNLOAD_SERVER_PUBLIC_DNS",
     "jobTracker": "JOB_TRACKER_URL"
   },
+  "instanceType": "INSTANCE_TYPE",
   "jobManagement": {
     "config": {
       "jobManagerBaseUrl": "JOB_MANAGER_BASE_URL",
@@ -99,8 +100,10 @@
       "tasks": {
         "init": "POLLING_INIT_TASK",
         "finalize": "POLLING_FINALIZE_TASK"
-      },
-      "jobs": {
+      }
+    },
+    "ingestion": {
+      "pollingJobs": {
         "new": {
           "type": "INGESTION_NEW_JOB_TYPE"
         },
@@ -109,19 +112,8 @@
         },
         "swapUpdate": {
           "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
-        },
-        "export": {
-          "type": "EXPORT_JOB_TYPE",
-          "cleanupExpirationDays": {
-            "__name": "EXPORT_CLEANUP_EXPIRATION_DAYS",
-            "__format": "number"
-          },
-          "gpkgsPath": "EXPORT_GPKGS_PATH",
-          "downloadPath": "EXPORT_DOWNLOAD_PATH"
         }
-      }
-    },
-    "ingestion": {
+      },
       "jobs": {
         "seed": {
           "type": "INGESTION_SEED_JOB_TYPE"
@@ -179,6 +171,17 @@
       }
     },
     "export": {
+      "pollingJobs": {
+        "export": {
+          "type": "EXPORT_JOB_TYPE",
+          "cleanupExpirationDays": {
+            "__name": "EXPORT_CLEANUP_EXPIRATION_DAYS",
+            "__format": "number"
+          },
+          "gpkgsPath": "EXPORT_GPKGS_PATH",
+          "downloadPath": "EXPORT_DOWNLOAD_PATH"
+        }
+      },
       "tasks": {
         "tilesExporting": {
           "type": "TILES_EXPORTING_TASK_TYPE"

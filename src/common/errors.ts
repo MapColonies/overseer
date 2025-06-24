@@ -1,3 +1,10 @@
+export class InvalidConfigError extends Error {
+  public constructor(message?: string) {
+    super(message);
+    this.name = InvalidConfigError.name;
+  }
+}
+
 export class MissingConfigError extends Error {
   public constructor(message?: string) {
     super(message);
