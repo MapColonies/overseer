@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/MapColonies/overseer/compare/v2.1.1...v2.2.0) (2025-06-24)
+
+
+### Features
+
+* support single responsibility instance deployment (MAPCO-7967) ([#59](https://github.com/MapColonies/overseer/issues/59)) ([d4a4444](https://github.com/MapColonies/overseer/commit/d4a4444ba1600df01a2cddc77d62e193e0a43c71))
+
 ### [2.1.1](https://github.com-personal/MapColonies/overseer/compare/v2.1.0...v2.1.1) (2025-06-22)
 
 
