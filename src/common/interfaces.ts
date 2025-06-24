@@ -74,6 +74,15 @@ export interface ExportPollingJobsConfig {
   export: JobConfig | undefined;
 }
 
+export interface IngestionTasksConfig {
+  tilesMerging: TilesMergingTaskConfig;
+  tilesSeeding: TilesSeedingTaskConfig;
+}
+
+export interface ExportTasksConfig {
+  tilesExporting: TilesExportingTaskConfig;
+}
+
 export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
 export interface PollingTasks {
@@ -113,9 +122,9 @@ export interface JobManagementConfig {
   ingestion: {
     pollingJobs: IngestionPollingJobsConfig;
     jobs: IngestionJobsConfig;
-    tasks: { tilesMerging: TilesMergingTaskConfig; tilesSeeding: TilesSeedingTaskConfig };
+    tasks: IngestionTasksConfig;
   };
-  export: { pollingJobs: ExportPollingJobsConfig; tasks: { tilesExporting: TilesExportingTaskConfig } };
+  export: { pollingJobs: ExportPollingJobsConfig; tasks: ExportTasksConfig };
 }
 //#endregion config
 
