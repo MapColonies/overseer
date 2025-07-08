@@ -1,0 +1,129 @@
+{
+    "telemetry": {
+      "logger": {
+        "level": "info",
+        "prettyPrint": false,
+        "pinoCaller": false
+      },
+      "tracing": {
+        "enabled": "true",
+        "url": "http://localhost:4318/v1/traces"
+      },
+      "metrics": {
+        "enabled": false,
+        "url": "http://localhost:4318/v1/metrics",
+        "interval": 5,
+        "buckets": [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500]
+      }
+    },
+    "server": {
+      "port": "8080",
+      "request": {
+        "payload": {
+          "limit": "1mb"
+        }
+      },
+      "response": {
+        "compression": {
+          "enabled": true,
+          "options": null
+        }
+      }
+    },
+    "httpRetry": {
+      "attempts": 5,
+      "delay": "exponential",
+      "shouldResetTimeout": true
+    },
+    "S3": {
+      "accessKeyId": "minioadmin",
+      "secretAccessKey": "minioadmin",
+      "endpointUrl": "http://localhost:9000",
+      "bucket": "",
+      "sslEnabled": false
+    },
+    "disableHttpClientLogs": true,
+    "tilesStorageProvider": "S3",
+    "gpkgStorageProvider": "FS",
+    "linkTemplatesPath": "config/linkTemplates.template",
+    "servicesUrl": {
+      "mapproxyApi": "https://raster-ingestion-qa-mapproxy-api-route-qa.apps.j1lk3njp.eastus.aroapp.io/",
+      "geoserverApi": "https://raster-ingestion-qa-geoserver-api-route-qa.apps.j1lk3njp.eastus.aroapp.io/",
+      "catalogManager": "https://raster-core-qa-raster-catalog-manager-route-qa.apps.j1lk3njp.eastus.aroapp.io/",
+      "mapproxyDns": "https://raster-serving-qa-mapproxy-nginx-route-manual-qa.apps.j1lk3njp.eastus.aroapp.io/api/raster/v1",
+      "polygonPartsManager": "https://polygon-parts-manager-manual-qa.apps.j1lk3njp.eastus.aroapp.io/",
+      "geoserverDns": "https://raster-serving-qa-pp-geoserver-nginx-route-manual-qa.apps.j1lk3njp.eastus.aroapp.io/api/raster/v1",
+      "downloadServerPublicDNS": "http://localhost:8089",
+      "jobTracker": "https://job-tracker-manual-qa.apps.j1lk3njp.eastus.aroapp.io/"
+    },
+    "geoserver": {
+      "workspace": "polygonParts",
+      "dataStore": "polygonParts"
+    },
+    "jobManagement": {
+      "config": {
+        "jobManagerBaseUrl": "https://common-job-manager-route-qa.apps.j1lk3njp.eastus.aroapp.io/",
+        "heartbeat": {
+          "baseUrl": "https://common-heartbeat-manager-route-qa.apps.j1lk3njp.eastus.aroapp.io/",
+          "intervalMs": 3000
+        },
+        "dequeueIntervalMs": 3000
+      },
+      "polling": {
+        "maxTaskAttempts": 3,
+        "tasks": {
+          "init": "init",
+          "finalize": "finalize"
+        },
+        "jobs": {
+          "new": {
+            "type": "Ingestion_New"
+          },
+          "update": {
+            "type": "Ingestion_Update"
+          },
+          "swapUpdate": {
+            "type": "Ingestion_Swap_Update"
+          },
+          "export": {
+            "type": "Export",
+            "cleanupExpirationDays": 14,
+            "gpkgsPath": "/gpkgs",
+            "downloadPath": "downloads"
+          }
+        }
+      },
+      "ingestion": {
+        "jobs": {
+          "seed": {
+            "type": "Ingestion_Seed"
+          }
+        },
+        "tasks": {
+          "tilesMerging": {
+            "type": "tiles-merging",
+            "tileBatchSize": 10000,
+            "taskBatchSize": 5,
+            "radiusBuffer": 0.000006,
+            "radiusBufferUnits": "degrees",
+            "truncatePrecision": 11,
+            "truncateCoordinates": 2
+          },
+          "tilesSeeding": {
+            "type": "tiles-seeding",
+            "grid": "WorldCRS84",
+            "maxZoom": 21,
+            "skipUncached": true
+          }
+        }
+      },
+      "export": {
+        "tasks": {
+          "tilesExporting": {
+            "type": "tilesExporting"
+          }
+        }
+      }
+    }
+  }
+  

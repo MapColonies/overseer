@@ -23,8 +23,14 @@ import { ingestionSwapUpdateFinalizeJobParamsSchema, ingestionUpdateFinalizeJobP
 export const ingestionNewInitJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema).describe('IngestionNewInitJobSchema');
 export type IngestionNewInitJob = z.infer<typeof ingestionNewInitJobSchema>;
 
-export const ingestionInitTaskSchema = createTaskResponseSchema(taskBlockDuplicationParamSchema).describe('IngestionInitTaskSchema');
+export const batchStateSchema = z.object({
+  batchState: z.object({
+    zoom: z.number(),
+    index: z.number()
+  }).optional()});
+export const ingestionInitTaskSchema = createTaskResponseSchema(batchStateSchema).describe('IngestionInitTaskSchema');
 export type IngestionInitTask = z.infer<typeof ingestionInitTaskSchema>;
+
 
 //finalize
 export const ingestionNewFinalizeJobSchema = createJobResponseSchema(ingestionNewExtendedJobParamsSchema).describe('IngestionNewFinalizeJobSchema');

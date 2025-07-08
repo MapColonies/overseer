@@ -74,9 +74,17 @@ export class NewJobHandler
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, job.id, task);
+        // const arr = [];
+        // for await (const task of mergeTasks) {
+          
+        //   arr.push(mergeTasks)
+        // }
+        // console.log("TOTAL TASKS", arr.length);
 
-        await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+      
+
+        await this.taskBuilder.pushTasks(job.id, task, job.type, mergeTasks);
 
         logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
         await this.queueClient.jobManagerClient.updateJob(job.id, {

@@ -98,7 +98,7 @@
         "tilesMerging": {
           "type": "tiles-merging",
           "tileBatchSize": 10000,
-          "taskBatchSize": 5,
+          "taskBatchSize": 1,
           "radiusBuffer": 0.000006,
           "radiusBufferUnits": "degrees",
           "truncatePrecision": 11,
