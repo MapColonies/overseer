@@ -26,7 +26,9 @@ import type {
   TilesSource,
   MergeTilesMetadata,
   PPFeatureCollection,
+  IInitTaskIndexing,
 } from '../../common/interfaces';
+import { IngestionInitTask } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
 @injectable()
@@ -39,6 +41,7 @@ export class TileMergeTaskManager {
   private readonly radiusBufferUnits: Units;
   private readonly truncatePrecision: number;
   private readonly truncateCoordinates: number;
+  private taskCreatedCounter: number;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -55,6 +58,7 @@ export class TileMergeTaskManager {
     this.radiusBufferUnits = this.config.get<Units>('jobManagement.ingestion.tasks.tilesMerging.radiusBufferUnits');
     this.truncatePrecision = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncatePrecision');
     this.truncateCoordinates = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncateCoordinates');
+    this.taskCreatedCounter = 0;
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -95,7 +99,12 @@ export class TileMergeTaskManager {
     });
   }
 
-  public async pushTasks(jobId: string, jobType: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
+  public async pushTasks(
+    initTask: IngestionInitTask,
+    jobId: string,
+    jobType: string,
+    tasks: AsyncGenerator<MergeTaskParameters, void, void>
+  ): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.pushTasks.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -114,7 +123,7 @@ export class TileMergeTaskManager {
           if (taskBatch.length === this.taskBatchSize) {
             logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
             activeSpan?.addEvent('enqueueTasks', { currentTaskBatchSize: taskBatch.length });
-            await this.enqueueTasks(jobId, taskBatch);
+            await this.enqueueTasks(jobId, taskBatch, initTask);
             taskBatch = [];
           }
         }
@@ -138,12 +147,21 @@ export class TileMergeTaskManager {
     });
   }
 
-  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[]): Promise<void> {
+  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[], initTask?: IngestionInitTask): Promise<void> {
     const logger = this.logger.child({ jobId });
     logger.debug({ msg: `Attempting to enqueue task batch` });
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
+      if (initTask) {
+        await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
+          parameters: {
+            ...initTask.parameters,
+            taskIndex: { currentTaskIndex: this.taskCreatedCounter, zoomLevel: tasks[0].parameters.taskIndex.zoomLevel },
+          },
+        });
+      }
+      this.taskCreatedCounter += tasks.length;
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
     } catch (error) {
       const errorMsg = (error as Error).message;
@@ -322,6 +340,7 @@ export class TileMergeTaskManager {
     const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
     const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
     const sources = this.createPartSources(part, grid, layerRelativePath);
+    const taskIndex: IInitTaskIndexing = { currentTaskIndex: this.taskCreatedCounter, zoomLevel: zoom };
 
     for await (const batch of batches) {
       logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
@@ -330,6 +349,7 @@ export class TileMergeTaskManager {
         targetFormat: tileOutputFormat,
         isNewTarget: isNewTarget,
         batches: batch,
+        taskIndex,
         sources,
       };
     }

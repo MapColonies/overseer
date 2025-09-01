@@ -76,7 +76,7 @@ export class NewJobHandler
         logger.info({ msg: 'building tasks' });
         const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
-        await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+        await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 
         logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
         await this.queueClient.jobManagerClient.updateJob(job.id, {

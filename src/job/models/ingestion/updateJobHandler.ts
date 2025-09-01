@@ -69,7 +69,7 @@ export class UpdateJobHandler
         logger.info({ msg: 'building tasks' });
         const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
 
-        await this.taskBuilder.pushTasks(job.id, job.type, mergeTasks);
+        await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {

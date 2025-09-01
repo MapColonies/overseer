@@ -159,6 +159,11 @@ export enum Grid {
   TWO_ON_ONE = '2x1',
 }
 
+export interface IInitTaskIndexing {
+  currentTaskIndex: number;
+  zoomLevel: number;
+}
+
 export interface IBBox {
   minX: number;
   minY: number;
@@ -214,6 +219,7 @@ export interface MergeTaskParameters {
   targetFormat: TileOutputFormat;
   isNewTarget: boolean;
   sources: TaskSources[];
+  taskIndex: IInitTaskIndexing;
   batches: ITileRange[];
 }
 
