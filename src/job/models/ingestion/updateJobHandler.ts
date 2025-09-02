@@ -67,7 +67,7 @@ export class UpdateJobHandler
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams);
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
 
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 

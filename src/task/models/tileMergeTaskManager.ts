@@ -61,7 +61,7 @@ export class TileMergeTaskManager {
     this.taskCreatedCounter = 0;
   }
 
-  public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
+  public buildTasks(taskBuildParams: MergeTilesTaskParams, initTask: IngestionInitTask): AsyncGenerator<MergeTaskParameters, void, void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttributes({
@@ -82,7 +82,7 @@ export class TileMergeTaskManager {
           ...mergeParams.tilesSource,
         });
 
-        const tasks = this.createZoomLevelTasks(mergeParams, activeSpan);
+        const tasks = this.createZoomLevelTasks(mergeParams, activeSpan, initTask);
 
         logger.debug({ msg: `Successfully built tasks for ${this.taskType} task` });
         return tasks;
@@ -153,6 +153,7 @@ export class TileMergeTaskManager {
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
+      this.taskCreatedCounter += tasks.length;
       if (initTask) {
         await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
           parameters: {
@@ -161,7 +162,6 @@ export class TileMergeTaskManager {
           },
         });
       }
-      this.taskCreatedCounter += tasks.length;
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
     } catch (error) {
       const errorMsg = (error as Error).message;
@@ -249,7 +249,7 @@ export class TileMergeTaskManager {
     return featurePolygon;
   }
 
-  private async *createZoomLevelTasks(params: MergeParameters, parentSpan: Span | undefined): AsyncGenerator<MergeTaskParameters, void, void> {
+  private async *createZoomLevelTasks(params: MergeParameters, parentSpan: Span | undefined, initTask: IngestionInitTask): AsyncGenerator<MergeTaskParameters, void, void> {
     const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createZoomLevelTasks.name}`, parentSpan);
 
     const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
@@ -261,14 +261,15 @@ export class TileMergeTaskManager {
 
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
-    for (let zoom = maxZoom; zoom >= 0; zoom--) {
+    let zoom: number = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
+    for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom });
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
         const collection = featureCollection(filteredFeatures);
         unifiedPart = this.unifyParts(collection, tilesSource);
       }
-      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, span);
+      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, initTask, span);
     }
     span.end();
   }
@@ -329,7 +330,8 @@ export class TileMergeTaskManager {
     part: UnifiedPart,
     zoom: number,
     tilesMetadata: MergeTilesMetadata,
-    parentSpan?: Span | undefined
+    initTask: IngestionInitTask,
+    parentSpan?: Span | undefined,
   ): AsyncGenerator<MergeTaskParameters, void, void> {
     const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createTasksForPart.name}.zoom.${zoom}`, parentSpan);
     span.setAttributes({ part: JSON.stringify(part), zoom, maxTileBatchSize: this.tileBatchSize });
@@ -340,16 +342,22 @@ export class TileMergeTaskManager {
     const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
     const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
     const sources = this.createPartSources(part, grid, layerRelativePath);
-    const taskIndex: IInitTaskIndexing = { currentTaskIndex: this.taskCreatedCounter, zoomLevel: zoom };
+    const currentTaskIndex: IInitTaskIndexing = { currentTaskIndex: initTask.parameters.taskIndex?.currentTaskIndex ?? 0, zoomLevel: initTask.parameters.taskIndex?.zoomLevel ?? zoom };
 
     for await (const batch of batches) {
+      if (currentTaskIndex.currentTaskIndex >= this.taskCreatedCounter) {
+        this.taskCreatedCounter++;
+        logger.debug({ msg: 'Skipping batch task due to resume from pause', batchSize: batch.length });
+        span.addEvent('Skipping batch task due to resume from pause', { batchSize: batch.length, batch: JSON.stringify(batch) });
+        continue;
+      }
       logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
       span.addEvent('Yielding batch task', { batchSize: batch.length, batch: JSON.stringify(batch) });
       yield {
         targetFormat: tileOutputFormat,
         isNewTarget: isNewTarget,
         batches: batch,
-        taskIndex,
+        taskIndex: { currentTaskIndex: this.taskCreatedCounter, zoomLevel: zoom },
         sources,
       };
     }
