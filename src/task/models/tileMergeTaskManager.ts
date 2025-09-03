@@ -144,16 +144,16 @@ export class TileMergeTaskManager {
     });
   }
 
-  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[], initTask?: IngestionInitTask): Promise<void> {
+  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[], initTask: IngestionInitTask): Promise<void> {
     const logger = this.logger.child({ jobId });
     logger.debug({ msg: `Attempting to enqueue task batch` });
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
-      if (initTask) {
-        let totalCreatedPerZoom = 0;
+          let totalCreatedPerZoom = 0;
         if (tasks[0].parameters.taskIndex.zoomLevel !== initTask.parameters.taskIndex?.zoomLevel) {
           totalCreatedPerZoom = 0; // reset counter when zoom level changes
+          //add local task counter to update and take it into account
         } else {
           totalCreatedPerZoom = initTask.parameters.taskIndex.currentTaskIndex;
           initTask.parameters.taskIndex.currentTaskIndex = totalCreatedPerZoom + tasks.length;
@@ -165,7 +165,6 @@ export class TileMergeTaskManager {
             taskIndex: { currentTaskIndex: totalCreatedPerZoom, zoomLevel: tasks[0].parameters.taskIndex.zoomLevel },
           },
         });
-      }
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
     } catch (error) {
       const errorMsg = (error as Error).message;
