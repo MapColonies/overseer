@@ -3,12 +3,32 @@ import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { bbox } from '@turf/turf';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
 import { Grid } from '../../../../src/common/interfaces';
+import { IngestionInitTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { createTaskGenerator, type MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
+
+// Helper function to create a mock IngestionInitTask
+const createMockInitTask = (taskIndex?: { lastInsertedTaskIndex: number; zoomLevel: number }): IngestionInitTask => ({
+  id: randomUUID(),
+  jobId: randomUUID(),
+  type: 'Ingestion_Init',
+  description: 'test init task',
+  parameters: {
+    taskIndex,
+  },
+  status: OperationStatus.PENDING,
+  percentage: 0,
+  reason: '',
+  attempts: 0,
+  resettable: true,
+  created: new Date().toISOString(),
+  updated: new Date().toISOString(),
+});
 
 describe('tileMergeTaskManager', () => {
   let testContext: MergeTilesTaskBuilderContext;
@@ -37,8 +57,9 @@ describe('tileMergeTaskManager', () => {
 
     test.each(successTestCases)('should build tasks successfully', async (buildTasksParams) => {
       const { tileMergeTaskManager } = testContext;
+      const mockInitTask = createMockInitTask();
 
-      const result = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const result = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
       const tasks: MergeTaskParameters[] = [];
 
       for await (const task of result) {
@@ -56,6 +77,7 @@ describe('tileMergeTaskManager', () => {
 
     it('should handle errors in buildTasks correctly', () => {
       const { tileMergeTaskManager } = testContext;
+      const mockInitTask = createMockInitTask();
 
       const buildTasksParams = {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
@@ -66,7 +88,7 @@ describe('tileMergeTaskManager', () => {
       let error: Error | null = null;
 
       try {
-        tileMergeTaskManager.buildTasks(buildTasksParams);
+        tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
       } catch (err) {
         error = err as Error;
       }
@@ -192,16 +214,19 @@ describe('tileMergeTaskManager', () => {
       };
 
       const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
 
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const path = `/jobs/${jobId}/tasks`;
+      const updatePath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
       nock(jobManagerBaseUrl).post(path).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updatePath).reply(200).persist();
 
-      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
 
       let error: Error | null = null;
       try {
-        await tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+        await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
       } catch (err) {
         error = err as Error;
       }
@@ -215,10 +240,13 @@ describe('tileMergeTaskManager', () => {
       const numberOfTasks = 3;
       const enqueueTasksTotal = Math.ceil(numberOfTasks / taskBatchSize);
       const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
 
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const path = `/jobs/${jobId}/tasks`;
+      const updatePath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
       nock(jobManagerBaseUrl).post(path).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updatePath).reply(200).persist();
 
       const tasks = createTaskGenerator(numberOfTasks);
 
@@ -226,7 +254,7 @@ describe('tileMergeTaskManager', () => {
 
       let error: Error | null = null;
       try {
-        await tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+        await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
       } catch (err) {
         error = err as Error;
       }
@@ -249,9 +277,10 @@ describe('tileMergeTaskManager', () => {
       const path = `/jobs/${jobId}/tasks`;
       nock(jobManagerBaseUrl).post(path).reply(500).persist();
 
-      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const mockInitTask = createMockInitTask();
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
 
-      const action = async () => tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+      const action = async () => tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
 
       await expect(action).rejects.toThrow();
     });

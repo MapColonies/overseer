@@ -37,7 +37,7 @@ describe('swapJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const mergeTasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () { })();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -47,8 +47,8 @@ describe('swapJobHandler', () => {
 
       await swapJobHandler.handleJobInit(job, task);
 
-      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams);
-      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, mergeTasks);
+      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams, task);
+      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(task, job.id, job.type, mergeTasks);
       expect(completeInitTaskSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
@@ -58,7 +58,7 @@ describe('swapJobHandler', () => {
 
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = initTaskForIngestionSwapUpdate;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () { })();
 
       const error = new Error('Test error');
 

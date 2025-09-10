@@ -17,7 +17,7 @@ describe('NewJobHandler', () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () { })();
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
@@ -26,7 +26,7 @@ describe('NewJobHandler', () => {
       await newJobHandler.handleJobInit(job, task);
 
       expect(taskBuilderMock.buildTasks).toHaveBeenCalled();
-      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, tasks);
+      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(task, job.id, job.type, tasks);
       expect(queueClientMock.jobManagerClient.updateJob).toHaveBeenCalledWith(job.id, {
         internalId: expect.any(String),
         parameters: expect.any(Object),
@@ -39,7 +39,7 @@ describe('NewJobHandler', () => {
 
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () { })();
 
       const error = new Error('Test error');
 

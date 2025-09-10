@@ -57,6 +57,7 @@ export async function* createTaskGenerator(numTasks: number): AsyncGenerator<Mer
       targetFormat: TileOutputFormat.PNG,
       sources: [{ path: 'layerRelativePath', type: 'source' }],
       batches: [{ maxX: 1, maxY: 1, minX: 0, minY: 0, zoom: 1 }],
+      taskIndex: { lastInsertedTaskIndex: i, zoomLevel: 1 },
     };
   }
 }
