@@ -7,7 +7,7 @@
     },
     "tracing": {
       "enabled": "true",
-      "url": "http://localhost:4318/v1/traces"
+      "url": "http://infra-monitoring-opentelemetry-collector.infra-services:4318/v1/traces"
     },
     "metrics": {
       "enabled": false,
@@ -63,9 +63,9 @@
   "instanceType": "ingestion",
   "jobManagement": {
     "config": {
-      "jobManagerBaseUrl": "http://localhost:8081",
+      "jobManagerBaseUrl": "https://common-job-manager-route-raster-dev.apps.j1lk3njp.eastus.aroapp.io/",
       "heartbeat": {
-        "baseUrl": "http://localhost:8082",
+        "baseUrl": "hhttps://common-heartbeat-manager-route-raster-dev.apps.j1lk3njp.eastus.aroapp.io/",
         "intervalMs": 3000
       },
       "dequeueIntervalMs": 3000

@@ -58,7 +58,7 @@ export const ingestionSwapUpdateFinalizeJobParamsSchema = updateRasterLayerReque
 
 //#region Task Parameters with Indexing
 export const initTaskIndexingSchema = z.object({
-  currentTaskIndex: z.number().min(0),
+  lastInsertedTaskIndex: z.number().min(0),
   zoomLevel: z.number().min(0),
 });
 

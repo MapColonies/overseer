@@ -58,7 +58,7 @@ export class TileMergeTaskManager {
     this.radiusBufferUnits = this.config.get<Units>('jobManagement.ingestion.tasks.tilesMerging.radiusBufferUnits');
     this.truncatePrecision = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncatePrecision');
     this.truncateCoordinates = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncateCoordinates');
-    this.currentTaskPosition = { currentTaskIndex: 0, zoomLevel: 0 };
+    this.currentTaskPosition = { lastInsertedTaskIndex: 0, zoomLevel: 0 };
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams, initTask: IngestionInitTask): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -155,7 +155,7 @@ export class TileMergeTaskManager {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
 
       this.updateLocalTaskIndexing(tasks, initTask);
-      this.currentTaskPosition.currentTaskIndex += tasks.length;
+      this.currentTaskPosition.lastInsertedTaskIndex += tasks.length;
       await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
         parameters: {
           ...initTask.parameters,
@@ -173,19 +173,40 @@ export class TileMergeTaskManager {
   }
 
   private updateLocalTaskIndexing(tasks: ICreateTaskBody<MergeTaskParameters>[], initTask: IngestionInitTask): void {
-    // Update currentTaskIndex based on initTask if it represents more progress (recover from service crash)
+    // Only update if initTask has more recent progress (recover from service crash)
     if (initTask.parameters.taskIndex) {
-      if (initTask.parameters.taskIndex.zoomLevel < this.currentTaskPosition.zoomLevel || (initTask.parameters.taskIndex.zoomLevel === this.currentTaskPosition.zoomLevel &&
-        initTask.parameters.taskIndex.currentTaskIndex > this.currentTaskPosition.currentTaskIndex)) {
-        this.currentTaskPosition = initTask.parameters.taskIndex;
+      const initTaskIndex = initTask.parameters.taskIndex;
+      const currentIndex = this.currentTaskPosition;
+
+      // Check if initTask represents more recent progress
+      const isMoreRecent =
+        initTaskIndex.zoomLevel < currentIndex.zoomLevel ||
+        (initTaskIndex.zoomLevel === currentIndex.zoomLevel &&
+          initTaskIndex.lastInsertedTaskIndex > currentIndex.lastInsertedTaskIndex);
+
+      if (isMoreRecent) {
+        this.currentTaskPosition = { ...initTaskIndex };
+        this.logger.debug({
+          msg: 'Updated task position from initTask (service recovery)',
+          previousPosition: currentIndex,
+          newPosition: this.currentTaskPosition
+        });
       }
     }
 
-    // Reset counter when zoom level changes
-      if (tasks.some(task => task.parameters.taskIndex.zoomLevel !== this.currentTaskPosition.zoomLevel)) {
-        this.currentTaskPosition.currentTaskIndex = 0; // reset counter when zoom level changes
-        this.currentTaskPosition.zoomLevel = Math.min(...tasks.map(task => task.parameters.taskIndex.zoomLevel));
+    // Update zoom level if tasks indicate a different zoom level is being processed
+    if (tasks.length > 0) {
+      const taskZoomLevel = Math.min(...tasks.map(task => task.parameters.taskIndex.zoomLevel));
+      if (taskZoomLevel !== this.currentTaskPosition.zoomLevel) {
+        // Zoom level transition detected - update without resetting counter
+        this.currentTaskPosition.zoomLevel = taskZoomLevel;
+        this.logger.debug({
+          msg: 'Updated zoom level from task batch',
+          newZoomLevel: taskZoomLevel,
+          currentPosition: this.currentTaskPosition
+        });
       }
+    }
   }
 
   private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): MergeParameters {
@@ -278,23 +299,30 @@ export class TileMergeTaskManager {
 
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
+    // Store original resume state (NEVER changes during loop)
+    const originalResumeZoom = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
+    const originalResumeIndex = initTask.parameters.taskIndex?.lastInsertedTaskIndex ?? 0;
+
     // Initialize working state
     this.currentTaskPosition = {
-      zoomLevel: initTask.parameters.taskIndex?.zoomLevel ?? maxZoom,
-      currentTaskIndex: initTask.parameters.taskIndex?.currentTaskIndex ?? 0
+      zoomLevel: originalResumeZoom,
+      lastInsertedTaskIndex: originalResumeIndex
     };
 
     logger.info({
       msg: 'Resume state initialized',
-      zoomLevel: this.currentTaskPosition.zoomLevel,
-      currentTaskIndex: this.currentTaskPosition.currentTaskIndex,
+      originalResumeZoom,
+      originalResumeIndex,
       maxZoom
     });
 
-    let zoom: number = this.currentTaskPosition.zoomLevel;
+    let zoom: number = originalResumeZoom;
 
     for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom, currentZoom: this.currentTaskPosition.zoomLevel });
+
+      // Update current zoom level being processed
+      this.currentTaskPosition.zoomLevel = zoom;
 
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
@@ -302,13 +330,14 @@ export class TileMergeTaskManager {
         unifiedPart = this.unifyParts(collection, tilesSource);
       }
 
-      // Only skip tasks on the EXACT resume zoom level
-      const shouldSkipTasks = zoom === this.currentTaskPosition.zoomLevel;
-      const tasksToSkip = shouldSkipTasks ? this.currentTaskPosition.currentTaskIndex : 0;
+      // Only skip tasks on the EXACT original resume zoom level
+      const shouldSkipTasks = zoom === originalResumeZoom;
+      const tasksToSkip = shouldSkipTasks ? originalResumeIndex : 0;
 
       logger.debug({
         msg: 'Zoom level task generation',
         zoom,
+        originalResumeZoom,
         shouldSkipTasks,
         tasksToSkip
       });
@@ -321,14 +350,13 @@ export class TileMergeTaskManager {
         tasksToSkip,
       );
 
-      // Reset task index for next zoom level (except during resume)
-      if (zoom !== this.currentTaskPosition.zoomLevel) {
-        this.currentTaskPosition.currentTaskIndex = 0;
-        this.currentTaskPosition.zoomLevel = zoom;
+      // Reset task index for new zoom levels (except original resume level)
+      if (zoom !== originalResumeZoom) {
+        this.currentTaskPosition.lastInsertedTaskIndex = 0;
         logger.debug({
           msg: 'Reset task index for new zoom level',
           zoom,
-          resetIndex: this.currentTaskPosition.currentTaskIndex
+          resetIndex: this.currentTaskPosition.lastInsertedTaskIndex
         });
       }
     }
@@ -452,18 +480,18 @@ export class TileMergeTaskManager {
         batch: JSON.stringify(batch)
       });
 
-      localTaskIndex++;
-
       yield {
         targetFormat: tileOutputFormat,
         isNewTarget: isNewTarget,
         batches: batch,
         taskIndex: {
-          currentTaskIndex: localTaskIndex,
+          lastInsertedTaskIndex: localTaskIndex,
           zoomLevel: zoom
         },
         sources,
       };
+
+      localTaskIndex++;
     }
     span.end();
   }

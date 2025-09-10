@@ -160,7 +160,7 @@ export enum Grid {
 }
 
 export interface IInitTaskIndexing {
-  currentTaskIndex: number;
+  lastInsertedTaskIndex: number;
   zoomLevel: number;
 }
 
@@ -370,9 +370,9 @@ export interface TraceParentContext {
 
 export type TaskProcessingTracker =
   | {
-      success: () => void;
-      failure: (errorType: string) => void;
-    }
+    success: () => void;
+    failure: (errorType: string) => void;
+  }
   | undefined;
 
 export interface JobAndTaskTelemetry {
