@@ -275,20 +275,22 @@ describe('tileMergeTaskManager', () => {
       const mockInitTask = createMockInitTask();
       mockInitTask.parameters.taskIndex = {
         zoomLevel: 5,
-        lastInsertedTaskIndex: 10
+        lastInsertedTaskIndex: 10,
       };
 
-      const tasks = [{
-        description: 'test task',
-        parameters: {
-          targetFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          batches: [],
-          taskIndex: { lastInsertedTaskIndex: 0, zoomLevel: 5 },
-          sources: []
+      const tasks = [
+        {
+          description: 'test task',
+          parameters: {
+            targetFormat: TileOutputFormat.PNG,
+            isNewTarget: true,
+            batches: [],
+            taskIndex: { lastInsertedTaskIndex: 0, zoomLevel: 5 },
+            sources: [],
+          },
+          type: 'merge',
         },
-        type: 'merge'
-      }];
+      ];
 
       // Set local position to be behind
       tileMergeTaskManager['currentTaskPosition'] = { zoomLevel: 5, lastInsertedTaskIndex: 5 };
@@ -299,9 +301,11 @@ describe('tileMergeTaskManager', () => {
       tileMergeTaskManager['updateLocalTaskIndexing'](tasks, mockInitTask);
 
       expect(tileMergeTaskManager['currentTaskPosition'].lastInsertedTaskIndex).toBe(11); // 10 + 1 task
-      expect(debugSpy).toHaveBeenCalledWith(expect.objectContaining({
-        msg: 'Updated task position from initTask (service recovery)'
-      }));
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'Updated task position from initTask (service recovery)',
+        })
+      );
     });
 
     it('should handle zoom level transition and reset task index', () => {
@@ -309,20 +313,22 @@ describe('tileMergeTaskManager', () => {
 
       const mockInitTask = createMockInitTask({
         zoomLevel: 5,
-        lastInsertedTaskIndex: 0
+        lastInsertedTaskIndex: 0,
       });
 
-      const tasks = [{
-        description: 'test task',
-        parameters: {
-          targetFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          batches: [],
-          taskIndex: { lastInsertedTaskIndex: 0, zoomLevel: 4 }, // Different zoom level
-          sources: []
+      const tasks = [
+        {
+          description: 'test task',
+          parameters: {
+            targetFormat: TileOutputFormat.PNG,
+            isNewTarget: true,
+            batches: [],
+            taskIndex: { lastInsertedTaskIndex: 0, zoomLevel: 4 }, // Different zoom level
+            sources: [],
+          },
+          type: 'merge',
         },
-        type: 'merge'
-      }];
+      ];
 
       // Set local position to different zoom
       tileMergeTaskManager['currentTaskPosition'] = { zoomLevel: 5, lastInsertedTaskIndex: 5 };
@@ -334,9 +340,11 @@ describe('tileMergeTaskManager', () => {
 
       expect(tileMergeTaskManager['currentTaskPosition'].zoomLevel).toBe(4);
       expect(tileMergeTaskManager['currentTaskPosition'].lastInsertedTaskIndex).toBe(1); // Reset to 0 + 1 task
-      expect(debugSpy).toHaveBeenCalledWith(expect.objectContaining({
-        msg: 'Updated zoom level from task batch'
-      }));
+      expect(debugSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          msg: 'Updated zoom level from task batch',
+        })
+      );
     });
   });
 });

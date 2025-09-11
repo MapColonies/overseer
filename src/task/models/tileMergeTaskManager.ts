@@ -351,7 +351,6 @@ export class TileMergeTaskManager {
       });
 
       yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, span, tasksToSkip);
-
     }
     span.end();
   }
