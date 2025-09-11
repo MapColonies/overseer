@@ -266,4 +266,77 @@ describe('tileMergeTaskManager', () => {
       await expect(action).rejects.toThrow();
     });
   });
+
+  describe('service recovery scenarios', () => {
+    it('should update task position from initTask when DB has more recent progress', () => {
+      const { tileMergeTaskManager } = testContext;
+
+      // Create initTask with more recent progress
+      const mockInitTask = createMockInitTask();
+      mockInitTask.parameters.taskIndex = {
+        zoomLevel: 5,
+        lastInsertedTaskIndex: 10
+      };
+
+      const tasks = [{
+        description: 'test task',
+        parameters: {
+          targetFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          batches: [],
+          taskIndex: { lastInsertedTaskIndex: 0, zoomLevel: 5 },
+          sources: []
+        },
+        type: 'merge'
+      }];
+
+      // Set local position to be behind
+      tileMergeTaskManager['currentTaskPosition'] = { zoomLevel: 5, lastInsertedTaskIndex: 5 };
+
+      const debugSpy = jest.spyOn(tileMergeTaskManager['logger'], 'debug');
+
+      // Call the private method directly
+      tileMergeTaskManager['updateLocalTaskIndexing'](tasks, mockInitTask);
+
+      expect(tileMergeTaskManager['currentTaskPosition'].lastInsertedTaskIndex).toBe(11); // 10 + 1 task
+      expect(debugSpy).toHaveBeenCalledWith(expect.objectContaining({
+        msg: 'Updated task position from initTask (service recovery)'
+      }));
+    });
+
+    it('should handle zoom level transition and reset task index', () => {
+      const { tileMergeTaskManager } = testContext;
+
+      const mockInitTask = createMockInitTask({
+        zoomLevel: 5,
+        lastInsertedTaskIndex: 0
+      });
+
+      const tasks = [{
+        description: 'test task',
+        parameters: {
+          targetFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          batches: [],
+          taskIndex: { lastInsertedTaskIndex: 0, zoomLevel: 4 }, // Different zoom level
+          sources: []
+        },
+        type: 'merge'
+      }];
+
+      // Set local position to different zoom
+      tileMergeTaskManager['currentTaskPosition'] = { zoomLevel: 5, lastInsertedTaskIndex: 5 };
+
+      const debugSpy = jest.spyOn(tileMergeTaskManager['logger'], 'debug');
+
+      // Call the private method directly
+      tileMergeTaskManager['updateLocalTaskIndexing'](tasks, mockInitTask);
+
+      expect(tileMergeTaskManager['currentTaskPosition'].zoomLevel).toBe(4);
+      expect(tileMergeTaskManager['currentTaskPosition'].lastInsertedTaskIndex).toBe(1); // Reset to 0 + 1 task
+      expect(debugSpy).toHaveBeenCalledWith(expect.objectContaining({
+        msg: 'Updated zoom level from task batch'
+      }));
+    });
+  });
 });
