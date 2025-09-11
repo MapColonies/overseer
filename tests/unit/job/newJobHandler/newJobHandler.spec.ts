@@ -17,7 +17,7 @@ describe('NewJobHandler', () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () { })();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
@@ -39,7 +39,7 @@ describe('NewJobHandler', () => {
 
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () { })();
+      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 

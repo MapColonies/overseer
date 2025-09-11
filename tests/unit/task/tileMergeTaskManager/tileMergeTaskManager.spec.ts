@@ -3,32 +3,13 @@ import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { bbox } from '@turf/turf';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
-import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
 import { Grid } from '../../../../src/common/interfaces';
-import { IngestionInitTask } from '../../../../src/utils/zod/schemas/job.schema';
+import { createMockInitTask } from '../../mocks/tasksMockData';
 import { createTaskGenerator, type MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
-
-// Helper function to create a mock IngestionInitTask
-const createMockInitTask = (taskIndex?: { lastInsertedTaskIndex: number; zoomLevel: number }): IngestionInitTask => ({
-  id: randomUUID(),
-  jobId: randomUUID(),
-  type: 'Ingestion_Init',
-  description: 'test init task',
-  parameters: {
-    taskIndex,
-  },
-  status: OperationStatus.PENDING,
-  percentage: 0,
-  reason: '',
-  attempts: 0,
-  resettable: true,
-  created: new Date().toISOString(),
-  updated: new Date().toISOString(),
-});
 
 describe('tileMergeTaskManager', () => {
   let testContext: MergeTilesTaskBuilderContext;

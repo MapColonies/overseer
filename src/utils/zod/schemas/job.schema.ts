@@ -18,7 +18,7 @@ import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
 import {
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
-  extendedTaskBlockDuplicationParamSchema
+  extendedTaskBlockDuplicationParamSchema,
 } from './jobParameters.schema';
 
 //#region Ingestion

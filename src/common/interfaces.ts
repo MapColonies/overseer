@@ -370,9 +370,9 @@ export interface TraceParentContext {
 
 export type TaskProcessingTracker =
   | {
-    success: () => void;
-    failure: (errorType: string) => void;
-  }
+      success: () => void;
+      failure: (errorType: string) => void;
+    }
   | undefined;
 
 export interface JobAndTaskTelemetry {
