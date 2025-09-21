@@ -276,7 +276,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -305,7 +305,7 @@ describe('tileMergeTaskManager', () => {
         // Explicit business logic assertions
         expect(taskSample).toHaveLength(5);
 
-        taskSample.forEach(task => {
+        taskSample.forEach((task) => {
           expect(task.taskIndex.zoomLevel).toBeLessThanOrEqual(resumeZoomLevel);
           expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
           expect(task.sources.length).toBeGreaterThan(0);
@@ -320,7 +320,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -345,7 +345,7 @@ describe('tileMergeTaskManager', () => {
         // Fresh start should generate tasks normally
         expect(taskSample).toHaveLength(5);
 
-        taskSample.forEach(task => {
+        taskSample.forEach((task) => {
           expect(task.taskIndex.zoomLevel).toBeGreaterThanOrEqual(0);
           expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
           expect(task.sources.length).toBeGreaterThan(0);
@@ -359,7 +359,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -386,7 +386,7 @@ describe('tileMergeTaskManager', () => {
 
         expect(taskSample.length).toBeGreaterThan(0);
 
-        taskSample.forEach(task => {
+        taskSample.forEach((task) => {
           expect(task.taskIndex.zoomLevel).toBe(0);
           expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
           expect(task.sources.length).toBeGreaterThan(0);
@@ -403,7 +403,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -432,7 +432,7 @@ describe('tileMergeTaskManager', () => {
         expect(taskSample.length).toBeGreaterThanOrEqual(0); // May be 0 if all tasks are skipped
 
         // If tasks are generated, they should be valid
-        taskSample.forEach(task => {
+        taskSample.forEach((task) => {
           expect(task.taskIndex.zoomLevel).toBeLessThanOrEqual(4);
           expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0); // Should be >= 0 (valid index)
           expect(task.sources.length).toBeGreaterThan(0);
@@ -447,7 +447,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -476,7 +476,7 @@ describe('tileMergeTaskManager', () => {
         expect(taskSample.length).toBeGreaterThanOrEqual(0); // Likely 0 since skip value is very high
 
         // If any tasks are generated, they should be valid
-        taskSample.forEach(task => {
+        taskSample.forEach((task) => {
           expect(task.targetFormat).toBe(TileOutputFormat.PNG);
           expect(task.isNewTarget).toBe(true);
           expect(task.taskIndex.zoomLevel).toBeLessThanOrEqual(4);
@@ -493,7 +493,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -532,7 +532,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -574,7 +574,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -627,7 +627,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
@@ -645,9 +645,7 @@ describe('tileMergeTaskManager', () => {
         const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
 
         // Should reject when HTTP requests fail
-        await expect(
-          tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks)
-        ).rejects.toThrow();
+        await expect(tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks)).rejects.toThrow();
       });
     });
 
@@ -659,7 +657,7 @@ describe('tileMergeTaskManager', () => {
             layerRelativePath: 'test/layer',
             tileOutputFormat: TileOutputFormat.PNG,
             isNewTarget: true,
-            grid: Grid.TWO_ON_ONE
+            grid: Grid.TWO_ON_ONE,
           },
           partsData,
           inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },

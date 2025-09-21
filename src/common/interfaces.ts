@@ -159,7 +159,7 @@ export enum Grid {
   TWO_ON_ONE = '2x1',
 }
 
-export interface IInitTaskIndexing {
+export interface IJobResumeState {
   lastInsertedTaskIndex: number;
   zoomLevel: number;
 }
@@ -219,7 +219,7 @@ export interface MergeTaskParameters {
   targetFormat: TileOutputFormat;
   isNewTarget: boolean;
   sources: TaskSources[];
-  taskIndex: IInitTaskIndexing;
+  taskIndex: IJobResumeState;
   batches: ITileRange[];
 }
 

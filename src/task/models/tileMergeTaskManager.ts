@@ -26,7 +26,7 @@ import type {
   TilesSource,
   MergeTilesMetadata,
   PPFeatureCollection,
-  IInitTaskIndexing,
+  IJobResumeState,
 } from '../../common/interfaces';
 import { IngestionInitTask } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
@@ -148,7 +148,12 @@ export class TileMergeTaskManager {
     });
   }
 
-  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[], initTask: IngestionInitTask, tasksProgress: IInitTaskIndexing): Promise<void> {
+  private async enqueueTasks(
+    jobId: string,
+    tasks: ICreateTaskBody<MergeTaskParameters>[],
+    initTask: IngestionInitTask,
+    tasksProgress: IJobResumeState
+  ): Promise<void> {
     const logger = this.logger.child({ jobId });
     logger.debug({ msg: `Attempting to enqueue task batch` });
 
@@ -267,21 +272,20 @@ export class TileMergeTaskManager {
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
     // Store original resume state (NEVER changes during loop)
-    const latestZoom = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
-    const latestIndex = initTask.parameters.taskIndex?.lastInsertedTaskIndex ?? 0;
+    const resumeFromZoom = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
+    const resumeFromTaskIndex = initTask.parameters.taskIndex?.lastInsertedTaskIndex ?? 0;
 
     logger.info({
       msg: 'Resume state initialized',
-      latestZoom,
-      latestIndex,
+      resumeFromZoom,
+      resumeFromTaskIndex,
       maxZoom,
     });
 
-    let zoom: number = latestZoom;
+    let zoom: number = resumeFromZoom;
 
     for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom });
-
 
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
@@ -290,13 +294,13 @@ export class TileMergeTaskManager {
       }
 
       // Only skip tasks on the EXACT original resume zoom level
-      const shouldSkipTasks = zoom === latestZoom;
-      const tasksToSkip = shouldSkipTasks ? latestIndex : 0;
+      const shouldSkipTasks = zoom === resumeFromZoom;
+      const tasksToSkip = shouldSkipTasks ? resumeFromTaskIndex : 0;
 
       logger.debug({
         msg: 'Zoom level task generation',
         zoom,
-        latestZoom,
+        latestZoom: resumeFromZoom,
         shouldSkipTasks,
         tasksToSkip,
       });
