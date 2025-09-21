@@ -41,7 +41,6 @@ export class TileMergeTaskManager {
   private readonly radiusBufferUnits: Units;
   private readonly truncatePrecision: number;
   private readonly truncateCoordinates: number;
-  private currentTaskPosition: IInitTaskIndexing;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -58,7 +57,6 @@ export class TileMergeTaskManager {
     this.radiusBufferUnits = this.config.get<Units>('jobManagement.ingestion.tasks.tilesMerging.radiusBufferUnits');
     this.truncatePrecision = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncatePrecision');
     this.truncateCoordinates = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncateCoordinates');
-    this.currentTaskPosition = { lastInsertedTaskIndex: 0, zoomLevel: 0 }; //try setting zoom to 21 by default
   }
 
   public buildTasks(taskBuildParams: MergeTilesTaskParams, initTask: IngestionInitTask): AsyncGenerator<MergeTaskParameters, void, void> {
@@ -113,9 +111,11 @@ export class TileMergeTaskManager {
 
       const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
       let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
+      let lastInsertedTaskIndex: MergeTaskParameters['taskIndex'];
 
       try {
         for await (const task of tasks) {
+          lastInsertedTaskIndex = task.taskIndex;
           const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
           taskBatch.push(taskBody);
           this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
@@ -123,15 +123,16 @@ export class TileMergeTaskManager {
           if (taskBatch.length === this.taskBatchSize) {
             logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
             activeSpan?.addEvent('enqueueTasks', { currentTaskBatchSize: taskBatch.length });
-            await this.enqueueTasks(jobId, taskBatch, initTask);
+            await this.enqueueTasks(jobId, taskBatch, initTask, lastInsertedTaskIndex);
             taskBatch = [];
           }
         }
 
         if (taskBatch.length > 0) {
+          lastInsertedTaskIndex = taskBatch[taskBatch.length - 1].parameters.taskIndex;
           logger.info({ msg: 'Pushing leftovers task batch to queue', batchLength: taskBatch.length });
           activeSpan?.addEvent('enqueueTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
-          await this.enqueueTasks(jobId, taskBatch, initTask);
+          await this.enqueueTasks(jobId, taskBatch, initTask, lastInsertedTaskIndex);
         }
         logger.info({ msg: `Successfully pushed all tasks to queue` });
       } catch (error) {
@@ -147,18 +148,18 @@ export class TileMergeTaskManager {
     });
   }
 
-  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[], initTask: IngestionInitTask): Promise<void> {
+  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[], initTask: IngestionInitTask, tasksProgress: IInitTaskIndexing): Promise<void> {
     const logger = this.logger.child({ jobId });
     logger.debug({ msg: `Attempting to enqueue task batch` });
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
 
-      this.updateLocalTaskIndexing(tasks, initTask);
+      //this.updateLocalTaskIndexing(tasks, initTask);
       await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
         parameters: {
           ...initTask.parameters,
-          taskIndex: this.currentTaskPosition,
+          taskIndex: tasksProgress,
         },
       });
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
@@ -169,48 +170,6 @@ export class TileMergeTaskManager {
 
       throw error;
     }
-  }
-
-  private updateLocalTaskIndexing(tasks: ICreateTaskBody<MergeTaskParameters>[], initTask: IngestionInitTask): void {
-    // Only update if initTask has more recent progress (recover from service crash)
-    if (initTask.parameters.taskIndex) {
-      const initTaskIndex = initTask.parameters.taskIndex;
-      const localTaskIndex = this.currentTaskPosition;
-
-      // Check if initTask represents more recent progress
-      const isDBTaskMoreRecent =
-        initTaskIndex.zoomLevel < localTaskIndex.zoomLevel ||
-        (initTaskIndex.zoomLevel === localTaskIndex.zoomLevel && initTaskIndex.lastInsertedTaskIndex > localTaskIndex.lastInsertedTaskIndex);
-
-      if (isDBTaskMoreRecent) {
-        this.currentTaskPosition = { ...initTaskIndex };
-        this.logger.debug({
-          msg: 'Updated task position from initTask (service recovery)',
-          previousPosition: localTaskIndex,
-          newPosition: this.currentTaskPosition,
-        });
-      }
-    }
-
-    // Update zoom level if tasks indicate a different zoom level is being processed
-    if (tasks.length > 0) {
-      const tasksMinZoomLevel = Math.min(...tasks.map((task) => task.parameters.taskIndex.zoomLevel));
-      const initTaskZoomLevel = initTask.parameters.taskIndex?.zoomLevel ?? this.currentTaskPosition.zoomLevel;
-      if (tasksMinZoomLevel !== initTaskZoomLevel) {
-        // Zoom level transition detected - update without resetting counter
-        this.currentTaskPosition.zoomLevel = tasksMinZoomLevel;
-        this.currentTaskPosition.lastInsertedTaskIndex = 0;
-        this.logger.debug({
-          msg: 'Updated zoom level from task batch',
-          newZoomLevel: tasksMinZoomLevel,
-          currentPosition: this.currentTaskPosition,
-        });
-      }
-    }
-
-    // Only count tasks that match the current zoom level
-    const tasksAtCurrentZoom = tasks.filter((task) => task.parameters.taskIndex.zoomLevel === this.currentTaskPosition.zoomLevel);
-    this.currentTaskPosition.lastInsertedTaskIndex += tasksAtCurrentZoom.length;
   }
 
   private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): MergeParameters {
@@ -308,29 +267,21 @@ export class TileMergeTaskManager {
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
     // Store original resume state (NEVER changes during loop)
-    const originalResumeZoom = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
-    const originalResumeIndex = initTask.parameters.taskIndex?.lastInsertedTaskIndex ?? 0;
-
-    // Initialize working state
-    this.currentTaskPosition = {
-      zoomLevel: originalResumeZoom,
-      lastInsertedTaskIndex: originalResumeIndex,
-    };
+    const latestZoom = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
+    const latestIndex = initTask.parameters.taskIndex?.lastInsertedTaskIndex ?? 0;
 
     logger.info({
       msg: 'Resume state initialized',
-      originalResumeZoom,
-      originalResumeIndex,
+      latestZoom,
+      latestIndex,
       maxZoom,
     });
 
-    let zoom: number = originalResumeZoom;
+    let zoom: number = latestZoom;
 
     for (zoom; zoom >= 0; zoom--) {
-      logger.info({ msg: 'Processing zoom level', zoom, currentZoom: this.currentTaskPosition.zoomLevel });
+      logger.info({ msg: 'Processing zoom level', zoom });
 
-      // Update current zoom level being processed
-      // this.currentTaskPosition.zoomLevel = zoom;
 
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
@@ -339,13 +290,13 @@ export class TileMergeTaskManager {
       }
 
       // Only skip tasks on the EXACT original resume zoom level
-      const shouldSkipTasks = zoom === originalResumeZoom;
-      const tasksToSkip = shouldSkipTasks ? originalResumeIndex : 0;
+      const shouldSkipTasks = zoom === latestZoom;
+      const tasksToSkip = shouldSkipTasks ? latestIndex : 0;
 
       logger.debug({
         msg: 'Zoom level task generation',
         zoom,
-        originalResumeZoom,
+        latestZoom,
         shouldSkipTasks,
         tasksToSkip,
       });
