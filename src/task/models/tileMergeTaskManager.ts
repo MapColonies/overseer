@@ -160,7 +160,6 @@ export class TileMergeTaskManager {
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
 
-      //this.updateLocalTaskIndexing(tasks, initTask);
       await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
         parameters: {
           ...initTask.parameters,
