@@ -8,6 +8,7 @@ import {
   updateAdditionalParamsSchema,
   updateRasterLayerRequestSchema,
   taskBlockDuplicationParamSchema,
+
 } from '@map-colonies/raster-shared';
 import { z } from 'zod';
 import { Grid } from '../../../common/interfaces';
@@ -63,6 +64,6 @@ export const initTaskIndexingSchema = z.object({
 });
 
 export const extendedTaskBlockDuplicationParamSchema = taskBlockDuplicationParamSchema.extend({
-  lastTaskState: initTaskIndexingSchema.optional(),
+  latestTaskState: initTaskIndexingSchema.optional(),
 });
 //#endregion

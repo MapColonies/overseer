@@ -184,7 +184,7 @@ export class TileMergeTaskManager {
       await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
         parameters: {
           ...initTask.parameters,
-          lastTaskState: latestTaskIndex,
+          latestTaskState: latestTaskIndex,
         },
       });
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
@@ -299,8 +299,8 @@ export class TileMergeTaskManager {
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
     // Store original resume state (NEVER changes during loop)
-    const resumedFromZoom = initTask.parameters.lastTaskState?.zoomLevel ?? maxZoom;
-    const resumeFromTaskIndex = initTask.parameters.lastTaskState?.lastInsertedTaskIndex ?? 0;
+    const resumedFromZoom = initTask.parameters.latestTaskState?.zoomLevel ?? maxZoom;
+    const resumeFromTaskIndex = initTask.parameters.latestTaskState?.lastInsertedTaskIndex ?? 0;
     let zoom: number = resumedFromZoom;
 
     logger.info({
