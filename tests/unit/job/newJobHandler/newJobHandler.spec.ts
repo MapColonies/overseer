@@ -47,13 +47,13 @@ describe('NewJobHandler', () => {
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
       const tasks: AsyncGenerator<
-    {
-      mergeTasksGenerator: MergeTaskParameters;
-      latestTaskIndex: JobResumeState;
-    },
-    void,
-    void
-  >  = (async function* () {})();
+        {
+          mergeTasksGenerator: MergeTaskParameters;
+          latestTaskIndex: JobResumeState;
+        },
+        void,
+        void
+      > = (async function* () {})();
 
       const error = new Error('Test error');
 
