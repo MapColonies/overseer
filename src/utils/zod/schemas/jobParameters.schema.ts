@@ -8,7 +8,6 @@ import {
   updateAdditionalParamsSchema,
   updateRasterLayerRequestSchema,
   taskBlockDuplicationParamSchema,
-
 } from '@map-colonies/raster-shared';
 import { z } from 'zod';
 import { Grid } from '../../../common/interfaces';
