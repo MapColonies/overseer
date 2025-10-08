@@ -184,7 +184,7 @@ export class TileMergeTaskManager {
       await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
         parameters: {
           ...initTask.parameters,
-          lastInsertedTaskIndex: latestTaskIndex,
+          lastTaskState: latestTaskIndex,
         },
       });
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
@@ -299,8 +299,8 @@ export class TileMergeTaskManager {
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
     // Store original resume state (NEVER changes during loop)
-    const resumedFromZoom = initTask.parameters.taskIndex?.zoomLevel ?? maxZoom;
-    const resumeFromTaskIndex = initTask.parameters.taskIndex?.lastInsertedTaskIndex ?? 0;
+    const resumedFromZoom = initTask.parameters.lastTaskState?.zoomLevel ?? maxZoom;
+    const resumeFromTaskIndex = initTask.parameters.lastTaskState?.lastInsertedTaskIndex ?? 0;
     let zoom: number = resumedFromZoom;
 
     logger.info({
@@ -467,6 +467,9 @@ export class TileMergeTaskManager {
         sources,
       };
 
+      // Increment counter first, then save the count of tasks processed
+      taskIndexCounter++;
+
       const taskResumeState: JobResumeState = {
         lastInsertedTaskIndex: taskIndexCounter,
         zoomLevel: zoom,
@@ -476,8 +479,6 @@ export class TileMergeTaskManager {
         mergeTasksGenerator: mergeTaskParameters,
         latestTaskIndex: taskResumeState,
       };
-
-      taskIndexCounter++;
     }
     span.end();
   }

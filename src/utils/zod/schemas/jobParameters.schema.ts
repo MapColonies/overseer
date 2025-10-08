@@ -63,6 +63,6 @@ export const initTaskIndexingSchema = z.object({
 });
 
 export const extendedTaskBlockDuplicationParamSchema = taskBlockDuplicationParamSchema.extend({
-  taskIndex: initTaskIndexingSchema.optional(),
+  lastTaskState: initTaskIndexingSchema.optional(),
 });
 //#endregion

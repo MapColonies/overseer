@@ -284,7 +284,7 @@ describe('tileMergeTaskManager', () => {
         const resumeZoomLevel = 6;
 
         const mockInitTask = createMockInitTask();
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: resumeZoomLevel,
           lastInsertedTaskIndex: 2,
         };
@@ -384,7 +384,7 @@ describe('tileMergeTaskManager', () => {
         };
 
         const mockInitTask = createMockInitTask();
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: 0, // Minimum zoom
           lastInsertedTaskIndex: 0, // Start index
         };
@@ -433,7 +433,7 @@ describe('tileMergeTaskManager', () => {
         };
 
         const mockInitTask = createMockInitTask();
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: 4, // Match test data max zoom
           lastInsertedTaskIndex: 1, // Should trigger skip logic
         };
@@ -482,7 +482,7 @@ describe('tileMergeTaskManager', () => {
         };
 
         const mockInitTask = createMockInitTask();
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: 4,
           lastInsertedTaskIndex: 999, // High skip value
         };
@@ -575,7 +575,7 @@ describe('tileMergeTaskManager', () => {
         const mockInitTask = createMockInitTask();
 
         // Set resume state
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: 4,
           lastInsertedTaskIndex: 1,
         };
@@ -615,7 +615,7 @@ describe('tileMergeTaskManager', () => {
 
         const mockInitTask = createMockInitTask();
         // Set malformed taskIndex
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: -1, // Invalid zoom level
           lastInsertedTaskIndex: -5, // Invalid index
         };
@@ -702,7 +702,7 @@ describe('tileMergeTaskManager', () => {
         const mockInitTask = createMockInitTask();
 
         // Simulate recovery scenario
-        mockInitTask.parameters.taskIndex = {
+        mockInitTask.parameters.lastTaskState = {
           zoomLevel: 3,
           lastInsertedTaskIndex: 0,
         };

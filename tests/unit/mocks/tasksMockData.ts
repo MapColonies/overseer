@@ -198,7 +198,7 @@ export const createMockInitTask = (taskIndex?: { lastInsertedTaskIndex: number; 
   type: 'init',
   description: 'test init task',
   parameters: {
-    taskIndex,
+    lastTaskState: taskIndex,
   },
   status: OperationStatus.PENDING,
   percentage: 0,
