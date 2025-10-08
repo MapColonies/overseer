@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
-import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
+import { Grid, MergeTaskParameters, JobResumeState } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
@@ -31,7 +31,14 @@ describe('updateJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const mergeTasks: AsyncGenerator<
+        {
+          mergeTasksGenerator: MergeTaskParameters;
+          latestTaskIndex: JobResumeState;
+        },
+        void,
+        void
+      > = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -49,7 +56,14 @@ describe('updateJobHandler', () => {
 
       const job = structuredClone(ingestionUpdateJob);
       const task = initTaskForIngestionUpdate;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<
+        {
+          mergeTasksGenerator: MergeTaskParameters;
+          latestTaskIndex: JobResumeState;
+        },
+        void,
+        void
+      > = (async function* () {})();
 
       const error = new Error('Test error');
 

@@ -4,7 +4,7 @@ import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
 import { configMock } from '../../mocks/configMock';
-import { JobManagerConfig, MergeTaskParameters } from '../../../../src/common/interfaces';
+import { JobManagerConfig, MergeTaskParameters, JobResumeState } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
@@ -50,14 +50,23 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
 }
 
 // eslint-disable-next-line @typescript-eslint/require-await
-export async function* createTaskGenerator(numTasks: number): AsyncGenerator<MergeTaskParameters, void, void> {
+export async function* createTaskGenerator(numTasks: number): AsyncGenerator<
+  {
+    mergeTasksGenerator: MergeTaskParameters;
+    latestTaskIndex: JobResumeState;
+  },
+  void,
+  void
+> {
   for (let i = 0; i < numTasks; i++) {
     yield {
-      isNewTarget: true,
-      targetFormat: TileOutputFormat.PNG,
-      sources: [{ path: 'layerRelativePath', type: 'source' }],
-      batches: [{ maxX: 1, maxY: 1, minX: 0, minY: 0, zoom: 1 }],
-      taskIndex: { lastInsertedTaskIndex: i, zoomLevel: 1 },
+      mergeTasksGenerator: {
+        isNewTarget: true,
+        targetFormat: TileOutputFormat.PNG,
+        sources: [{ path: 'layerRelativePath', type: 'source' }],
+        batches: [{ maxX: 1, maxY: 1, minX: 0, minY: 0, zoom: 1 }],
+      },
+      latestTaskIndex: { lastInsertedTaskIndex: i, zoomLevel: 1 },
     };
   }
 }

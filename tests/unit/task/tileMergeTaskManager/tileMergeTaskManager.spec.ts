@@ -6,7 +6,7 @@ import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
+import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection, JobResumeState } from '../../../../src/common/interfaces';
 import { Grid } from '../../../../src/common/interfaces';
 import { createMockInitTask } from '../../mocks/tasksMockData';
 import { createTaskGenerator, type MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
@@ -44,7 +44,7 @@ describe('tileMergeTaskManager', () => {
       const tasks: MergeTaskParameters[] = [];
 
       for await (const task of result) {
-        tasks.push(task);
+        tasks.push(task.mergeTasksGenerator);
       }
 
       const samplingTask: MergeTaskParameters = tasks[0];
@@ -296,7 +296,7 @@ describe('tileMergeTaskManager', () => {
         const maxSamples = 5;
 
         for await (const task of tasks) {
-          taskSample.push(task);
+          taskSample.push(task.mergeTasksGenerator);
           if (taskSample.length >= maxSamples) {
             break;
           }
@@ -305,9 +305,22 @@ describe('tileMergeTaskManager', () => {
         // Explicit business logic assertions
         expect(taskSample).toHaveLength(5);
 
+        const taskResumeSample: JobResumeState[] = [];
+        let sampleCount = 0;
+        for await (const task of tasks) {
+          taskResumeSample.push(task.latestTaskIndex);
+          sampleCount++;
+          if (sampleCount >= maxSamples) {
+            break;
+          }
+        }
+
+        taskResumeSample.forEach((taskIndex) => {
+          expect(taskIndex.zoomLevel).toBeLessThanOrEqual(resumeZoomLevel);
+          expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+        });
+
         taskSample.forEach((task) => {
-          expect(task.taskIndex.zoomLevel).toBeLessThanOrEqual(resumeZoomLevel);
-          expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
           expect(task.sources.length).toBeGreaterThan(0);
           expect(task.batches.length).toBeGreaterThan(0);
         });
@@ -333,10 +346,12 @@ describe('tileMergeTaskManager', () => {
 
         // Collect tasks to verify fresh start works correctly
         const taskSample: MergeTaskParameters[] = [];
+        const taskResumeSample: JobResumeState[] = [];
         const maxSamples = 5;
 
         for await (const task of tasks) {
-          taskSample.push(task);
+          taskSample.push(task.mergeTasksGenerator);
+          taskResumeSample.push(task.latestTaskIndex);
           if (taskSample.length >= maxSamples) {
             break;
           }
@@ -345,9 +360,12 @@ describe('tileMergeTaskManager', () => {
         // Fresh start should generate tasks normally
         expect(taskSample).toHaveLength(5);
 
+        taskResumeSample.forEach((taskIndex) => {
+          expect(taskIndex.zoomLevel).toBeGreaterThanOrEqual(0);
+          expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+        });
+
         taskSample.forEach((task) => {
-          expect(task.taskIndex.zoomLevel).toBeGreaterThanOrEqual(0);
-          expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
           expect(task.sources.length).toBeGreaterThan(0);
         });
       });
@@ -375,10 +393,12 @@ describe('tileMergeTaskManager', () => {
 
         // Collect tasks to verify boundary conditions work
         const taskSample: MergeTaskParameters[] = [];
+        const taskResumeSample: JobResumeState[] = [];
         const maxSamples = 2;
 
         for await (const task of tasks) {
-          taskSample.push(task);
+          taskSample.push(task.mergeTasksGenerator);
+          taskResumeSample.push(task.latestTaskIndex);
           if (taskSample.length >= maxSamples) {
             break;
           }
@@ -386,9 +406,12 @@ describe('tileMergeTaskManager', () => {
 
         expect(taskSample.length).toBeGreaterThan(0);
 
+        taskResumeSample.forEach((taskIndex) => {
+          expect(taskIndex.zoomLevel).toBe(0);
+          expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+        });
+
         taskSample.forEach((task) => {
-          expect(task.taskIndex.zoomLevel).toBe(0);
-          expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
           expect(task.sources.length).toBeGreaterThan(0);
           expect(task.batches.length).toBeGreaterThan(0);
         });
@@ -419,10 +442,12 @@ describe('tileMergeTaskManager', () => {
 
         // Collect tasks to verify skip logic works
         const taskSample: MergeTaskParameters[] = [];
+        const taskResumeSample: JobResumeState[] = [];
         const maxSamples = 2;
 
         for await (const task of tasks) {
-          taskSample.push(task);
+          taskSample.push(task.mergeTasksGenerator);
+          taskResumeSample.push(task.latestTaskIndex);
           if (taskSample.length >= maxSamples) {
             break;
           }
@@ -432,9 +457,12 @@ describe('tileMergeTaskManager', () => {
         expect(taskSample.length).toBeGreaterThanOrEqual(0); // May be 0 if all tasks are skipped
 
         // If tasks are generated, they should be valid
+        taskResumeSample.forEach((taskIndex) => {
+          expect(taskIndex.zoomLevel).toBeLessThanOrEqual(4);
+          expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0); // Should be >= 0 (valid index)
+        });
+
         taskSample.forEach((task) => {
-          expect(task.taskIndex.zoomLevel).toBeLessThanOrEqual(4);
-          expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0); // Should be >= 0 (valid index)
           expect(task.sources.length).toBeGreaterThan(0);
           expect(task.batches.length).toBeGreaterThan(0);
         });
@@ -463,10 +491,12 @@ describe('tileMergeTaskManager', () => {
 
         // Try to collect tasks with high skip value
         const taskSample: MergeTaskParameters[] = [];
+        const taskResumeSample: JobResumeState[] = [];
         const maxSamples = 2;
 
         for await (const task of tasks) {
-          taskSample.push(task);
+          taskSample.push(task.mergeTasksGenerator);
+          taskResumeSample.push(task.latestTaskIndex);
           if (taskSample.length >= maxSamples) {
             break;
           }
@@ -479,8 +509,11 @@ describe('tileMergeTaskManager', () => {
         taskSample.forEach((task) => {
           expect(task.targetFormat).toBe(TileOutputFormat.PNG);
           expect(task.isNewTarget).toBe(true);
-          expect(task.taskIndex.zoomLevel).toBeLessThanOrEqual(4);
-          expect(task.taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+        });
+
+        taskResumeSample.forEach((taskIndex) => {
+          expect(taskIndex.zoomLevel).toBeLessThanOrEqual(4);
+          expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
         });
       });
     });
@@ -596,10 +629,12 @@ describe('tileMergeTaskManager', () => {
         // Verify no tasks are generated with malformed parameters
         const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
         const taskSample: MergeTaskParameters[] = [];
+        const taskResumeSample: JobResumeState[] = [];
         const maxSamples = 5;
 
         for await (const task of tasks) {
-          taskSample.push(task);
+          taskSample.push(task.mergeTasksGenerator);
+          taskResumeSample.push(task.latestTaskIndex);
           if (taskSample.length >= maxSamples) {
             break;
           }
