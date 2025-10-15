@@ -155,6 +155,11 @@ export type IngestionFinalizeTaskParams = IngestionNewFinalizeTaskParams | Inges
 
 //#region merge task
 
+export interface MergeTask {
+  mergeTasksGenerator: MergeTaskParameters;
+  latestTaskIndex: JobResumeState;
+}
+
 export enum Grid {
   TWO_ON_ONE = '2x1',
 }
@@ -369,9 +374,9 @@ export interface TraceParentContext {
 
 export type TaskProcessingTracker =
   | {
-      success: () => void;
-      failure: (errorType: string) => void;
-    }
+    success: () => void;
+    failure: (errorType: string) => void;
+  }
   | undefined;
 
 export interface JobAndTaskTelemetry {
