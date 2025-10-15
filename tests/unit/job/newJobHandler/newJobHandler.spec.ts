@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { finalizeTaskForIngestionNew, initTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
-import { JobResumeState, MergeTaskParameters } from '../../../../src/common/interfaces';
+import { JobResumeState, MergeTask, MergeTaskParameters } from '../../../../src/common/interfaces';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { PublishLayerError } from '../../../../src/common/errors';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
@@ -18,13 +18,10 @@ describe('NewJobHandler', () => {
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
       const tasks: AsyncGenerator<
-        {
-          mergeTasksGenerator: MergeTaskParameters;
-          latestTaskIndex: JobResumeState;
-        },
+        MergeTask,
         void,
         void
-      > = (async function* () {})();
+      > = (async function* () { })();
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
@@ -47,13 +44,10 @@ describe('NewJobHandler', () => {
       const job = ingestionNewJob;
       const task = initTaskForIngestionNew;
       const tasks: AsyncGenerator<
-        {
-          mergeTasksGenerator: MergeTaskParameters;
-          latestTaskIndex: JobResumeState;
-        },
+        MergeTask,
         void,
         void
-      > = (async function* () {})();
+      > = (async function* () { })();
 
       const error = new Error('Test error');
 
