@@ -232,11 +232,11 @@ describe('tileMergeTaskManager', () => {
         expect(taskIndex.zoomLevel).toBeLessThanOrEqual(4);
         expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
       });
-      
-      const zoomLevels = taskResumeSample.map(taskIndex => taskIndex.zoomLevel);
-      expect(zoomLevels.filter(zoom => zoom === 1).length).toBeGreaterThan(0);
-      expect(zoomLevels.filter(zoom => zoom === 2).length).toBeGreaterThan(0);
-      expect(zoomLevels.filter(zoom => zoom === 3).length).toBeGreaterThan(0);
+
+      const zoomLevels = taskResumeSample.map((taskIndex) => taskIndex.zoomLevel);
+      expect(zoomLevels.filter((zoom) => zoom === 1).length).toBeGreaterThan(0);
+      expect(zoomLevels.filter((zoom) => zoom === 2).length).toBeGreaterThan(0);
+      expect(zoomLevels.filter((zoom) => zoom === 3).length).toBeGreaterThan(0);
     });
 
     it('should handle malformed resume parameters gracefully', async () => {

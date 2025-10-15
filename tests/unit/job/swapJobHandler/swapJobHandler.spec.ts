@@ -2,7 +2,7 @@
 import crypto from 'crypto';
 import { type LayerName, type RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
-import { Grid, MergeTask, MergeTaskParameters, SeedJobParams } from '../../../../src/common/interfaces';
+import { Grid, MergeTask, SeedJobParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
@@ -37,11 +37,7 @@ describe('swapJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<
-        MergeTask,
-        void,
-        void
-      > = (async function* () { })();
+      const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -62,11 +58,7 @@ describe('swapJobHandler', () => {
 
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = initTaskForIngestionSwapUpdate;
-      const tasks: AsyncGenerator<
-        MergeTask,
-        void,
-        void
-      > = (async function* () { })();
+      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 

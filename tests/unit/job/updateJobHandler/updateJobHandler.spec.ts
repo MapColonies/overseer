@@ -31,11 +31,7 @@ describe('updateJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<
-        MergeTask,
-        void,
-        void
-      > = (async function* () { })();
+      const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -53,11 +49,7 @@ describe('updateJobHandler', () => {
 
       const job = structuredClone(ingestionUpdateJob);
       const task = initTaskForIngestionUpdate;
-      const tasks: AsyncGenerator<
-        MergeTask,
-        void,
-        void
-      > = (async function* () { })();
+      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 
