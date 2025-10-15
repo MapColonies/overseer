@@ -467,7 +467,6 @@ export class TileMergeTaskManager {
         sources,
       };
 
-      // Increment counter first, then save the count of tasks processed
       taskIndexCounter++;
 
       const taskResumeState: JobResumeState = {
