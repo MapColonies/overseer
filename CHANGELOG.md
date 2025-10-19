@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.3.0](https://github.com/MapColonies/overseer/compare/v2.2.0...v2.3.0) (2025-10-19)
+
+
+### Features
+
+* allow init task recovery (MAPCO-8003) ([#61](https://github.com/MapColonies/overseer/issues/61)) ([4f38eb5](https://github.com/MapColonies/overseer/commit/4f38eb5e6bc9782f0083d657f58d4f2bbe4e7c47))
+
+
+### Bug Fixes
+
+* helm chart having url override global ([#60](https://github.com/MapColonies/overseer/issues/60)) ([80d3d1e](https://github.com/MapColonies/overseer/commit/80d3d1e147bc74cd6e04918ce67b605d5aa0b4cd))
+
 ## [2.2.0](https://github.com/MapColonies/overseer/compare/v2.1.1...v2.2.0) (2025-06-24)
 
 
