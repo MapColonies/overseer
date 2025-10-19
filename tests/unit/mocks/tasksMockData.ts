@@ -7,7 +7,7 @@ import {
   TaskBlockDuplicationParam,
 } from '@map-colonies/raster-shared';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
-import { ExportFinalizeTask, ExportInitTask } from '../../../src/utils/zod/schemas/job.schema';
+import { ExportFinalizeTask, ExportInitTask, IngestionInitTask } from '../../../src/utils/zod/schemas/job.schema';
 
 export const initTaskForIngestionNew: ITaskResponse<TaskBlockDuplicationParam> = {
   id: '4a5486bd-6269-4898-b9b1-647fe56d6ae2',
@@ -191,3 +191,20 @@ export const notifyTask: ITaskResponse<unknown> = {
   created: faker.date.past().toISOString(),
   updated: faker.date.recent().toISOString(),
 };
+
+export const createMockInitTask = (taskIndex?: { lastInsertedTaskIndex: number; zoomLevel: number }): IngestionInitTask => ({
+  id: faker.string.uuid(),
+  jobId: faker.string.uuid(),
+  type: 'init',
+  description: 'test init task',
+  parameters: {
+    latestTaskState: taskIndex,
+  },
+  status: OperationStatus.PENDING,
+  percentage: 0,
+  reason: '',
+  attempts: 0,
+  resettable: true,
+  created: new Date().toISOString(),
+  updated: new Date().toISOString(),
+});

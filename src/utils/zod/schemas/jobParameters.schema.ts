@@ -7,6 +7,7 @@ import {
   tilesMimeFormatSchema,
   updateAdditionalParamsSchema,
   updateRasterLayerRequestSchema,
+  taskBlockDuplicationParamSchema,
 } from '@map-colonies/raster-shared';
 import { z } from 'zod';
 import { Grid } from '../../../common/interfaces';
@@ -53,4 +54,15 @@ export const ingestionSwapUpdateFinalizeJobParamsSchema = updateRasterLayerReque
   additionalParams: swapUpdateFinalizeAdditionalParamsSchema,
 });
 
+//#endregion
+
+//#region Task Parameters with Indexing
+export const initTaskIndexingSchema = z.object({
+  lastInsertedTaskIndex: z.number().min(0),
+  zoomLevel: z.number().min(0),
+});
+
+export const extendedTaskBlockDuplicationParamSchema = taskBlockDuplicationParamSchema.extend({
+  latestTaskState: initTaskIndexingSchema.optional(),
+});
 //#endregion

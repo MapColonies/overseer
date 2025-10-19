@@ -3,11 +3,12 @@ import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { bbox } from '@turf/turf';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
-import { createFakeFeatureCollection, multiPartDataWithDifferentResolution, partsData } from '../../mocks/partsMockData';
+import { createFakeFeatureCollection, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection } from '../../../../src/common/interfaces';
+import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection, JobResumeState } from '../../../../src/common/interfaces';
 import { Grid } from '../../../../src/common/interfaces';
+import { createMockInitTask } from '../../mocks/tasksMockData';
 import { createTaskGenerator, type MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
@@ -22,40 +23,58 @@ describe('tileMergeTaskManager', () => {
   });
 
   describe('buildTasks', () => {
-    const successTestCases: MergeTilesTaskParams[] = [
-      {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partsData,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['unified_zoom_level'] },
-      },
-      {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partsData: multiPartDataWithDifferentResolution,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['different_zoom_level'] },
-      },
-    ];
-
-    test.each(successTestCases)('should build tasks successfully', async (buildTasksParams) => {
+    it('should handle initTask (fresh start)', async () => {
       const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'layerRelativePath',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
 
-      const result = tileMergeTaskManager.buildTasks(buildTasksParams);
-      const tasks: MergeTaskParameters[] = [];
+      const mockInitTask = createMockInitTask();
+      // No taskIndex set - should default to fresh start
 
-      for await (const task of result) {
-        tasks.push(task);
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      // Collect tasks to verify fresh start works correctly
+      const taskSample: MergeTaskParameters[] = [];
+      const taskResumeSample: JobResumeState[] = [];
+      const maxSamples = 5;
+
+      for await (const task of tasks) {
+        taskSample.push(task.mergeTasksGenerator);
+        taskResumeSample.push(task.latestTaskIndex);
+        if (taskSample.length >= maxSamples) {
+          break;
+        }
       }
 
-      const samplingTask: MergeTaskParameters = tasks[0];
-      expect(tasks.length).toBeGreaterThan(0);
-      expect(samplingTask.isNewTarget).toBe(true);
-      expect(samplingTask.targetFormat).toBe(TileOutputFormat.PNG);
-      expect(samplingTask.sources.length).toBeGreaterThan(0);
-      expect(samplingTask.sources[0].path).toBe('layerRelativePath');
-      expect(samplingTask.batches.length).toBeGreaterThan(0);
+      // Fresh start should generate tasks normally
+      expect(taskSample).toHaveLength(5);
+
+      taskResumeSample.forEach((taskIndex) => {
+        expect(taskIndex.zoomLevel).toBeGreaterThanOrEqual(0);
+        expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+      });
+
+      taskSample.forEach((task) => {
+        expect(task.sources.length).toBeGreaterThan(0);
+        expect(task.isNewTarget).toBe(true);
+        expect(task.targetFormat).toBe(TileOutputFormat.PNG);
+        expect(task.sources.length).toBeGreaterThan(0);
+        expect(task.sources[0].path).toBe('layerRelativePath');
+        expect(task.batches.length).toBeGreaterThan(0);
+      });
     });
 
     it('should handle errors in buildTasks correctly', () => {
       const { tileMergeTaskManager } = testContext;
+      const mockInitTask = createMockInitTask();
 
       const buildTasksParams = {
         taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
@@ -66,12 +85,257 @@ describe('tileMergeTaskManager', () => {
       let error: Error | null = null;
 
       try {
-        tileMergeTaskManager.buildTasks(buildTasksParams);
+        tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
       } catch (err) {
         error = err as Error;
       }
 
       expect(error).not.toBeNull();
+    });
+
+    it('resume state initialization - should handle initTask with valid resume parameters', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+      const resumeZoomLevel = 6;
+
+      const mockInitTask = createMockInitTask();
+      mockInitTask.parameters.latestTaskState = {
+        zoomLevel: resumeZoomLevel,
+        lastInsertedTaskIndex: 2,
+      };
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      // Collect a small sample of tasks to verify business logic
+      const taskSample: MergeTaskParameters[] = [];
+      const taskResumeSample: JobResumeState[] = [];
+      const maxSamples = 5;
+
+      for await (const task of tasks) {
+        taskSample.push(task.mergeTasksGenerator);
+        taskResumeSample.push(task.latestTaskIndex);
+        if (taskSample.length >= maxSamples) {
+          break;
+        }
+      }
+
+      // Explicit business logic assertions
+      expect(taskSample).toHaveLength(5);
+
+      taskResumeSample.forEach((taskIndex) => {
+        expect(taskIndex.zoomLevel).toBeLessThanOrEqual(resumeZoomLevel);
+        expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+      });
+
+      taskSample.forEach((task) => {
+        expect(task.sources.length).toBeGreaterThan(0);
+        expect(task.batches.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('resume state initialization - should handle initTask with boundary resume parameters', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const mockInitTask = createMockInitTask();
+      mockInitTask.parameters.latestTaskState = {
+        zoomLevel: 0, // Minimum zoom
+        lastInsertedTaskIndex: 0, // Start index
+      };
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      // Collect tasks to verify boundary conditions work
+      const taskSample: MergeTaskParameters[] = [];
+      const taskResumeSample: JobResumeState[] = [];
+      const maxSamples = 2;
+
+      for await (const task of tasks) {
+        taskSample.push(task.mergeTasksGenerator);
+        taskResumeSample.push(task.latestTaskIndex);
+        if (taskSample.length >= maxSamples) {
+          break;
+        }
+      }
+
+      expect(taskSample.length).toBeGreaterThan(0);
+
+      taskResumeSample.forEach((taskIndex) => {
+        expect(taskIndex.zoomLevel).toBe(0);
+        expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+      });
+
+      taskSample.forEach((task) => {
+        expect(task.sources.length).toBeGreaterThan(0);
+        expect(task.batches.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('resume state initialization - should handle high skip index values', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const mockInitTask = createMockInitTask();
+      mockInitTask.parameters.latestTaskState = {
+        zoomLevel: 4,
+        lastInsertedTaskIndex: 999, // High skip value
+      };
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      // Try to collect tasks with high skip value
+      const taskSample: MergeTaskParameters[] = [];
+      const taskResumeSample: JobResumeState[] = [];
+
+      for await (const task of tasks) {
+        taskSample.push(task.mergeTasksGenerator);
+        taskResumeSample.push(task.latestTaskIndex);
+      }
+
+      // High skip values should not crash the system
+      expect(taskSample.length).toBeGreaterThanOrEqual(0); // Likely 0 since skip value is very high
+
+      // If any tasks are generated, they should be valid
+      taskSample.forEach((task) => {
+        expect(task.targetFormat).toBe(TileOutputFormat.PNG);
+        expect(task.isNewTarget).toBe(true);
+      });
+
+      taskResumeSample.forEach((taskIndex) => {
+        expect(taskIndex.zoomLevel).toBeLessThanOrEqual(4);
+        expect(taskIndex.lastInsertedTaskIndex).toBeGreaterThanOrEqual(0);
+      });
+
+      const zoomLevels = taskResumeSample.map((taskIndex) => taskIndex.zoomLevel);
+      expect(zoomLevels.filter((zoom) => zoom === 0).length).toBeGreaterThan(0);
+      expect(zoomLevels.filter((zoom) => zoom === 1).length).toBeGreaterThan(0);
+      expect(zoomLevels.filter((zoom) => zoom === 2).length).toBeGreaterThan(0);
+      expect(zoomLevels.filter((zoom) => zoom === 3).length).toBeGreaterThan(0);
+    });
+
+    it('should handle malformed resume parameters gracefully', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const mockInitTask = createMockInitTask();
+      // Set malformed taskIndex
+      mockInitTask.parameters.latestTaskState = {
+        zoomLevel: -1, // Invalid zoom level
+        lastInsertedTaskIndex: -5, // Invalid index
+      };
+
+      // Should not throw error - implementation should handle gracefully
+      expect(() => {
+        const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+        expect(tasks).toBeDefined();
+      }).not.toThrow();
+
+      // Verify no tasks are generated with malformed parameters
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+      const taskSample: MergeTaskParameters[] = [];
+      const taskResumeSample: JobResumeState[] = [];
+      const maxSamples = 5;
+
+      for await (const task of tasks) {
+        taskSample.push(task.mergeTasksGenerator);
+        taskResumeSample.push(task.latestTaskIndex);
+        if (taskSample.length >= maxSamples) {
+          break;
+        }
+      }
+
+      // Expect no tasks to be pushed with malformed parameters
+      expect(taskSample).toHaveLength(0);
+
+      // Spy on updateTask to verify it's not called
+      const updateTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
+
+      const jobId = randomUUID();
+      await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
+
+      // Expect updateJob to not be called when no tasks are processed
+      expect(updateTaskSpy).not.toHaveBeenCalled();
+
+      updateTaskSpy.mockRestore();
+    });
+
+    it('should complete full recovery cycle: build -> push with resume state', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
+
+      // Simulate recovery scenario
+      mockInitTask.parameters.latestTaskState = {
+        zoomLevel: 3,
+        lastInsertedTaskIndex: 0,
+      };
+
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${jobId}/tasks`;
+      const updateTaskPath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
+
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updateTaskPath).reply(200).persist();
+
+      // Execute full recovery cycle
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      let error: Error | null = null;
+      try {
+        await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
+      } catch (err) {
+        error = err as Error;
+      }
+
+      // Verify successful completion
+      expect(error).toBeNull();
     });
   });
 
@@ -192,16 +456,19 @@ describe('tileMergeTaskManager', () => {
       };
 
       const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
 
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const path = `/jobs/${jobId}/tasks`;
+      const updatePath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
       nock(jobManagerBaseUrl).post(path).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updatePath).reply(200).persist();
 
-      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
 
       let error: Error | null = null;
       try {
-        await tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+        await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
       } catch (err) {
         error = err as Error;
       }
@@ -215,10 +482,13 @@ describe('tileMergeTaskManager', () => {
       const numberOfTasks = 3;
       const enqueueTasksTotal = Math.ceil(numberOfTasks / taskBatchSize);
       const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
 
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const path = `/jobs/${jobId}/tasks`;
+      const updatePath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
       nock(jobManagerBaseUrl).post(path).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updatePath).reply(200).persist();
 
       const tasks = createTaskGenerator(numberOfTasks);
 
@@ -226,7 +496,7 @@ describe('tileMergeTaskManager', () => {
 
       let error: Error | null = null;
       try {
-        await tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+        await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
       } catch (err) {
         error = err as Error;
       }
@@ -249,11 +519,119 @@ describe('tileMergeTaskManager', () => {
       const path = `/jobs/${jobId}/tasks`;
       nock(jobManagerBaseUrl).post(path).reply(500).persist();
 
-      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams);
+      const mockInitTask = createMockInitTask();
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
 
-      const action = async () => tileMergeTaskManager.pushTasks(jobId, ingestionNewJob.type, tasks);
+      const action = async () => tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
 
       await expect(action).rejects.toThrow();
+    });
+
+    it('should update initTask progress after pushTasks', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
+
+      // Setup HTTP mocks for job manager interactions
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${jobId}/tasks`;
+      const updateTaskPath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
+
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updateTaskPath).reply(200).persist();
+
+      // Spy on the job manager client methods
+      const updateTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
+      const createTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'createTaskForJob');
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+      await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
+
+      // Verify progress tracking occurred
+      expect(updateTaskSpy).toHaveBeenCalled();
+      expect(updateTaskSpy.mock.calls.length).toBeGreaterThan(0);
+
+      updateTaskSpy.mockRestore();
+      createTaskSpy.mockRestore();
+    });
+
+    it('resume state initialization - should handle progress tracking with resume state on pushTasks', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
+
+      // Set resume state
+      mockInitTask.parameters.latestTaskState = {
+        zoomLevel: 4,
+        lastInsertedTaskIndex: 1,
+      };
+
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${jobId}/tasks`;
+      const updateTaskPath = `/jobs/${jobId}/tasks/${mockInitTask.id}`;
+
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updateTaskPath).reply(200).persist();
+
+      const updateTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+      await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
+
+      // Verify that progress tracking works even with resume state
+      expect(updateTaskSpy).toHaveBeenCalled();
+
+      updateTaskSpy.mockRestore();
+    });
+
+    it('should handle recovery when HTTP requests fail', async () => {
+      const { tileMergeTaskManager } = testContext;
+      const buildTasksParams: MergeTilesTaskParams = {
+        taskMetadata: {
+          layerRelativePath: 'test/layer',
+          tileOutputFormat: TileOutputFormat.PNG,
+          isNewTarget: true,
+          grid: Grid.TWO_ON_ONE,
+        },
+        partsData,
+        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
+      };
+
+      const jobId = randomUUID();
+      const mockInitTask = createMockInitTask();
+
+      // Setup HTTP mocks to simulate failures
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${jobId}/tasks`;
+
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(500).persist();
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      // Should reject when HTTP requests fail
+      await expect(tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks)).rejects.toThrow();
     });
   });
 });

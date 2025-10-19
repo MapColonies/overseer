@@ -26,7 +26,9 @@ import type {
   TilesSource,
   MergeTilesMetadata,
   PPFeatureCollection,
+  JobResumeState,
 } from '../../common/interfaces';
+import { IngestionInitTask } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
 @injectable()
@@ -57,7 +59,17 @@ export class TileMergeTaskManager {
     this.truncateCoordinates = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncateCoordinates');
   }
 
-  public buildTasks(taskBuildParams: MergeTilesTaskParams): AsyncGenerator<MergeTaskParameters, void, void> {
+  public buildTasks(
+    taskBuildParams: MergeTilesTaskParams,
+    initTask: IngestionInitTask
+  ): AsyncGenerator<
+    {
+      mergeTasksGenerator: MergeTaskParameters;
+      latestTaskIndex: JobResumeState;
+    },
+    void,
+    void
+  > {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttributes({
@@ -78,7 +90,7 @@ export class TileMergeTaskManager {
           ...mergeParams.tilesSource,
         });
 
-        const tasks = this.createZoomLevelTasks(mergeParams, activeSpan);
+        const tasks = this.createZoomLevelTasks(mergeParams, activeSpan, initTask);
 
         logger.debug({ msg: `Successfully built tasks for ${this.taskType} task` });
         return tasks;
@@ -95,7 +107,19 @@ export class TileMergeTaskManager {
     });
   }
 
-  public async pushTasks(jobId: string, jobType: string, tasks: AsyncGenerator<MergeTaskParameters, void, void>): Promise<void> {
+  public async pushTasks(
+    initTask: IngestionInitTask,
+    jobId: string,
+    jobType: string,
+    mergeTasks: AsyncGenerator<
+      {
+        mergeTasksGenerator: MergeTaskParameters;
+        latestTaskIndex: JobResumeState;
+      },
+      void,
+      void
+    >
+  ): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.pushTasks.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -104,17 +128,23 @@ export class TileMergeTaskManager {
 
       const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
       let taskBatch: ICreateTaskBody<MergeTaskParameters>[] = [];
+      let latestTaskIndex: JobResumeState;
 
       try {
-        for await (const task of tasks) {
-          const taskBody: ICreateTaskBody<MergeTaskParameters> = { description: 'merge tiles task', parameters: task, type: this.taskType };
+        for await (const task of mergeTasks) {
+          latestTaskIndex = task.latestTaskIndex;
+          const taskBody: ICreateTaskBody<MergeTaskParameters> = {
+            description: 'merge tiles task',
+            parameters: task.mergeTasksGenerator,
+            type: this.taskType,
+          };
           taskBatch.push(taskBody);
-          this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.batches.length);
+          this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.mergeTasksGenerator.batches.length);
 
           if (taskBatch.length === this.taskBatchSize) {
             logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
             activeSpan?.addEvent('enqueueTasks', { currentTaskBatchSize: taskBatch.length });
-            await this.enqueueTasks(jobId, taskBatch);
+            await this.enqueueTasks(jobId, taskBatch, initTask, latestTaskIndex);
             taskBatch = [];
           }
         }
@@ -122,7 +152,8 @@ export class TileMergeTaskManager {
         if (taskBatch.length > 0) {
           logger.info({ msg: 'Pushing leftovers task batch to queue', batchLength: taskBatch.length });
           activeSpan?.addEvent('enqueueTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
-          await this.enqueueTasks(jobId, taskBatch);
+          await this.enqueueTasks(jobId, taskBatch, initTask, latestTaskIndex!);
+          taskBatch = [];
         }
         logger.info({ msg: `Successfully pushed all tasks to queue` });
       } catch (error) {
@@ -138,17 +169,30 @@ export class TileMergeTaskManager {
     });
   }
 
-  private async enqueueTasks(jobId: string, tasks: ICreateTaskBody<MergeTaskParameters>[]): Promise<void> {
+  private async enqueueTasks(
+    jobId: string,
+    tasks: ICreateTaskBody<MergeTaskParameters>[],
+    initTask: IngestionInitTask,
+    latestTaskIndex: JobResumeState
+  ): Promise<void> {
     const logger = this.logger.child({ jobId });
     logger.debug({ msg: `Attempting to enqueue task batch` });
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
+
+      await this.queueClient.jobManagerClient.updateTask(jobId, initTask.id, {
+        parameters: {
+          ...initTask.parameters,
+          latestTaskState: latestTaskIndex,
+        },
+      });
       logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
     } catch (error) {
       const errorMsg = (error as Error).message;
       const message = `Failed to enqueue tasks: ${errorMsg}`;
       logger.error({ msg: message, error });
+
       throw error;
     }
   }
@@ -231,7 +275,18 @@ export class TileMergeTaskManager {
     return featurePolygon;
   }
 
-  private async *createZoomLevelTasks(params: MergeParameters, parentSpan: Span | undefined): AsyncGenerator<MergeTaskParameters, void, void> {
+  private async *createZoomLevelTasks(
+    params: MergeParameters,
+    parentSpan: Span | undefined,
+    initTask: IngestionInitTask
+  ): AsyncGenerator<
+    {
+      mergeTasksGenerator: MergeTaskParameters;
+      latestTaskIndex: JobResumeState;
+    },
+    void,
+    void
+  > {
     const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createZoomLevelTasks.name}`, parentSpan);
 
     const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
@@ -243,14 +298,40 @@ export class TileMergeTaskManager {
 
     span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
 
-    for (let zoom = maxZoom; zoom >= 0; zoom--) {
+    // Store original resume state (NEVER changes during loop)
+    const resumedFromZoom = initTask.parameters.latestTaskState?.zoomLevel ?? maxZoom;
+    const resumeFromTaskIndex = initTask.parameters.latestTaskState?.lastInsertedTaskIndex ?? 0;
+    let zoom: number = resumedFromZoom;
+
+    logger.info({
+      msg: 'starting task creation on zoom levels',
+      runningCurrentZoom: zoom,
+      resumedFromZoom,
+      resumeFromTaskIndex,
+    });
+
+    for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom });
+
       if (!partsZoomLevelMatch) {
         const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
         const collection = featureCollection(filteredFeatures);
         unifiedPart = this.unifyParts(collection, tilesSource);
       }
-      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, span);
+
+      // Only skip tasks on the EXACT original resume zoom level
+      const shouldSkipTasks = zoom === resumedFromZoom;
+      const targetTaskIndex = shouldSkipTasks ? resumeFromTaskIndex : 0;
+
+      logger.debug({
+        msg: 'Zoom level task generation',
+        zoom,
+        latestZoom: resumedFromZoom,
+        shouldSkipTasks,
+        tasksToSkip: targetTaskIndex,
+      });
+
+      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, span, targetTaskIndex);
     }
     span.end();
   }
@@ -311,26 +392,91 @@ export class TileMergeTaskManager {
     part: UnifiedPart,
     zoom: number,
     tilesMetadata: MergeTilesMetadata,
-    parentSpan?: Span | undefined
-  ): AsyncGenerator<MergeTaskParameters, void, void> {
+    parentSpan: Span | undefined,
+    targetTaskIndex: number = 0
+  ): AsyncGenerator<
+    {
+      mergeTasksGenerator: MergeTaskParameters;
+      latestTaskIndex: JobResumeState;
+    },
+    void,
+    void
+  > {
     const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createTasksForPart.name}.zoom.${zoom}`, parentSpan);
-    span.setAttributes({ part: JSON.stringify(part), zoom, maxTileBatchSize: this.tileBatchSize });
+    span.setAttributes({
+      part: JSON.stringify(part),
+      zoom,
+      maxTileBatchSize: this.tileBatchSize,
+      targetTaskIndex,
+    });
+
     const { layerRelativePath, grid, isNewTarget, tileOutputFormat } = tilesMetadata;
-    const logger = this.logger.child({ zoomLevel: zoom, isNewTarget, layerRelativePath, tileOutputFormat, grid });
+    const logger = this.logger.child({
+      zoomLevel: zoom,
+      isNewTarget,
+      layerRelativePath,
+      tileOutputFormat,
+      grid,
+      targetTaskIndex,
+    });
 
     const footprint = part.footprint;
     const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
     const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
     const sources = this.createPartSources(part, grid, layerRelativePath);
 
+    let taskIndexCounter = 0; // Local counter for this zoom level
+
     for await (const batch of batches) {
-      logger.debug({ msg: 'Yielding batch task', batchSize: batch.length });
-      span.addEvent('Yielding batch task', { batchSize: batch.length, batch: JSON.stringify(batch) });
-      yield {
+      // Skip tasks if we're resuming and haven't reached the resume point yet
+      if (taskIndexCounter < targetTaskIndex) {
+        taskIndexCounter++;
+        logger.debug({
+          msg: 'Skipping batch task due to resume',
+          localTaskIndex: taskIndexCounter - 1,
+          skipTasksUntilIndex: targetTaskIndex,
+          zoomLevel: zoom,
+        });
+        span.addEvent('Skipping batch task due to resume', {
+          skippedTaskIndex: taskIndexCounter - 1,
+          skipTasksUntilIndex: targetTaskIndex,
+          batchSize: batch.length,
+          zoomLevel: zoom,
+        });
+        continue;
+      }
+
+      logger.debug({
+        msg: 'Yielding batch task',
+        batchSize: batch.length,
+        localTaskIndex: taskIndexCounter,
+        zoomLevel: zoom,
+      });
+      span.addEvent('Yielding batch task', {
+        batchSize: batch.length,
+        localTaskIndex: taskIndexCounter,
+        taskIndex: taskIndexCounter,
+        zoomLevel: zoom,
+        batch: JSON.stringify(batch),
+      });
+
+      const mergeTaskParameters: MergeTaskParameters = {
         targetFormat: tileOutputFormat,
         isNewTarget: isNewTarget,
         batches: batch,
         sources,
+      };
+
+      taskIndexCounter++;
+
+      const taskResumeState: JobResumeState = {
+        lastInsertedTaskIndex: taskIndexCounter,
+        zoomLevel: zoom,
+      };
+
+      yield {
+        mergeTasksGenerator: mergeTaskParameters,
+        latestTaskIndex: taskResumeState,
       };
     }
     span.end();

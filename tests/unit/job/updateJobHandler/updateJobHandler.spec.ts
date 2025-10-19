@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
-import { Grid, MergeTaskParameters } from '../../../../src/common/interfaces';
+import { Grid, MergeTask } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
@@ -31,7 +31,7 @@ describe('updateJobHandler', () => {
         partsData: job.parameters.partsData,
       };
 
-      const mergeTasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -39,8 +39,8 @@ describe('updateJobHandler', () => {
 
       await updateJobHandler.handleJobInit(job, task);
 
-      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams);
-      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(job.id, job.type, mergeTasks);
+      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams, task);
+      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(task, job.id, job.type, mergeTasks);
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
@@ -49,7 +49,7 @@ describe('updateJobHandler', () => {
 
       const job = structuredClone(ingestionUpdateJob);
       const task = initTaskForIngestionUpdate;
-      const tasks: AsyncGenerator<MergeTaskParameters, void, void> = (async function* () {})();
+      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 
