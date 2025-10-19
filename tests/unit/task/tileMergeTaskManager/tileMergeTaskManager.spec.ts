@@ -234,6 +234,7 @@ describe('tileMergeTaskManager', () => {
       });
 
       const zoomLevels = taskResumeSample.map((taskIndex) => taskIndex.zoomLevel);
+      expect(zoomLevels.filter((zoom) => zoom === 0).length).toBeGreaterThan(0);
       expect(zoomLevels.filter((zoom) => zoom === 1).length).toBeGreaterThan(0);
       expect(zoomLevels.filter((zoom) => zoom === 2).length).toBeGreaterThan(0);
       expect(zoomLevels.filter((zoom) => zoom === 3).length).toBeGreaterThan(0);
