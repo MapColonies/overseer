@@ -445,9 +445,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     };
 
     if (job.status === OperationStatus.COMPLETED) {
-      const gpkgDownloadUrl = this.isS3GpkgProvider
-        ? `${this.downloadUrl}/${GPKGS_PREFIX}/${packageRelativePath}`
-        : `${this.downloadUrl}/${packageRelativePath}`; //TODO: later when we change download server mount directory, the path for s3 and fs should be the same
+      const gpkgDownloadUrl = `${this.downloadUrl}/${GPKGS_PREFIX}/${packageRelativePath}`;
       const jsonDownloadUrl = gpkgDownloadUrl.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
 
       callbackResponse.artifacts = [
