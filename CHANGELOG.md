@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.1](https://github.com/MapColonies/overseer/compare/v2.3.0...v2.3.1) (2025-12-08)
+
+
+### Bug Fixes
+
+* simplify gpkgDownloadUrl construction in ExportJobHandler MAPCO-9228 ([#62](https://github.com/MapColonies/overseer/issues/62)) ([9b2e08b](https://github.com/MapColonies/overseer/commit/9b2e08bd12e9338ea474f2547fb3f06c5d8a2332))
+
 ## [2.3.0](https://github.com/MapColonies/overseer/compare/v2.2.0...v2.3.0) (2025-10-19)
 
 
