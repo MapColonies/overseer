@@ -133,7 +133,7 @@ jobDefinitions:
       cleanupExpirationDays: 14
       downloadPath: ""
     tasks:
-      init:
+      mergeTaskCreation:
         type: ""
       finalize:
         type: ""
@@ -177,6 +177,8 @@ env:
     delay: exponential
     resetTimeout: 30000
   disableHttpClientLogs: true
+  shapefileReader:
+    maxVerticesPerChunk: 20000
 
 resources:
   enabled: true

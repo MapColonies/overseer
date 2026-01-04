@@ -72,6 +72,11 @@ spec:
             - name: internal-storage
               mountPath: {{ $storage.fs.internalPvc.outputPath }}
             {{- end }}
+            {{- if $storage.fs.ingestionSourcePvc.enabled }}
+            - name: ingestion-storage
+              mountPath: {{ $storage.fs.ingestionSourcePvc.mountPath }} 
+              subPath: {{ $storage.fs.ingestionSourcePvc.subPath }}
+            {{- end }}
             {{- if .Values.global.ca.secretName }}
             - mountPath: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
               name: root-ca
@@ -143,6 +148,11 @@ spec:
         - name: internal-storage
           persistentVolumeClaim:
             claimName: {{ $storage.fs.internalPvc.name }}
+        {{- end }}
+        {{- if $storage.fs.ingestionSourcePvc.enabled }}
+        - name: ingestion-storage
+          persistentVolumeClaim:
+            claimName: {{ $storage.fs.ingestionSourcePvc.name }}
         {{- end }}          
         - name: nginx-config
           configMap:
