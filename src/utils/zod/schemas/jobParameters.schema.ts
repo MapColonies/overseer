@@ -1,13 +1,12 @@
 import {
-  layerDataSchema,
   newAdditionalParamsSchema,
   newRasterLayerMetadataSchema,
-  polygonPartsEntityNameSchema,
   TileOutputFormat,
   tilesMimeFormatSchema,
   updateAdditionalParamsSchema,
-  updateRasterLayerRequestSchema,
   taskBlockDuplicationParamSchema,
+  ingestionBaseJobParamsSchema,
+  ingestionUpdateJobParamsSchema,
 } from '@map-colonies/raster-shared';
 import { z } from 'zod';
 import { Grid } from '../../../common/interfaces';
@@ -30,9 +29,9 @@ export const extendedRasterLayerMetadataSchema = newRasterLayerMetadataSchema
   )
   .describe('extendedRasterLayerMetadataSchema');
 
-export const ingestionNewExtendedJobParamsSchema = layerDataSchema.extend({
+export const ingestionNewExtendedJobParamsSchema = ingestionBaseJobParamsSchema.extend({
   metadata: extendedRasterLayerMetadataSchema,
-  additionalParams: newAdditionalParamsSchema.merge(polygonPartsEntityNameSchema),
+  additionalParams: newAdditionalParamsSchema,
 });
 
 export const internalIdSchema = z.object({
@@ -40,17 +39,17 @@ export const internalIdSchema = z.object({
 });
 
 //#region AdditionalParams
-export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema.merge(polygonPartsEntityNameSchema);
+export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema;
 
 export const swapUpdateFinalizeAdditionalParamsSchema = updateFinalizeAdditionalParamsSchema.extend({
   displayPath: updateAdditionalParamsSchema.shape.displayPath.optional(),
 });
 
-export const ingestionUpdateFinalizeJobParamsSchema = updateRasterLayerRequestSchema.extend({
+export const ingestionUpdateFinalizeJobParamsSchema = ingestionUpdateJobParamsSchema.extend({
   additionalParams: updateFinalizeAdditionalParamsSchema,
 });
 
-export const ingestionSwapUpdateFinalizeJobParamsSchema = updateRasterLayerRequestSchema.extend({
+export const ingestionSwapUpdateFinalizeJobParamsSchema = ingestionUpdateJobParamsSchema.extend({
   additionalParams: swapUpdateFinalizeAdditionalParamsSchema,
 });
 
