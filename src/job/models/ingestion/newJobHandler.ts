@@ -12,10 +12,10 @@ import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IC
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../../common/constants';
 import type {
-  IngestionInitTask,
+  IngestionCreateMergeTasksTask,
   IngestionNewFinalizeJob,
   IngestionNewFinalizeTask,
-  IngestionNewInitJob,
+  IngestionNewCreateMergeTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
 import { getTileOutputFormat } from '../../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
@@ -24,12 +24,13 @@ import { GeoserverClient } from '../../../httpClients/geoserverClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { JobHandler } from '../jobHandler';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
+import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 
 @injectable()
 /* eslint-disable @typescript-eslint/brace-style */
 export class NewJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionNewInitJob, IngestionInitTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
+  implements IJobHandler<IngestionNewCreateMergeTasksJob, IngestionCreateMergeTasksTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -42,12 +43,13 @@ export class NewJobHandler
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
     @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
+    @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
   }
 
-  public async handleJobInit(job: IngestionNewInitJob, task: IngestionInitTask): Promise<void> {
+  public async handleJobInit(job: IngestionNewCreateMergeTasksJob, task: IngestionCreateMergeTasksTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });
@@ -55,7 +57,7 @@ export class NewJobHandler
       try {
         logger.info({ msg: `handling ${job.type} job with ${job.type} task` });
 
-        const { inputFiles, metadata, partsData, additionalParams } = job.parameters;
+        const { inputFiles, metadata, ingestionResolution } = job.parameters;
 
         activeSpan?.addEvent('validateAdditionalParams.valid');
 
@@ -70,18 +72,19 @@ export class NewJobHandler
             isNewTarget: true,
             grid: extendedLayerMetadata.grid,
           },
-          partsData,
+          ingestionResolution,
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
+        const mergeTasks = await this.taskBuilder.buildTasks(taskBuildParams, task);
 
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 
         logger.info({ msg: 'Updating job with new metadata', ...metadata, extendedLayerMetadata });
+        logger.info({ msg: 'job ingestion resolution', ingestionResolution: job.parameters.ingestionResolution });
         await this.queueClient.jobManagerClient.updateJob(job.id, {
           internalId: extendedLayerMetadata.catalogId,
-          parameters: { metadata: extendedLayerMetadata, partsData, inputFiles, additionalParams },
+          parameters: { ...job.parameters, metadata: extendedLayerMetadata },
         });
         activeSpan?.addEvent('updateJob.completed', { ...extendedLayerMetadata });
 
@@ -98,7 +101,7 @@ export class NewJobHandler
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobFinalize.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
-      const logger = this.logger.child({ jobId: job.id, taskId: task.id });
+      const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
       const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
       try {
@@ -106,13 +109,22 @@ export class NewJobHandler
         let finalizeTaskParams: IngestionNewFinalizeTaskParams = task.parameters;
         activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
 
-        const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog } = finalizeTaskParams;
+        const { insertedToMapproxy, insertedToGeoServer, insertedToCatalog, processedParts } = finalizeTaskParams;
         const { layerRelativePath, tileOutputFormat } = job.parameters.metadata;
-        const layerName = this.validateAndGenerateLayerName(job);
+        const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
+        const { layerName } = layerNameFormats;
         activeSpan?.addEvent('layerNames.valid', { layerName });
-        const polygonPartsEntityName = job.parameters.additionalParams.polygonPartsEntityName;
 
-        const layerNameFormats: LayerNameFormats = { layerName, polygonPartsEntityName };
+        if (!processedParts) {
+          const { productName, productType } = job;
+          logger.info({ msg: 'processing polygon parts', productName, productType });
+
+          await this.polygonPartsMangerClient.process(productName, productType);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'processedParts');
+
+          activeSpan?.addEvent('processPolygonParts.success', { ...finalizeTaskParams });
+          logger.info({ msg: 'polygon parts processed successfully', productName, productType });
+        }
 
         if (!insertedToMapproxy) {
           logger.info({ msg: 'publishing to mapproxy', layerName, layerRelativePath, tileOutputFormat });
@@ -131,7 +143,7 @@ export class NewJobHandler
         if (!insertedToCatalog) {
           const layerName = layerNameFormats.layerName;
           logger.info({ msg: 'publishing to catalog', layerName });
-          await this.catalogClient.publish(job, layerName);
+          await this.catalogClient.publish(job, layerNameFormats);
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'insertedToCatalog');
           activeSpan?.addEvent('publishToCatalog.success', { ...finalizeTaskParams });
         }

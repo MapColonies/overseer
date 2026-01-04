@@ -5,11 +5,12 @@ import { context, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import type { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
 import {
-  IngestionInitTask,
+  IngestionCreateMergeTasksTask,
   IngestionUpdateFinalizeJob,
   IngestionUpdateFinalizeTask,
-  IngestionUpdateInitJob,
+  IngestionUpdateCreateMergeTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
+import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
@@ -24,7 +25,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateInitJob, IngestionInitTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
+  implements IJobHandler<IngestionUpdateCreateMergeTasksJob, IngestionCreateMergeTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -36,12 +37,13 @@ export class UpdateJobHandler
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
+    @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
   }
 
-  public async handleJobInit(job: IngestionUpdateInitJob, task: IngestionInitTask): Promise<void> {
+  public async handleJobInit(job: IngestionUpdateCreateMergeTasksJob, task: IngestionCreateMergeTasksTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${UpdateJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -49,7 +51,7 @@ export class UpdateJobHandler
       const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
 
       try {
-        const { inputFiles, partsData, additionalParams, metadata } = job.parameters;
+        const { inputFiles, additionalParams, metadata } = job.parameters;
 
         activeSpan?.setAttributes({ ...metadata });
 
@@ -63,11 +65,11 @@ export class UpdateJobHandler
             isNewTarget: false,
             grid: Grid.TWO_ON_ONE,
           },
-          partsData,
+          ingestionResolution: job.parameters.ingestionResolution,
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
+        const mergeTasks = await this.taskBuilder.buildTasks(taskBuildParams, task);
 
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 
@@ -93,13 +95,25 @@ export class UpdateJobHandler
           let finalizeTaskParams: IngestionUpdateFinalizeTaskParams = task.parameters;
           activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
 
-          const { updatedInCatalog } = finalizeTaskParams;
-          const layerName = this.validateAndGenerateLayerName(job);
-          activeSpan?.addEvent('layerNameFormat.valid', { layerName });
+          const { updatedInCatalog, processedParts } = finalizeTaskParams;
+          const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
+          const { layerName, polygonPartsEntityName } = layerNameFormats;
+          activeSpan?.addEvent('layerNameFormat.valid', { layerName: layerNameFormats.layerName });
+
+          if (!processedParts) {
+            const { productName, productType } = job;
+            logger.info({ msg: 'processing polygon parts', productName, productType });
+
+            await this.polygonPartsMangerClient.process(productName, productType);
+            finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'processedParts');
+
+            activeSpan?.addEvent('processPolygonParts.success', { ...finalizeTaskParams });
+            logger.info({ msg: 'polygon parts processed successfully', productName, productType });
+          }
 
           if (!updatedInCatalog) {
             logger.info({ msg: 'Updating layer in catalog', catalogId: job.internalId });
-            await this.catalogClient.update(job);
+            await this.catalogClient.update(job, polygonPartsEntityName);
             finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInCatalog');
             activeSpan?.addEvent('updateCatalog.success', { ...finalizeTaskParams });
           }

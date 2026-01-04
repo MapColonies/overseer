@@ -8,11 +8,12 @@ import type { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster
 import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
 import { Grid } from '../../../common/interfaces';
 import type {
-  IngestionInitTask,
+  IngestionCreateMergeTasksTask,
   IngestionSwapUpdateFinalizeJob,
   IngestionSwapUpdateFinalizeTask,
-  IngestionSwapUpdateInitJob,
+  IngestionSwapUpdateCreateMergeTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
+import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
@@ -26,7 +27,13 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class SwapJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionSwapUpdateInitJob, IngestionInitTask, IngestionSwapUpdateFinalizeJob, IngestionSwapUpdateFinalizeTask>
+  implements
+    IJobHandler<
+      IngestionSwapUpdateCreateMergeTasksJob,
+      IngestionCreateMergeTasksTask,
+      IngestionSwapUpdateFinalizeJob,
+      IngestionSwapUpdateFinalizeTask
+    >
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -40,12 +47,13 @@ export class SwapJobHandler
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
+    @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
   }
 
-  public async handleJobInit(job: IngestionSwapUpdateInitJob, task: IngestionInitTask): Promise<void> {
+  public async handleJobInit(job: IngestionSwapUpdateCreateMergeTasksJob, task: IngestionCreateMergeTasksTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SwapJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -54,7 +62,7 @@ export class SwapJobHandler
 
       try {
         logger.info({ msg: `handling ${job.type} job with ${task.type} task` });
-        const { inputFiles, partsData, additionalParams, metadata } = job.parameters;
+        const { inputFiles, additionalParams, metadata } = job.parameters;
 
         activeSpan?.setAttributes({ ...metadata });
 
@@ -66,18 +74,17 @@ export class SwapJobHandler
 
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
-          partsData,
           taskMetadata: {
             tileOutputFormat: additionalParams.tileOutputFormat,
             isNewTarget: true,
             layerRelativePath: `${job.internalId}/${displayPath}`,
             grid: Grid.TWO_ON_ONE,
           },
+          ingestionResolution: job.parameters.ingestionResolution,
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
-
+        const mergeTasks = await this.taskBuilder.buildTasks(taskBuildParams, task);
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
@@ -103,15 +110,27 @@ export class SwapJobHandler
         let finalizeTaskParams: IngestionSwapUpdateFinalizeTaskParams = task.parameters;
         activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...finalizeTaskParams });
 
-        const { updatedInCatalog, updatedInMapproxy } = finalizeTaskParams;
-        const layerName = this.validateAndGenerateLayerName(job);
+        const { updatedInCatalog, updatedInMapproxy, processedParts } = finalizeTaskParams;
+        const layerNameFormats = this.validateAndGenerateLayerNameFormats(job);
+        const { layerName, polygonPartsEntityName } = layerNameFormats;
         activeSpan?.addEvent('layerNameFormat.valid', { layerName });
 
         const { tileOutputFormat, displayPath } = job.parameters.additionalParams;
 
+        if (!processedParts) {
+          const { productName, productType } = job;
+          logger.info({ msg: 'processing polygon parts', productName, productType });
+
+          await this.polygonPartsMangerClient.process(productName, productType);
+          finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'processedParts');
+
+          activeSpan?.addEvent('processPolygonParts.success', { ...finalizeTaskParams });
+          logger.info({ msg: 'polygon parts processed successfully', productName, productType });
+        }
+
         if (!updatedInMapproxy) {
           const layerRelativePath = `${job.internalId}/${displayPath}`;
-          logger.info({ msg: 'Updating layer in mapproxy', layerName, layerRelativePath, tileOutputFormat });
+          logger.info({ msg: 'Updating layer in mapproxy', layerName: layerName, layerRelativePath, tileOutputFormat });
           await this.mapproxyClient.update(layerName, layerRelativePath, tileOutputFormat);
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInMapproxy');
           activeSpan?.addEvent('updateMapproxy.success', { ...finalizeTaskParams });
@@ -119,7 +138,7 @@ export class SwapJobHandler
 
         if (!updatedInCatalog) {
           logger.info({ msg: 'Updating layer in catalog', displayPath });
-          await this.catalogClient.update(job);
+          await this.catalogClient.update(job, polygonPartsEntityName);
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInCatalog');
           activeSpan?.addEvent('updateCatalog.success', { ...finalizeTaskParams });
         }
@@ -140,7 +159,7 @@ export class SwapJobHandler
   }
 
   private async updateJobAdditionalParams(
-    job: IngestionSwapUpdateInitJob,
+    job: IngestionSwapUpdateCreateMergeTasksJob,
     additionalParams: Record<string, unknown>,
     displayPath: string
   ): Promise<void> {
