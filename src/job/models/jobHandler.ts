@@ -1,7 +1,7 @@
 import { ZodError } from 'zod';
 import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { rasterProductTypeSchema } from '@map-colonies/raster-shared';
-import type { LayerName } from '@map-colonies/raster-shared';
+import { getEntityName, rasterProductTypeSchema } from '@map-colonies/raster-shared';
+import type { LayerNameFormats } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
@@ -19,11 +19,14 @@ export class JobHandler {
     this.pollingConfig = config.get<PollingConfig>('jobManagement.polling');
   }
 
-  protected validateAndGenerateLayerName(job: IJobResponse<unknown, unknown>): LayerName {
+  protected validateAndGenerateLayerNameFormats(job: IJobResponse<unknown, unknown>): LayerNameFormats {
     const { resourceId, productType } = job;
     const validProductType = rasterProductTypeSchema.parse(productType);
     this.logger.debug({ msg: 'productType validation passed', resourceId, productType: validProductType });
-    return `${resourceId}-${validProductType}`;
+    return {
+      layerName: `${resourceId}-${validProductType}`,
+      polygonPartsEntityName: getEntityName(resourceId, validProductType),
+    };
   }
 
   protected async markFinalizeStepAsCompleted<T>(jobId: string, taskId: string, finalizeTaskParams: T, step: StepKey<T>): Promise<T> {
