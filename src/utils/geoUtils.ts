@@ -1,21 +1,7 @@
-import { PolygonPart } from '@map-colonies/raster-shared';
 import { feature, featureCollection, union, bbox, bboxPolygon, intersect } from '@turf/turf';
 import { featureToTilesCount } from '@map-colonies/mc-utils';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import type { BBox } from 'geojson';
-
-/**
- * Helper function to unify multiple polygon parts into a single geometry.
- */
-export function unifyParts(parts: PolygonPart[]): Feature<Polygon | MultiPolygon> | null {
-  if (parts.length === 1) {
-    return feature(parts[0].footprint);
-  }
-  const polygons = parts.map((part) => feature(part.footprint));
-  const collection = featureCollection(polygons);
-  const footprint = union(collection);
-  return footprint;
-}
 
 /**
  * Splits a geometry into smaller sub-geometries based on tile count limitations.
