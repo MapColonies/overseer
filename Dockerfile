@@ -1,5 +1,4 @@
-FROM node:20 as build
-
+FROM node:20.15.1-slim as build
 
 WORKDIR /tmp/buildApp
 
@@ -9,9 +8,12 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM node:20.3.1-alpine3.17 as production
+FROM node:20.15.1-slim as production
 
-RUN apk add --no-cache dumb-init gdal gdal-tools proj-util
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dumb-init \
+    gdal-bin \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080
