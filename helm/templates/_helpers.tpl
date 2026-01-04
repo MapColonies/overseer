@@ -9,12 +9,15 @@ Expand the name of the chart.
 Common labels
 */}}
 {{- define "overseer.labels" -}}
+app.kubernetes.io/name: {{ include "overseer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 helm.sh/chart: {{ include "overseer.chart" . }}
 {{ include "overseer.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{ include "mclabels.labels" . }}
 {{- end }}
 
 {{/*
@@ -30,6 +33,7 @@ Selector labels
 {{- define "overseer.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "overseer.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{ include "mclabels.selectorLabels" . }}
 {{- end }}
 
 {{/*
