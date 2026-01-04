@@ -1,3 +1,5 @@
+import { POLYGON_PARTS_MANAGER_SERVICE_NAME } from './constants';
+
 export class InvalidConfigError extends Error {
   public constructor(message?: string) {
     super(message);
@@ -96,11 +98,39 @@ export class FSError extends Error {
   }
 }
 
-export class LayerMetadataAggregationError extends Error {
+export class PolygonPartsError extends Error {
+  public constructor(message: string) {
+    const messageWithClient = `[${POLYGON_PARTS_MANAGER_SERVICE_NAME}] ${message}`;
+    super(messageWithClient);
+    this.name = PolygonPartsError.name;
+  }
+}
+
+export class LayerMetadataAggregationError extends PolygonPartsError {
   public constructor(err: unknown, polygonPartsEntityName: string) {
     const message = `Failed to get aggregated layer metadata for ${polygonPartsEntityName}: ${err instanceof Error ? err.message : 'unknown'}`;
     super(message);
     this.name = LayerMetadataAggregationError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}
+
+export class PolygonPartsProcessingError extends PolygonPartsError {
+  public constructor(err: unknown, productName: string, productType: string) {
+    const message = `Failed to process polygon parts for product ${productName} of type ${productType}: ${
+      err instanceof Error ? err.message : 'unknown'
+    }`;
+    super(message);
+    this.name = PolygonPartsProcessingError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}
+
+export class ProductReadError extends Error {
+  public constructor(err: unknown, productPath: string) {
+    const message = `Failed to read product geometry from path ${productPath}: ${err instanceof Error ? err.message : 'unknown'}`;
+    super(message);
+    this.name = ProductReadError.name;
     this.stack = err instanceof Error ? err.stack : undefined;
   }
 }
