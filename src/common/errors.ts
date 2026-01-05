@@ -128,7 +128,7 @@ export class PolygonPartsProcessingError extends PolygonPartsError {
 
 export class ProductReadError extends Error {
   public constructor(err: unknown, productPath: string) {
-    const message = `Failed to read product geometry from path ${productPath}: ${err instanceof Error ? err.message : 'unknown'}`;
+    const message = `Failed to handle product from path ${productPath}: ${err instanceof Error ? err.message : 'unknown'}`;
     super(message);
     this.name = ProductReadError.name;
     this.stack = err instanceof Error ? err.stack : undefined;

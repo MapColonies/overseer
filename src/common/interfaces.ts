@@ -241,6 +241,7 @@ export interface MergeTilesTaskParams {
   inputFiles: InputFiles;
   taskMetadata: MergeTilesMetadata;
   ingestionResolution: number;
+  productGeometry: Polygon | MultiPolygon;
 }
 
 export interface MergeTilesMetadata {

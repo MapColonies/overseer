@@ -12,6 +12,7 @@ import {
 } from '../../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
+import { ReedProductGeometry } from '../../../utils/storage/productReader';
 import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { Grid } from '../../../common/interfaces';
@@ -38,6 +39,7 @@ export class UpdateJobHandler
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
@@ -57,6 +59,8 @@ export class UpdateJobHandler
 
         activeSpan?.addEvent('validateAdditionalParams.success');
 
+        const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
+
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
           taskMetadata: {
@@ -66,10 +70,11 @@ export class UpdateJobHandler
             grid: Grid.TWO_ON_ONE,
           },
           ingestionResolution: job.parameters.ingestionResolution,
+          productGeometry,
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = await this.taskBuilder.buildTasks(taskBuildParams, task);
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
 
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 

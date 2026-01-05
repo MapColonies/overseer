@@ -14,7 +14,7 @@ export class JobHandler {
     protected readonly logger: Logger,
     protected readonly config: IConfig,
     protected readonly queueClient: QueueClient,
-    private readonly jobTrackerClient: JobTrackerClient // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    private readonly jobTrackerClient: JobTrackerClient
   ) {
     this.pollingConfig = config.get<PollingConfig>('jobManagement.polling');
   }

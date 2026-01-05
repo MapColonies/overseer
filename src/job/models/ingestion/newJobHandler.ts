@@ -6,7 +6,7 @@ import type { Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { lookup as mimeLookup } from '@map-colonies/types';
 import type { TilesMimeFormat } from '@map-colonies/types';
-import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata, LayerNameFormats } from '@map-colonies/raster-shared';
+import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata } from '@map-colonies/raster-shared';
 import { Grid } from '../../../common/interfaces';
 import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IConfig } from '../../../common/interfaces';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
@@ -25,6 +25,7 @@ import { CatalogClient } from '../../../httpClients/catalogClient';
 import { JobHandler } from '../jobHandler';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
+import { ReedProductGeometry } from '../../../utils/storage/productReader';
 
 @injectable()
 /* eslint-disable @typescript-eslint/brace-style */
@@ -44,6 +45,7 @@ export class NewJobHandler
     @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
@@ -63,6 +65,8 @@ export class NewJobHandler
         const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(job.internalId, metadata);
         activeSpan?.setAttributes({ ...extendedLayerMetadata });
 
+        const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
+
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
           taskMetadata: {
@@ -72,10 +76,11 @@ export class NewJobHandler
             grid: extendedLayerMetadata.grid,
           },
           ingestionResolution,
+          productGeometry,
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = await this.taskBuilder.buildTasks(taskBuildParams, task);
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
 
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 

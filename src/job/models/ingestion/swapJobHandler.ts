@@ -13,6 +13,7 @@ import type {
   IngestionSwapUpdateFinalizeTask,
   IngestionSwapUpdateCreateMergeTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
+import { ReedProductGeometry } from '../../../utils/storage/productReader';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
@@ -39,7 +40,6 @@ export class SwapJobHandler
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) protected readonly config: IConfig,
-
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
@@ -48,6 +48,7 @@ export class SwapJobHandler
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
@@ -72,6 +73,8 @@ export class SwapJobHandler
 
         activeSpan?.addEvent('generateDisplayPath.success', { displayPath });
 
+        const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
+
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
           taskMetadata: {
@@ -81,10 +84,11 @@ export class SwapJobHandler
             grid: Grid.TWO_ON_ONE,
           },
           ingestionResolution: job.parameters.ingestionResolution,
+          productGeometry,
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = await this.taskBuilder.buildTasks(taskBuildParams, task);
+        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
         await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });

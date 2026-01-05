@@ -3,7 +3,7 @@ import { Logger } from '@map-colonies/js-logger';
 import { ChunkProcessor, ShapefileChunk, ShapefileChunkReader } from '@map-colonies/mc-utils';
 import { IConfig } from 'config';
 import { productFeatureSchema } from '@map-colonies/raster-shared';
-import { MultiPolygon, Polygon } from 'geojson';
+import { Feature, MultiPolygon, Polygon } from 'geojson';
 import { DependencyContainer } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import { ProductReadError } from '../../common/errors';
@@ -34,15 +34,16 @@ export const productReaderFactory = (container: DependencyContainer): ReedProduc
 
     logger.info({ msg: 'reading product geometry from shapefile', shapefileFullPath, productPath, basePath });
     const processor: ChunkProcessor = {
+      // eslint-disable-next-line @typescript-eslint/require-await
       process: async (chunk: ShapefileChunk): Promise<void> => {
-        const product = productFeatureSchema.parse(chunk.features);
+        const product = validateProduct(chunk, maxVerticesPerChunk);
         geometry = product?.geometry;
       },
     };
     try {
       await shapefileReader.readAndProcess(shapefileFullPath, processor);
       if (geometry === undefined) {
-        throw new Error(`Failed to parse product feature from shapefile chunk at path: ${shapefileFullPath}`);
+        throw new Error('No Geometry found in shapefile');
       }
       logger.info({ msg: 'successfully read product geometry from shapefile', shapefileFullPath, geometryType: geometry.type });
       return geometry;
@@ -52,4 +53,19 @@ export const productReaderFactory = (container: DependencyContainer): ReedProduc
       throw productReadError;
     }
   };
+};
+
+export const validateProduct = (chunk: ShapefileChunk, maxVerticesPerChunk: number): Feature<Polygon | MultiPolygon> | undefined => {
+  if (chunk.features.length === 0 && chunk.skippedFeatures.length === 0) {
+    return undefined;
+  }
+  if (chunk.skippedFeatures.length > 1 || chunk.features.length > 1) {
+    throw new Error('Product shapefile contains multiple features');
+  }
+  if (chunk.skippedFeatures.length === 1 && chunk.features.length === 0) {
+    throw new Error(`Product exceeded maximum allowed vertices- current:${chunk.skippedVerticesCount} > allowed:${maxVerticesPerChunk}`);
+  }
+
+  const product = productFeatureSchema.parse(chunk.features);
+  return product;
 };

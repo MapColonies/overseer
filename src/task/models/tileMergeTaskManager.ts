@@ -3,7 +3,6 @@ import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
 import { feature } from '@turf/turf';
-import type { Units } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { type InputFiles } from '@map-colonies/raster-shared';
@@ -27,7 +26,6 @@ import type {
 } from '../../common/interfaces';
 import { IngestionCreateMergeTasksTask } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
-import { ReedProductGeometry } from '../../utils/storage/productReader';
 
 @injectable()
 export class TileMergeTaskManager {
@@ -42,8 +40,7 @@ export class TileMergeTaskManager {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
-    private readonly taskMetrics: TaskMetrics,
-    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry
+    private readonly taskMetrics: TaskMetrics
   ) {
     this.tilesStorageProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
@@ -51,20 +48,18 @@ export class TileMergeTaskManager {
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
   }
 
-  public async buildTasks(
+  public buildTasks(
     taskBuildParams: MergeTilesTaskParams,
     initTask: IngestionCreateMergeTasksTask
-  ): Promise<
-    AsyncGenerator<
-      {
-        mergeTasksGenerator: MergeTaskParameters;
-        latestTaskIndex: JobResumeState;
-      },
-      void,
-      void
-    >
+  ): AsyncGenerator<
+    {
+      mergeTasksGenerator: MergeTaskParameters;
+      latestTaskIndex: JobResumeState;
+    },
+    void,
+    void
   > {
-    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.buildTasks.name}`)), async () => {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileMergeTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttributes({
         taskType: this.taskType,
@@ -77,7 +72,7 @@ export class TileMergeTaskManager {
       logger.debug({ msg: `Building tasks for ${this.taskType} task` });
 
       try {
-        const mergeParams = await this.prepareMergeParameters(taskBuildParams);
+        const mergeParams = this.prepareMergeParameters(taskBuildParams);
         activeSpan?.addEvent('Merge parameters prepared');
 
         const tasks = this.createZoomLevelTasks(mergeParams, activeSpan, initTask);
@@ -187,13 +182,11 @@ export class TileMergeTaskManager {
     }
   }
 
-  private async prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): Promise<MergeParameters> {
+  private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): MergeParameters {
     const logger = this.logger.child({ taskType: this.taskType });
     const { taskMetadata, inputFiles, ingestionResolution } = taskBuildParams;
 
     logger.info({ msg: 'creating task parameters' });
-
-    const geometry = await this.readProductGeometry(inputFiles.productShapefilePath);
 
     const tilesSource = this.extractTilesSource(inputFiles);
 
@@ -201,7 +194,7 @@ export class TileMergeTaskManager {
       maxZoom: degreesPerPixelToZoomLevel(ingestionResolution),
       partsZoomLevelMatch: true, // TODO: When multi part resolution support is added, this should be determined accordingly
     };
-    const product = feature(geometry, {
+    const product = feature(taskBuildParams.productGeometry, {
       tilesSource,
       zoomDefinitions,
     });
