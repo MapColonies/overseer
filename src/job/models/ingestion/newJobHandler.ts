@@ -56,12 +56,11 @@ export class NewJobHandler
       const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
       try {
         logger.info({ msg: `handling ${job.type} job with ${job.type} task` });
-
         const { inputFiles, metadata, ingestionResolution } = job.parameters;
 
         activeSpan?.addEvent('validateAdditionalParams.valid');
 
-        const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(metadata);
+        const extendedLayerMetadata = this.mapToExtendedNewLayerMetadata(job.internalId, metadata);
         activeSpan?.setAttributes({ ...extendedLayerMetadata });
 
         const taskBuildParams: MergeTilesTaskParams = {
@@ -160,8 +159,7 @@ export class NewJobHandler
     });
   }
 
-  private readonly mapToExtendedNewLayerMetadata = (metadata: NewRasterLayerMetadata): ExtendedRasterLayerMetadata => {
-    const catalogId = randomUUID();
+  private readonly mapToExtendedNewLayerMetadata = (catalogId: string, metadata: NewRasterLayerMetadata): ExtendedRasterLayerMetadata => {
     const displayPath = randomUUID();
     const layerRelativePath = `${catalogId}/${displayPath}`;
     const tileOutputFormat = getTileOutputFormat(metadata.transparency);

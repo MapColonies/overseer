@@ -15,7 +15,7 @@ import {
   exportFinalizeTaskParamsSchema,
   rasterProductTypeSchema,
 } from '@map-colonies/raster-shared';
-import { ingestionNewExtendedJobParamsSchema } from './jobParameters.schema';
+import { ingestionNewExtendedJobParamsSchema, internalIdSchema } from './jobParameters.schema';
 import {
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
@@ -25,9 +25,9 @@ import {
 //#region Ingestion
 //#region IngestionNew
 //mergeTaskCreation
-export const ingestionNewCreateMergeTasksJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema).describe(
-  'IngestionNewCreateMergeTasksJobSchema'
-);
+export const ingestionNewCreateMergeTasksJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema)
+  .and(internalIdSchema)
+  .describe('IngestionNewCreateMergeTasksJobSchema');
 export type IngestionNewCreateMergeTasksJob = z.infer<typeof ingestionNewCreateMergeTasksJobSchema>;
 
 export const ingestionCreateMergeTasksTaskSchema = createTaskResponseSchema(extendedTaskBlockDuplicationParamSchema).describe(
