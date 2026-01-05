@@ -91,7 +91,7 @@ export class SeedingJobCreator {
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
           producerName: producerName ?? undefined,
-          productName: productName ?? undefined,
+          productName: productName,
           productType,
           domain,
           tasks: seedTasks,
