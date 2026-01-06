@@ -10,6 +10,9 @@ import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../
 import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { configMock } from '../../mocks/configMock';
+import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
+import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
+import { readProductGeometry } from '../../mocks/productReaderMock';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
@@ -20,6 +23,7 @@ export interface NewJobHandlerTestContext {
   geoserverClientMock: jest.Mocked<GeoserverClient>;
   catalogClientMock: jest.Mocked<CatalogClient>;
   jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
 }
 
 export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
@@ -42,6 +46,8 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
     mapproxyClientMock,
     geoserverClientMock,
     jobTrackerClientMock,
+    polygonPartsManagerClientMock,
+    readProductGeometry,
     taskMetricsMock
   );
 
@@ -54,5 +60,6 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
     geoserverClientMock,
     catalogClientMock,
     jobTrackerClientMock,
+    polygonPartsManagerClientMock,
   };
 };

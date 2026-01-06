@@ -13,7 +13,7 @@ import { exportJob, ingestionNewJob, ingestionSwapUpdateJob, ingestionUpdateJob 
 
 export const createFakeTask = <T>(taskOverride?: Partial<ITaskResponse<T>>, parameters?: T): ITaskResponse<T> => ({
   id: faker.string.uuid(),
-  type: 'create-merge-tasks',
+  type: 'create-tasks',
   description: faker.lorem.sentence({ min: 1, max: 3 }),
   parameters: parameters ?? ({} as T),
   status: OperationStatus.PENDING,
@@ -27,18 +27,18 @@ export const createFakeTask = <T>(taskOverride?: Partial<ITaskResponse<T>>, para
   ...taskOverride,
 });
 
-export const createMergeTasksTaskForIngestionNew = createFakeTask<TaskBlockDuplicationParam>(
-  { jobId: ingestionNewJob.id, type: 'create-merge-tasks' },
+export const createTasksTaskForIngestionNew = createFakeTask<TaskBlockDuplicationParam>(
+  { jobId: ingestionNewJob.id, type: 'create-tasks' },
   { blockDuplication: true }
 );
 
-export const createMergeTasksTaskForIngestionUpdate = createFakeTask<TaskBlockDuplicationParam>(
-  { jobId: ingestionUpdateJob.id, type: 'create-merge-tasks' },
+export const createTasksTaskForIngestionUpdate = createFakeTask<TaskBlockDuplicationParam>(
+  { jobId: ingestionUpdateJob.id, type: 'create-tasks' },
   { blockDuplication: true }
 );
 
-export const createMergeTasksTaskForIngestionSwapUpdate = createFakeTask<TaskBlockDuplicationParam>(
-  { jobId: ingestionSwapUpdateJob.id, type: 'create-merge-tasks' },
+export const createTasksTaskForIngestionSwapUpdate = createFakeTask<TaskBlockDuplicationParam>(
+  { jobId: ingestionSwapUpdateJob.id, type: 'create-tasks' },
   { blockDuplication: true }
 );
 

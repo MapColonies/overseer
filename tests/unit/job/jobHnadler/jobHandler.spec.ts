@@ -2,7 +2,7 @@ import { ZodError } from 'zod';
 import { JobAndTaskTelemetry } from '../../../../src/common/interfaces';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import { initTaskForIngestionNew } from '../../mocks/tasksMockData';
+import { createTasksTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { setupJobHandlerTest } from './jobHandlerSetup';
 
 describe('JobHandler', () => {
@@ -15,7 +15,7 @@ describe('JobHandler', () => {
     it('should handle error', async () => {
       const { newJobHandler, queueClientMock } = setupJobHandlerTest();
       const job = ingestionNewJob;
-      const task = initTaskForIngestionNew;
+      const task = createTasksTaskForIngestionNew;
       const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };
       const error = 'unknown' as unknown as Error;
 
@@ -28,7 +28,7 @@ describe('JobHandler', () => {
     it('should handle unrecoverable error', async () => {
       const { newJobHandler, queueClientMock, jobTrackerClientMock } = setupJobHandlerTest();
       const job = ingestionNewJob;
-      const task = initTaskForIngestionNew;
+      const task = createTasksTaskForIngestionNew;
       const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };
       const error = new ZodError([]);
 

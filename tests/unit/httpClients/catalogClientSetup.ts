@@ -14,7 +14,7 @@ import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { CatalogClient } from '../../../src/httpClients/catalogClient';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
-import { createFakeBBox, createFakeRandomPolygonalGeometry } from '../mocks/partsMockData';
+import { createFakeBBox, createFakeRandomPolygonalGeometry } from '../mocks/geometryMockData';
 import { tracerMock } from '../mocks/tracerMock';
 import { AggregationLayerMetadata } from '../../../src/common/interfaces';
 

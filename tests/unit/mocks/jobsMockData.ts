@@ -3,10 +3,10 @@ import { zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
 import { OperationStatus, ICreateJobBody } from '@map-colonies/mc-priority-queue';
 import type {
   ExportJob,
-  IngestionNewCreateMergeTasksJob,
+  IngestionNewCreateTasksJob,
   IngestionNewFinalizeJob,
   IngestionSwapUpdateFinalizeJob,
-  IngestionUpdateCreateMergeTasksJob,
+  IngestionUpdateCreateTasksJob,
   IngestionUpdateFinalizeJob,
 } from '../../../src/utils/zod/schemas/job.schema';
 import { Grid, SeedTaskOptions, Footprint, SeedTaskParams } from '../../../src/common/interfaces';
@@ -16,7 +16,7 @@ import { SeedMode, LayerCacheType } from '../../../src/common/constants';
 const TEST_INGESTION_RESOLUTION = zoomLevelToResolutionDeg(5)!;
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-export const ingestionNewJob: IngestionNewCreateMergeTasksJob = {
+export const ingestionNewJob: IngestionNewCreateTasksJob = {
   id: 'de57d743-3155-4a28-86c8-9c181faabd94',
   resourceId: 'some_product',
   version: '1.0',
@@ -98,7 +98,7 @@ export const ingestionNewJobExtended: IngestionNewFinalizeJob = {
   },
 };
 
-export const ingestionUpdateJob: IngestionUpdateCreateMergeTasksJob = {
+export const ingestionUpdateJob: IngestionUpdateCreateTasksJob = {
   id: 'd027b3aa-272b-4dc9-91d7-ba8343af5ed1',
   resourceId: 'some_product',
   version: '1.0',

@@ -99,9 +99,6 @@ export class JobProcessor {
           case taskTypes.init: // when export domain will have validation we will remove init and move to createTasks
             await jobHandler.handleJobInit(job, task);
             break;
-          case taskTypes.init:
-            await jobHandler.handleJobInit(job, task);
-            break;
           case taskTypes.finalize:
             await jobHandler.handleJobFinalize(job, task);
             break;

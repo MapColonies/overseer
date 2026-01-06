@@ -10,6 +10,8 @@ import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
+import { readProductGeometry } from '../../mocks/productReaderMock';
 
 export interface UpdateJobHandlerTestContext {
   updateJobHandler: UpdateJobHandler;
@@ -41,6 +43,8 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     catalogClientMock,
     seedingJobCreatorMock,
     jobTrackerClientMock,
+    polygonPartsManagerClientMock,
+    readProductGeometry,
     taskMetricsMock
   );
 

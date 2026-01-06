@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { Grid, MergeTask } from '../../../../src/common/interfaces';
-import { finalizeTaskForIngestionUpdate, initTaskForIngestionUpdate } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
@@ -17,7 +17,7 @@ describe('updateJobHandler', () => {
     it('should handle job init successfully', async () => {
       const { updateJobHandler, queueClientMock, taskBuilderMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
-      const task = initTaskForIngestionUpdate;
+      const task = createTasksTaskForIngestionUpdate;
 
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 
@@ -46,7 +46,7 @@ describe('updateJobHandler', () => {
       const { updateJobHandler, taskBuilderMock, queueClientMock } = setupUpdateJobHandlerTest();
 
       const job = structuredClone(ingestionUpdateJob);
-      const task = initTaskForIngestionUpdate;
+      const task = createTasksTaskForIngestionUpdate;
 
       const error = new Error('Test error');
 

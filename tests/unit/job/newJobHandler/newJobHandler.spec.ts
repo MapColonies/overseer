@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
-import { finalizeTaskForIngestionNew, initTaskForIngestionNew } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionNew, createTasksTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
 import { MergeTask } from '../../../../src/common/interfaces';
 import { IngestionNewFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
@@ -18,7 +18,7 @@ describe('NewJobHandler', () => {
     it('should handle job init successfully', async () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
-      const task = initTaskForIngestionNew;
+      const task = createTasksTaskForIngestionNew;
 
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -40,7 +40,7 @@ describe('NewJobHandler', () => {
       const { newJobHandler, taskBuilderMock, queueClientMock } = setupNewJobHandlerTest();
 
       const job = ingestionNewJob;
-      const task = initTaskForIngestionNew;
+      const task = createTasksTaskForIngestionNew;
 
       const error = new Error('Test error');
 

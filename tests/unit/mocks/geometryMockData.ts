@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { faker } from '@faker-js/faker';
 import { BBox, MultiPolygon, Polygon } from 'geojson';
-import { PolygonFeature, PPFeatureCollection } from '../../../src/common/interfaces';
 
 export function createFakeBBox(): BBox {
   return [
@@ -48,21 +47,4 @@ export function createFakeRandomPolygonalGeometry(): Polygon | MultiPolygon {
     return createFakePolygon();
   }
   return createFakeMultiPolygon(faker.number.int({ min: 1, max: 5 }));
-}
-
-export function createFakePolygonFeature(): PolygonFeature {
-  return {
-    geometry: createFakePolygon(),
-    type: 'Feature',
-    properties: {
-      maxZoom: faker.number.int({ min: 0, max: 20 }),
-    },
-  };
-}
-
-export function createFakeFeatureCollection(): PPFeatureCollection {
-  return {
-    type: 'FeatureCollection',
-    features: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, createFakePolygonFeature),
-  };
 }

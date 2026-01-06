@@ -5,7 +5,6 @@ import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { feature } from '@turf/turf';
 import { LayerCacheType, SeedMode } from '../../../../src/common/constants';
 import { SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../../src/common/interfaces';
-import { multiPartData } from '../../mocks/partsMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { LayerCacheNotFoundError } from '../../../../src/common/errors';
 import {
@@ -18,7 +17,7 @@ import {
   createCleanTaskOptions,
   createSeedJob,
 } from '../../mocks/jobsMockData';
-import { unifyParts, splitGeometryByTileCount } from '../../../../src/utils/geoUtils';
+import { splitGeometryByTileCount } from '../../../../src/utils/geoUtils';
 import { SeedingJobCreatorTestContext, seedJobParameters, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
 
 describe('SeedingJobCreator', () => {

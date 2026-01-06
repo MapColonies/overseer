@@ -4,8 +4,8 @@ import nock from 'nock';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import type { MergeTaskParameters, JobResumeState } from '../../../../src/common/interfaces';
-import { IngestionCreateMergeTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
+import type { MergeTaskParameters, JobResumeState, MergeTilesTaskParams } from '../../../../src/common/interfaces';
+import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { createFakeTask } from '../../mocks/tasksMockData';
 import {
   createMergeTilesTaskParams,
@@ -17,11 +17,11 @@ import {
 describe('tileMergeTaskManager', () => {
   const buildTasksParams = createMergeTilesTaskParams();
   let testContext: MergeTilesTaskBuilderContext;
-  let mockInitTask: IngestionCreateMergeTasksTask;
+  let mockInitTask: IngestionCreateTasksTask;
   beforeEach(() => {
     registerDefaultConfig();
     testContext = setupMergeTilesTaskBuilderTest();
-    mockInitTask = createFakeTask<IngestionCreateMergeTasksTask['parameters']>();
+    mockInitTask = createFakeTask<IngestionCreateTasksTask['parameters']>();
   });
 
   afterEach(() => {
@@ -69,16 +69,17 @@ describe('tileMergeTaskManager', () => {
 
     it('should handle errors in buildTasks correctly', () => {
       const { tileMergeTaskManager } = testContext;
+      const invalidBuildTasksParams: MergeTilesTaskParams = {
+        ...buildTasksParams,
+        inputFiles: {
+          ...buildTasksParams.inputFiles,
+          gpkgFilesPath: ['file1.gpkg', 'file2.gpkg'],
+        },
+      };
 
-      let error: Error | null = null;
+      const action = () => tileMergeTaskManager.buildTasks(invalidBuildTasksParams, mockInitTask);
 
-      try {
-        tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
-      } catch (err) {
-        error = err as Error;
-      }
-
-      expect(error).not.toBeNull();
+      expect(action).toThrow();
     });
 
     it('resume state initialization - should handle initTask with valid resume parameters', async () => {

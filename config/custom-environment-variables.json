@@ -99,7 +99,7 @@
         "__format": "number"
       },
       "tasks": {
-        "mergeTaskCreation": "POLLING_MERGE_TASK_CREATION_TASK",
+        "createTasks": "POLLING_MERGE_TASK_CREATION_TASK",
         "finalize": "POLLING_FINALIZE_TASK",
         "init": "POLLING_INIT_TASK"
       }
