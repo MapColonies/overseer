@@ -12,10 +12,10 @@ import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IC
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../../common/constants';
 import type {
-  IngestionCreateMergeTasksTask,
+  IngestionCreateTasksTask,
   IngestionNewFinalizeJob,
   IngestionNewFinalizeTask,
-  IngestionNewCreateMergeTasksJob,
+  IngestionNewCreateTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
 import { getTileOutputFormat } from '../../../utils/imageFormatUtil';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
@@ -31,7 +31,7 @@ import { ReedProductGeometry } from '../../../utils/storage/productReader';
 /* eslint-disable @typescript-eslint/brace-style */
 export class NewJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionNewCreateMergeTasksJob, IngestionCreateMergeTasksTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
+  implements IJobHandler<IngestionNewCreateTasksJob, IngestionCreateTasksTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -51,7 +51,7 @@ export class NewJobHandler
     super(logger, config, queueClient, jobTrackerClient);
   }
 
-  public async handleJobInit(job: IngestionNewCreateMergeTasksJob, task: IngestionCreateMergeTasksTask): Promise<void> {
+  public async handleJobInit(job: IngestionNewCreateTasksJob, task: IngestionCreateTasksTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${NewJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id });

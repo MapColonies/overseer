@@ -3,11 +3,11 @@
 [![Release](https://img.shields.io/github/v/release/MapColonies/overseer)](https://github.com/MapColonies/overseer/releases)
 
 
-A geospatial data management worker service that handles mergeTaskCreation, merge, and finalization of geospatial jobs & tasks.
+A geospatial data management worker service that handles createTasks, merge, and finalization of geospatial jobs & tasks.
 
 ## Overview
 
-Overseer is a worker service that communicates with the Job-Manager service using a polling strategy to handle mergeTaskCreation & finalize tasks created by the Ingestion domain services. It manages various aspects of geospatial data ingestion, including layer management in MapProxy, GeoServer, and catalog system.
+Overseer is a worker service that communicates with the Job-Manager service using a polling strategy to handle createTasks & finalize tasks created by the Ingestion domain services. It manages various aspects of geospatial data ingestion, including layer management in MapProxy, GeoServer, and catalog system.
 
 ### Key Features
 
@@ -133,7 +133,7 @@ The service can be configured using environment variables or a configuration fil
 | GEOSERVER_WORKSPACE | string | GeoServer workspace name | `"polygonParts"` |
 | GEOSERVER_DATASTORE | string | GeoServer datastore name | `"polygonParts"` |
 | MAX_TASK_ATTEMPTS | number | Maximum number of task execution attempts | `3` |
-| POLLING_MERGE_TASK_CREATION_TASK | string | mergeTaskCreation task type for polling | `"create-merge-tasks"` |
+| POLLING_MERGE_TASK_CREATION_TASK | string | createTasks task type for polling | `"create-tasks"` |
 | POLLING_FINALIZE_TASK | string | Finalize task type for polling | `"finalize"` |
 
 ## Ingestion Configuration
@@ -173,7 +173,7 @@ The Overseer worker service handles two main types of geospatial data processing
 2. Export of geospatial data to geopackage (GPKG) format
 
 For both processing types, the service handles two primary task phases:
-- **MergeTaskCreation Task**: Sets up and prepares the job, creating necessary subtasks
+- **CreateTasks Task**: Sets up and prepares the job, creating necessary subtasks
 - **Finalize Task**: Handles post-processing and finalizes the job
 
 ## Task Processing Overview
@@ -184,7 +184,7 @@ For both processing types, the service handles two primary task phases:
 
 ## Ingestion Processing
 
-### Ingestion MergeTaskCreation Task
+### Ingestion CreateTasks Task
 - Creates merge tasks for different ingestion job types (New, Update, Swap-Update)
 - Processes job parameters and polygon part metadata
 - Manages task status transitions
@@ -244,7 +244,7 @@ For both processing types, the service handles two primary task phases:
 - **Export Type:**
   - Export
 
-Each job type supports both mergeTaskCreation and finalize task phases.
+Each job type supports both create-tasks and finalize task phases.
 
 ## Architecture
 

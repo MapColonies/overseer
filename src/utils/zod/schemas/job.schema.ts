@@ -24,16 +24,16 @@ import {
 
 //#region Ingestion
 //#region IngestionNew
-//mergeTaskCreation
-export const ingestionNewCreateMergeTasksJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema)
-  .and(internalIdSchema)
-  .describe('IngestionNewCreateMergeTasksJobSchema');
-export type IngestionNewCreateMergeTasksJob = z.infer<typeof ingestionNewCreateMergeTasksJobSchema>;
 
-export const ingestionCreateMergeTasksTaskSchema = createTaskResponseSchema(extendedTaskBlockDuplicationParamSchema).describe(
-  'IngestionNewCreateMergeTasksTaskSchema'
+export const ingestionNewCreateTasksJobSchema = createJobResponseSchema(ingestionNewJobParamsSchema)
+  .and(internalIdSchema)
+  .describe('IngestionNewCreateTasksJobSchema');
+export type IngestionNewCreateTasksJob = z.infer<typeof ingestionNewCreateTasksJobSchema>;
+
+export const ingestionCreateTasksTaskSchema = createTaskResponseSchema(extendedTaskBlockDuplicationParamSchema).describe(
+  'IngestionNewCreateTasksTaskSchema'
 );
-export type IngestionCreateMergeTasksTask = z.infer<typeof ingestionCreateMergeTasksTaskSchema>;
+export type IngestionCreateTasksTask = z.infer<typeof ingestionCreateTasksTaskSchema>;
 //finalize
 export const requiredProductNameAndTypeSchema = z.object({
   productName: z.string(),
@@ -52,11 +52,10 @@ export type IngestionNewFinalizeTask = z.infer<typeof ingestionNewFinalizeTaskSc
 //#endregion
 
 //#region IngestionUpdate
-//mergeTaskCreation
-export const ingestionUpdateCreateMergeTasksJobSchema = createJobResponseSchema(ingestionUpdateJobParamsSchema).describe(
-  'IngestionUpdateCreateMergeTasksJobSchema'
+export const ingestionUpdateCreateTasksJobSchema = createJobResponseSchema(ingestionUpdateJobParamsSchema).describe(
+  'IngestionUpdateCreateTasksJobSchema'
 );
-export type IngestionUpdateCreateMergeTasksJob = z.infer<typeof ingestionUpdateCreateMergeTasksJobSchema>;
+export type IngestionUpdateCreateTasksJob = z.infer<typeof ingestionUpdateCreateTasksJobSchema>;
 
 //finalize
 export const ingestionUpdateFinalizeJobSchema = createJobResponseSchema(ingestionUpdateFinalizeJobParamsSchema)
@@ -72,11 +71,10 @@ export type IngestionUpdateFinalizeTask = z.infer<typeof ingestionUpdateFinalize
 //#endregion
 
 //#region IngestionSwapUpdate
-//mergeTaskCreation
-export const ingestionSwapUpdateCreateMergeTasksJobSchema = createJobResponseSchema(ingestionSwapUpdateJobParamsSchema).describe(
-  'IngestionSwapUpdateCreateMergeTasksJobSchema'
+export const ingestionSwapUpdateCreateTasksJobSchema = createJobResponseSchema(ingestionSwapUpdateJobParamsSchema).describe(
+  'IngestionSwapUpdateCreateTasksJobSchema'
 );
-export type IngestionSwapUpdateCreateMergeTasksJob = z.infer<typeof ingestionSwapUpdateCreateMergeTasksJobSchema>;
+export type IngestionSwapUpdateCreateTasksJob = z.infer<typeof ingestionSwapUpdateCreateTasksJobSchema>;
 
 //finalize
 export const ingestionSwapUpdateFinalizeJobSchema = createJobResponseSchema(ingestionSwapUpdateFinalizeJobParamsSchema)
@@ -105,7 +103,7 @@ export type ExportFinalizeTaskParams = z.infer<typeof exportFinalizeTaskParamsSc
 
 // Ingestion domain types
 type IngestionJobType = 'Ingestion_New' | 'Ingestion_Update' | 'Ingestion_Swap_Update';
-type IngestionTaskType = 'create-merge-tasks' | 'finalize';
+type IngestionTaskType = 'create-tasks' | 'finalize';
 
 // Export domain types
 type ExportJobType = 'Export';
@@ -121,17 +119,17 @@ export interface JobTaskSchema {
 
 export type JobTaskSchemasMap = { [key in OperationValidationKey]: JobTaskSchema };
 export const jobTaskSchemaMap: JobTaskSchemasMap = {
-  'Ingestion_New_create-merge-tasks': {
-    jobSchema: ingestionNewCreateMergeTasksJobSchema,
-    taskSchema: ingestionCreateMergeTasksTaskSchema,
+  'Ingestion_New_create-tasks': {
+    jobSchema: ingestionNewCreateTasksJobSchema,
+    taskSchema: ingestionCreateTasksTaskSchema,
   },
-  'Ingestion_Update_create-merge-tasks': {
-    jobSchema: ingestionUpdateCreateMergeTasksJobSchema,
-    taskSchema: ingestionCreateMergeTasksTaskSchema,
+  'Ingestion_Update_create-tasks': {
+    jobSchema: ingestionUpdateCreateTasksJobSchema,
+    taskSchema: ingestionCreateTasksTaskSchema,
   },
-  'Ingestion_Swap_Update_create-merge-tasks': {
-    jobSchema: ingestionSwapUpdateCreateMergeTasksJobSchema,
-    taskSchema: ingestionCreateMergeTasksTaskSchema,
+  'Ingestion_Swap_Update_create-tasks': {
+    jobSchema: ingestionSwapUpdateCreateTasksJobSchema,
+    taskSchema: ingestionCreateTasksTaskSchema,
   },
   Ingestion_New_finalize: {
     jobSchema: ingestionNewFinalizeJobSchema,

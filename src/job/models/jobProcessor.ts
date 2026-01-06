@@ -34,7 +34,7 @@ export class JobProcessor {
     const jobManagementConfig = this.config.get<JobManagementConfig>('jobManagement');
     const jobs = getPollingJobs(jobManagementConfig, this.instanceType);
     this.pollingJobTypes = getAvailableJobTypes(jobs);
-    this.pollingTaskTypes = [tasks.mergeTaskCreation, tasks.finalize];
+    this.pollingTaskTypes = [tasks.createTasks, tasks.init, tasks.finalize];
   }
 
   public async start(): Promise<void> {
@@ -93,7 +93,10 @@ export class JobProcessor {
         const jobHandler = this.jobHandlerFactory(job.type);
 
         switch (task.type) {
-          case taskTypes.mergeTaskCreation:
+          case taskTypes.createTasks:
+            await jobHandler.handleJobInit(job, task);
+            break;
+          case taskTypes.init: // when export domain will have validation we will remove init and move to createTasks
             await jobHandler.handleJobInit(job, task);
             break;
           case taskTypes.finalize:
@@ -145,7 +148,8 @@ export class JobProcessor {
 
     const job = await this.queueClient.jobManagerClient.getJob(jobId);
 
-    if (taskType === this.pollingConfig.tasks.mergeTaskCreation) {
+    if (taskType === this.pollingConfig.tasks.init) {
+      // currently inly export jobs use the init task to change status to IN_PROGRESS
       await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
     }
 

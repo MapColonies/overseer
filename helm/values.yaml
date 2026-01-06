@@ -143,8 +143,10 @@ jobDefinitions:
       cleanupExpirationDays: 14
       downloadPath: ""
     tasks:
-      mergeTaskCreation:
+      createTasks:
         type: ""
+      init:
+        type: ""  
       finalize:
         type: ""
       merge:

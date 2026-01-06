@@ -8,10 +8,10 @@ import type { IngestionSwapUpdateFinalizeTaskParams } from '@map-colonies/raster
 import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
 import { Grid } from '../../../common/interfaces';
 import type {
-  IngestionCreateMergeTasksTask,
+  IngestionCreateTasksTask,
   IngestionSwapUpdateFinalizeJob,
   IngestionSwapUpdateFinalizeTask,
-  IngestionSwapUpdateCreateMergeTasksJob,
+  IngestionSwapUpdateCreateTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
 import { ReedProductGeometry } from '../../../utils/storage/productReader';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
@@ -29,12 +29,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 export class SwapJobHandler
   extends JobHandler
   implements
-    IJobHandler<
-      IngestionSwapUpdateCreateMergeTasksJob,
-      IngestionCreateMergeTasksTask,
-      IngestionSwapUpdateFinalizeJob,
-      IngestionSwapUpdateFinalizeTask
-    >
+    IJobHandler<IngestionSwapUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionSwapUpdateFinalizeJob, IngestionSwapUpdateFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -54,7 +49,7 @@ export class SwapJobHandler
     super(logger, config, queueClient, jobTrackerClient);
   }
 
-  public async handleJobInit(job: IngestionSwapUpdateCreateMergeTasksJob, task: IngestionCreateMergeTasksTask): Promise<void> {
+  public async handleJobInit(job: IngestionSwapUpdateCreateTasksJob, task: IngestionCreateTasksTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${SwapJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
@@ -163,7 +158,7 @@ export class SwapJobHandler
   }
 
   private async updateJobAdditionalParams(
-    job: IngestionSwapUpdateCreateMergeTasksJob,
+    job: IngestionSwapUpdateCreateTasksJob,
     additionalParams: Record<string, unknown>,
     displayPath: string
   ): Promise<void> {

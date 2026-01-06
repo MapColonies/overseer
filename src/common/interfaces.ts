@@ -85,7 +85,8 @@ export interface ExportTasksConfig {
 export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
 export interface PollingTasks {
-  mergeTaskCreation: string;
+  createTasks: string;
+  init: string;
   finalize: string;
 }
 

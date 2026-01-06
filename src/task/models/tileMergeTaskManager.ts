@@ -24,7 +24,7 @@ import type {
   ZoomDefinitions,
   FeatureTask,
 } from '../../common/interfaces';
-import { IngestionCreateMergeTasksTask } from '../../utils/zod/schemas/job.schema';
+import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
 @injectable()
@@ -50,7 +50,7 @@ export class TileMergeTaskManager {
 
   public buildTasks(
     taskBuildParams: MergeTilesTaskParams,
-    initTask: IngestionCreateMergeTasksTask
+    initTask: IngestionCreateTasksTask
   ): AsyncGenerator<
     {
       mergeTasksGenerator: MergeTaskParameters;
@@ -93,7 +93,7 @@ export class TileMergeTaskManager {
   }
 
   public async pushTasks(
-    initTask: IngestionCreateMergeTasksTask,
+    initTask: IngestionCreateTasksTask,
     jobId: string,
     jobType: string,
     mergeTasks: AsyncGenerator<
@@ -157,7 +157,7 @@ export class TileMergeTaskManager {
   private async enqueueTasks(
     jobId: string,
     tasks: ICreateTaskBody<MergeTaskParameters>[],
-    initTask: IngestionCreateMergeTasksTask,
+    initTask: IngestionCreateTasksTask,
     latestTaskIndex: JobResumeState
   ): Promise<void> {
     const logger = this.logger.child({ jobId });
@@ -222,7 +222,7 @@ export class TileMergeTaskManager {
   private async *createZoomLevelTasks(
     params: MergeParameters,
     parentSpan: Span | undefined,
-    initTask: IngestionCreateMergeTasksTask
+    initTask: IngestionCreateTasksTask
   ): AsyncGenerator<
     {
       mergeTasksGenerator: MergeTaskParameters;

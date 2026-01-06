@@ -5,10 +5,10 @@ import { context, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import type { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
 import {
-  IngestionCreateMergeTasksTask,
+  IngestionCreateTasksTask,
   IngestionUpdateFinalizeJob,
   IngestionUpdateFinalizeTask,
-  IngestionUpdateCreateMergeTasksJob,
+  IngestionUpdateCreateTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
@@ -26,7 +26,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateCreateMergeTasksJob, IngestionCreateMergeTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
+  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
 {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
@@ -45,7 +45,7 @@ export class UpdateJobHandler
     super(logger, config, queueClient, jobTrackerClient);
   }
 
-  public async handleJobInit(job: IngestionUpdateCreateMergeTasksJob, task: IngestionCreateMergeTasksTask): Promise<void> {
+  public async handleJobInit(job: IngestionUpdateCreateTasksJob, task: IngestionCreateTasksTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${UpdateJobHandler.name}.${this.handleJobInit.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
 
