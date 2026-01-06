@@ -9,7 +9,7 @@ import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../.
 import { exportJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import { FindLayerResponse } from '../../../src/common/interfaces';
 import { layerRecord } from '../mocks/catalogClientMockData';
-import { createFakeAggregatedPartData, setupCatalogClientTest } from './catalogClientSetup';
+import { createFakeAggregatedPartData, layerNameFormats, setupCatalogClientTest } from './catalogClientSetup';
 
 describe('CatalogClient', () => {
   beforeEach(() => {
@@ -27,13 +27,12 @@ describe('CatalogClient', () => {
 
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
-      const layerName: LayerName = 'layer-Orthophoto';
 
       polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
 
       nock(baseUrl).post('/records').reply(201);
 
-      const action = catalogClient.publish(ingestionNewJobExtended, layerName);
+      const action = catalogClient.publish(ingestionNewJobExtended, layerNameFormats);
 
       await expect(action).resolves.not.toThrow();
       expect(nock.isDone()).toBe(true);
@@ -44,11 +43,10 @@ describe('CatalogClient', () => {
 
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
-      const layerName: LayerName = 'layer-Orthophoto';
 
       nock(baseUrl).post('/records').reply(500);
 
-      const action = catalogClient.publish(ingestionNewJobExtended, layerName);
+      const action = catalogClient.publish(ingestionNewJobExtended, layerNameFormats);
 
       await expect(action).rejects.toThrow(PublishLayerError);
     });
@@ -65,7 +63,7 @@ describe('CatalogClient', () => {
           requestBody = reqBody;
         });
 
-      const action = catalogClient.update(ingestionUpdateFinalizeJob);
+      const action = catalogClient.update(ingestionUpdateFinalizeJob, layerNameFormats.polygonPartsEntityName);
 
       await expect(action).resolves.not.toThrow();
       expect(requestBody).toMatchObject({
@@ -89,7 +87,6 @@ describe('CatalogClient', () => {
           additionalParams: {
             ...ingestionSwapUpdateJob.parameters.additionalParams,
             displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
-            polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
           },
         },
       };
@@ -102,7 +99,7 @@ describe('CatalogClient', () => {
           return swapUpdateJob;
         });
 
-      const action = catalogClient.update(swapUpdateJob);
+      const action = catalogClient.update(swapUpdateJob, layerNameFormats.polygonPartsEntityName);
 
       await expect(action).resolves.not.toThrow();
       expect(requestBody).toMatchObject({
@@ -122,7 +119,7 @@ describe('CatalogClient', () => {
       const recordId = ingestionUpdateJob.internalId;
       nock(baseUrl).put(`/records/${recordId}`).reply(500);
 
-      const action = catalogClient.update(ingestionUpdateFinalizeJob);
+      const action = catalogClient.update(ingestionUpdateFinalizeJob, layerNameFormats.polygonPartsEntityName);
 
       await expect(action).rejects.toThrow(UpdateLayerError);
     });
@@ -134,7 +131,7 @@ describe('CatalogClient', () => {
       nock(baseUrl).get(`/aggregation/${polygonPartsEntityName}`).reply(500);
       polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockRejectedValue(new Error('Failed to get aggregation layer metadata'));
 
-      const action = catalogClient.update(ingestionUpdateFinalizeJob);
+      const action = catalogClient.update(ingestionUpdateFinalizeJob, layerNameFormats.polygonPartsEntityName);
 
       await expect(action).rejects.toThrow(UpdateLayerError);
     });

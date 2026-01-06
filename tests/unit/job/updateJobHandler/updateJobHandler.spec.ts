@@ -7,6 +7,7 @@ import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobs
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
+  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
@@ -28,10 +29,7 @@ describe('updateJobHandler', () => {
           isNewTarget: false,
           grid: Grid.TWO_ON_ONE,
         },
-        partsData: job.parameters.partsData,
       };
-
-      const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -49,11 +47,10 @@ describe('updateJobHandler', () => {
 
       const job = structuredClone(ingestionUpdateJob);
       const task = initTaskForIngestionUpdate;
-      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       const error = new Error('Test error');
 
-      taskBuilderMock.buildTasks.mockReturnValue(tasks);
+      taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);
 

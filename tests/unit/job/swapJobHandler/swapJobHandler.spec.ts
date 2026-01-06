@@ -1,14 +1,15 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { type LayerName, type RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
+import { type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { Grid, MergeTask, SeedJobParams } from '../../../../src/common/interfaces';
-import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionSwapUpdate, createMergeTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
 import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
 
 describe('swapJobHandler', () => {
+  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
@@ -18,7 +19,7 @@ describe('swapJobHandler', () => {
     it('should handle job init successfully', async () => {
       const { swapJobHandler, queueClientMock, taskBuilderMock } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
-      const task = initTaskForIngestionSwapUpdate;
+      const task = createMergeTasksTaskForIngestionSwapUpdate;
 
       const additionalParams = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 
@@ -34,10 +35,7 @@ describe('swapJobHandler', () => {
           isNewTarget: true,
           grid: Grid.TWO_ON_ONE,
         },
-        partsData: job.parameters.partsData,
       };
-
-      const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
 
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -57,12 +55,11 @@ describe('swapJobHandler', () => {
       const { swapJobHandler, taskBuilderMock, queueClientMock } = setupSwapJobHandlerTest();
 
       const job = structuredClone(ingestionSwapUpdateJob);
-      const task = initTaskForIngestionSwapUpdate;
-      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+      const task = createMergeTasksTaskForIngestionSwapUpdate;
 
       const error = new Error('Test error');
 
-      taskBuilderMock.buildTasks.mockReturnValue(tasks);
+      taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);
 
@@ -81,7 +78,7 @@ describe('swapJobHandler', () => {
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
       const { displayPath, tileOutputFormat } = job.parameters.additionalParams;
-      const productType = job.productType as RasterProductTypes;
+      const productType = job.productType;
       const layerName: LayerName = `${job.resourceId}-${productType}`;
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {

@@ -99,9 +99,9 @@
         "__format": "number"
       },
       "tasks": {
-        "createTasks": "POLLING_CREATE_TASKS_TASK",
-        "init": "POLLING_INIT_TASK",
-        "finalize": "POLLING_FINALIZE_TASK"
+        "mergeTaskCreation": "POLLING_MERGE_TASK_CREATION_TASK",
+        "finalize": "POLLING_FINALIZE_TASK",
+        "init": "POLLING_INIT_TASK"
       }
     },
     "ingestion": {

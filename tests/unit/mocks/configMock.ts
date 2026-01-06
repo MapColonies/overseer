@@ -123,6 +123,7 @@ const registerDefaultConfig = (): void => {
       polling: {
         maxTaskAttempts: 3,
         tasks: {
+          mergeTaskCreation: 'create-merge-tasks',
           init: 'init',
           finalize: 'finalize',
         },

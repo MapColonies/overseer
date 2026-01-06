@@ -88,6 +88,7 @@ export interface PollingTasks {
   createTasks: string;
   init: string;
   finalize: string;
+  init: string;
 }
 
 export interface PollingConfig {

@@ -14,9 +14,9 @@ import {
   finalizeTaskForIngestionSwapUpdate,
   finalizeTaskForIngestionUpdate,
   initTaskForExport,
-  initTaskForIngestionNew,
-  initTaskForIngestionSwapUpdate,
-  initTaskForIngestionUpdate,
+  createMergeTasksTaskForIngestionNew,
+  createMergeTasksTaskForIngestionSwapUpdate,
+  createMergeTasksTaskForIngestionUpdate,
 } from '../mocks/tasksMockData';
 import type { InstanceType } from '../../../src/utils/zod/schemas/instance.schema';
 
@@ -28,24 +28,24 @@ interface JobProcessingTestCase {
   instanceType?: InstanceType;
 }
 
-export const initTestCases: JobProcessingTestCase[] = [
+export const createMergeTasksTestCases: JobProcessingTestCase[] = [
   {
     jobType: ingestionNewJob.type,
-    taskType: initTaskForIngestionNew.type,
+    taskType: createMergeTasksTaskForIngestionNew.type,
     job: ingestionNewJob,
-    task: initTaskForIngestionNew,
+    task: createMergeTasksTaskForIngestionNew,
   },
   {
     jobType: ingestionUpdateJob.type,
-    taskType: initTaskForIngestionNew.type,
+    taskType: createMergeTasksTaskForIngestionUpdate.type,
     job: ingestionUpdateJob,
-    task: initTaskForIngestionUpdate,
+    task: createMergeTasksTaskForIngestionUpdate,
   },
   {
     jobType: ingestionSwapUpdateJob.type,
-    taskType: initTaskForIngestionSwapUpdate.type,
+    taskType: createMergeTasksTaskForIngestionSwapUpdate.type,
     job: ingestionSwapUpdateJob,
-    task: initTaskForIngestionSwapUpdate,
+    task: createMergeTasksTaskForIngestionSwapUpdate,
   },
   {
     jobType: exportJob.type,

@@ -145,7 +145,7 @@ jobDefinitions:
     tasks:
       createTasks:
         type: ""
-      init:
+      init: 
         type: ""  
       finalize:
         type: ""

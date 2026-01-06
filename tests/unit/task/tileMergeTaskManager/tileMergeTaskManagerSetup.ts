@@ -2,12 +2,16 @@ import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import jsLogger from '@map-colonies/js-logger';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { TileRanger } from '@map-colonies/mc-utils';
+import { TileRanger, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
 import { configMock } from '../../mocks/configMock';
-import { JobManagerConfig, MergeTaskParameters, JobResumeState } from '../../../../src/common/interfaces';
+import { JobManagerConfig, MergeTaskParameters, JobResumeState, MergeTilesTaskParams, Grid } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
+import { createFakeRandomPolygonalGeometry } from '../../mocks/partsMockData';
+
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const TEST_INGESTION_RESOLUTION = zoomLevelToResolutionDeg(2)!;
 
 export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
 export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
@@ -70,3 +74,21 @@ export async function* createTaskGenerator(numTasks: number): AsyncGenerator<
     };
   }
 }
+
+export const createMergeTilesTaskParams = (): MergeTilesTaskParams => {
+  return {
+    taskMetadata: {
+      layerRelativePath: 'layerRelativePath',
+      tileOutputFormat: TileOutputFormat.PNG,
+      isNewTarget: true,
+      grid: Grid.TWO_ON_ONE,
+    },
+    inputFiles: {
+      gpkgFilesPath: ['/originDirectory/file'],
+      metadataShapefilePath: '/originDirectory/metadata.shp',
+      productShapefilePath: '/originDirectory/product.shp',
+    },
+    ingestionResolution: TEST_INGESTION_RESOLUTION,
+    productGeometry: createFakeRandomPolygonalGeometry(),
+  };
+};

@@ -2,7 +2,13 @@
 import { Link } from '@map-colonies/mc-model-types';
 import jsLogger from '@map-colonies/js-logger';
 import { z } from 'zod';
-import { AggregationFeature, aggregationFeaturePropertiesSchema, CORE_VALIDATIONS, INGESTION_VALIDATIONS } from '@map-colonies/raster-shared';
+import {
+  AggregationFeature,
+  aggregationFeaturePropertiesSchema,
+  CORE_VALIDATIONS,
+  INGESTION_VALIDATIONS,
+  LayerNameFormats,
+} from '@map-colonies/raster-shared';
 import { faker } from '@faker-js/faker';
 import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
@@ -74,4 +80,9 @@ export const createFakeAggregatedFeature = (): AggregationFeature => {
     type: 'Feature',
     properties: createFakeAggregationProperties(),
   };
+};
+
+export const layerNameFormats: LayerNameFormats = {
+  layerName: 'layer-Orthophoto',
+  polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
 };
