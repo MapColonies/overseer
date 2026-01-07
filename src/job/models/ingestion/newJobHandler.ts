@@ -25,7 +25,7 @@ import { CatalogClient } from '../../../httpClients/catalogClient';
 import { JobHandler } from '../jobHandler';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
-import { ReedProductGeometry } from '../../../utils/storage/productReader';
+import { ReadProductGeometry } from '../../../utils/storage/productReader';
 
 @injectable()
 /* eslint-disable @typescript-eslint/brace-style */
@@ -45,7 +45,7 @@ export class NewJobHandler
     @inject(GeoserverClient) private readonly geoserverClient: GeoserverClient,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
-    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReadProductGeometry,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);

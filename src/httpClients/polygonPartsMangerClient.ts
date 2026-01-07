@@ -21,7 +21,7 @@ export class PolygonPartsMangerClient extends HttpClient {
 
   public async process(productName: string, productType: RasterProductTypes): Promise<void> {
     try {
-      const url = 'polygonParts/process';
+      const url = '/polygonParts/process';
 
       const body = {
         productName,
@@ -39,7 +39,7 @@ export class PolygonPartsMangerClient extends HttpClient {
     try {
       this.logger.info({ msg: 'getAggregatedLayerMetadata', polygonPartsEntityName, filter });
 
-      const url = `polygonParts/${polygonPartsEntityName}/aggregate`;
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
       const body = {
         filter: filter ?? null,
       };

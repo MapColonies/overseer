@@ -193,7 +193,7 @@ export interface FeatureCollectionWitZoomDefinitions {
 
 export interface ZoomDefinitions {
   maxZoom: number;
-  partsZoomLevelMatch: boolean;
+  isMultiResolution: boolean;
 }
 
 export interface TilesSource {

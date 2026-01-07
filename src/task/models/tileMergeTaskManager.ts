@@ -1,8 +1,8 @@
-import path from 'path';
+import { basename } from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { feature } from '@turf/turf';
+import { bbox, feature } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { type InputFiles } from '@map-colonies/raster-shared';
@@ -184,17 +184,16 @@ export class TileMergeTaskManager {
 
   private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): MergeParameters {
     const logger = this.logger.child({ taskType: this.taskType });
-    const { taskMetadata, inputFiles, ingestionResolution } = taskBuildParams;
+    const { taskMetadata, inputFiles, ingestionResolution, productGeometry } = taskBuildParams;
 
     logger.info({ msg: 'creating task parameters' });
 
     const tilesSource = this.extractTilesSource(inputFiles);
-
     const zoomDefinitions: ZoomDefinitions = {
       maxZoom: degreesPerPixelToZoomLevel(ingestionResolution),
-      partsZoomLevelMatch: true, // TODO: When multi part resolution support is added, this should be determined accordingly
+      isMultiResolution: true, // TODO: When multi part resolution support is added, this should be determined accordingly
     };
-    const product = feature(taskBuildParams.productGeometry, {
+    const product = feature(productGeometry, {
       tilesSource,
       zoomDefinitions,
     });
@@ -211,7 +210,7 @@ export class TileMergeTaskManager {
       throw new Error('Multiple files ingestion is currently not supported');
     }
     const tilesPath = gpkgFilesPath[0];
-    const fileName = path.basename(tilesPath);
+    const fileName = basename(tilesPath);
 
     return {
       fileName,
@@ -234,8 +233,8 @@ export class TileMergeTaskManager {
     const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createZoomLevelTasks.name}`, parentSpan);
 
     const { taskMetadata, product } = params;
-    const { maxZoom, partsZoomLevelMatch } = product.properties.zoomDefinitions;
-    const telemetryParams = { taskType: this.taskType, maxZoom, partsZoomLevelMatch };
+    const { maxZoom, isMultiResolution } = product.properties.zoomDefinitions;
+    const telemetryParams = { taskType: this.taskType, maxZoom, isMultiResolution };
     const logger = this.logger.child(telemetryParams);
 
     logger.info({ msg: 'Creating tasks for zoom levels' });
@@ -257,7 +256,7 @@ export class TileMergeTaskManager {
     for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom });
 
-      if (!partsZoomLevelMatch) {
+      if (!isMultiResolution) {
         //TODO:send request to pp-manager and get the footprint of all the parts with the same zoom level.
       }
 
@@ -376,19 +375,17 @@ export class TileMergeTaskManager {
 
     const sourceEntry: TaskSources = { type: this.tilesStorageProvider, path: destPath };
     const fileExtension = fileExtensionExtractor(part.properties.tilesSource.fileName);
-
+    const extent = bbox(part.geometry);
     const source: TaskSources = {
       type: fileExtension.toUpperCase(),
       path: part.properties.tilesSource.tilesPath,
       grid,
-      extent: part.bbox
-        ? {
-            minX: part.bbox[0],
-            minY: part.bbox[1],
-            maxX: part.bbox[2],
-            maxY: part.bbox[3],
-          }
-        : undefined,
+      extent: {
+        minX: extent[0],
+        minY: extent[1],
+        maxX: extent[2],
+        maxY: extent[3],
+      },
     };
 
     return [sourceEntry, source];

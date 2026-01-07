@@ -8,7 +8,7 @@ import { DependencyContainer } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import { ProductReadError } from '../../common/errors';
 
-export interface ReedProductGeometry {
+export interface ReadProductGeometry {
   (productPath: string): Promise<Polygon | MultiPolygon>;
 }
 
@@ -18,7 +18,7 @@ export interface ReedProductGeometry {
  * @param container - The dependency injection container used to resolve dependencies
  * @returns A function that takes a product path and returns a Promise resolving to the product's geometry (Polygon or MultiPolygon)
  */
-export const productReaderFactory = (container: DependencyContainer): ReedProductGeometry => {
+export const productReaderFactory = (container: DependencyContainer): ReadProductGeometry => {
   const config = container.resolve<IConfig>(SERVICES.CONFIG);
   const logger = container.resolve<Logger>(SERVICES.LOGGER);
   const maxVerticesPerChunk = config.get<number>('shapefileReader.maxVerticesPerChunk');
@@ -29,7 +29,7 @@ export const productReaderFactory = (container: DependencyContainer): ReedProduc
     let geometry: Polygon | MultiPolygon | undefined;
 
     // Use absolute path from root if ingestionSourcesDirPath is relative
-    const basePath = path.isAbsolute(ingestionSourcesDirPath) ? ingestionSourcesDirPath : path.resolve('/', ingestionSourcesDirPath);
+    const basePath = path.join('/', ingestionSourcesDirPath);
     const shapefileFullPath = path.join(basePath, productPath);
 
     logger.info({ msg: 'reading product geometry from shapefile', shapefileFullPath, productPath, basePath });

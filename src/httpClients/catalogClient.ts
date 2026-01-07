@@ -38,8 +38,9 @@ export class CatalogClient extends HttpClient {
 
   public async publish(job: IngestionNewFinalizeJob, layerNameFormats: LayerNameFormats): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.publish.name}`)), async () => {
+      const { layerName } = layerNameFormats;
       const activeSpan = trace.getActiveSpan();
-      activeSpan?.setAttribute('layerName', layerNameFormats.layerName);
+      activeSpan?.setAttribute('layerName', layerName);
       try {
         const url = '/records';
         const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerNameFormats);
@@ -54,7 +55,7 @@ export class CatalogClient extends HttpClient {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
           activeSpan?.recordException(err);
-          throw new PublishLayerError(this.targetService, layerNameFormats.layerName, err);
+          throw new PublishLayerError(this.targetService, layerName, err);
         }
       } finally {
         activeSpan?.end();

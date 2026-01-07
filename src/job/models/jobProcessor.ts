@@ -94,8 +94,6 @@ export class JobProcessor {
 
         switch (task.type) {
           case taskTypes.createTasks:
-            await jobHandler.handleJobInit(job, task);
-            break;
           case taskTypes.init: // when export domain will have validation we will remove init and move to createTasks
             await jobHandler.handleJobInit(job, task);
             break;
@@ -149,7 +147,7 @@ export class JobProcessor {
     const job = await this.queueClient.jobManagerClient.getJob(jobId);
 
     if (taskType === this.pollingConfig.tasks.init) {
-      // currently inly export jobs use the init task to change status to IN_PROGRESS
+      // currently only export jobs use the init task to change status to IN_PROGRESS
       await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
     }
 
@@ -183,7 +181,7 @@ export class JobProcessor {
     const { job, task } = jobAndTask;
     const logger = this.logger.child({ jobId: job.id, jobType: job.type, taskId: task.id, taskType: task.type });
     const validationKey = `${job.type}_${task.type}` as OperationValidationKey;
-    logger.info({ msg: 'The validation key is', validationKey });
+    logger.debug({ msg: 'The validation key is', validationKey });
     const validationSchemas = jobTaskSchemaMap[validationKey];
 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
