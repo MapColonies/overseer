@@ -15,6 +15,7 @@ export interface SeedingJobCreatorTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   configMock: typeof configMock;
+  readProductGeometry: jest.MockedFunction<typeof readProductGeometry>;
 }
 
 export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
@@ -45,6 +46,7 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
     jobManagerClientMock,
     mapproxyClientMock,
     configMock,
+    readProductGeometry,
   };
 };
 

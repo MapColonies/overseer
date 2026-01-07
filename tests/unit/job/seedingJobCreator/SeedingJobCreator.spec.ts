@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { randomUUID } from 'crypto';
+import { MultiPolygon, Polygon } from 'geojson';
 import nock from 'nock';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { feature } from '@turf/turf';
 import { LayerCacheType, SeedMode } from '../../../../src/common/constants';
 import { SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../../src/common/interfaces';
 import { registerDefaultConfig } from '../../mocks/configMock';
+import { createFakeRandomPolygonalGeometry } from '../../mocks/geometryMockData';
 import { LayerCacheNotFoundError } from '../../../../src/common/errors';
 import {
   ingestionSwapUpdateFinalizeJob,
@@ -22,10 +23,12 @@ import { SeedingJobCreatorTestContext, seedJobParameters, setupSeedingJobCreator
 
 describe('SeedingJobCreator', () => {
   let seedingJobCreatorContext: SeedingJobCreatorTestContext;
+  let productGeometry: Polygon | MultiPolygon;
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
     seedingJobCreatorContext = setupSeedingJobCreatorTest();
+    productGeometry = createFakeRandomPolygonalGeometry();
   });
 
   afterEach(() => {
@@ -36,7 +39,8 @@ describe('SeedingJobCreator', () => {
 
   describe('createSeedingJob', () => {
     it('should create seeding job successfully with clean task mode on swapUpdate', async () => {
-      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock } = seedingJobCreatorContext;
+      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry } =
+        seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
       const tilesSeedingConfig = configMock.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
@@ -53,7 +57,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 0,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: ingestionSwapUpdateFinalizeJob.parameters.additionalParams.footprint,
+        geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,
@@ -84,6 +88,7 @@ describe('SeedingJobCreator', () => {
         ],
       };
 
+      readProductGeometry.mockResolvedValue(productGeometry);
       jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
@@ -100,7 +105,8 @@ describe('SeedingJobCreator', () => {
     });
 
     it('should create seeding job successfully with seed task and clean task on update with more than one part', async () => {
-      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock } = seedingJobCreatorContext;
+      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry } =
+        seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
       const tilesSeedingConfig = configMock.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
@@ -115,7 +121,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 0,
         toZoomLevel: 4,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: feature(ingestionUpdateJob.parameters.partsData[0].footprint).geometry,
+        geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,
@@ -126,7 +132,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 5,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: feature(ingestionUpdateJob.parameters.partsData[0].footprint).geometry,
+        geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,
@@ -166,6 +172,7 @@ describe('SeedingJobCreator', () => {
         ],
       };
 
+      readProductGeometry.mockResolvedValue(productGeometry);
       jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
@@ -182,15 +189,14 @@ describe('SeedingJobCreator', () => {
     });
 
     it('should create seeding job successfully with seed task mode (more than 1 part)', async () => {
-      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock } = seedingJobCreatorContext;
+      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry } =
+        seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
       const tilesSeedingConfig = configMock.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
       const layerCacheName = 'cache-Name-s3';
       const taskId = randomUUID();
       const seedJobId = randomUUID();
-
-      ingestionUpdateJob.parameters.partsData = multiPartData;
 
       const seedJobParams: SeedJobParams = {
         ...seedJobParameters,
@@ -200,7 +206,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 0,
         toZoomLevel: 4,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: feature(ingestionUpdateJob.parameters.partsData[0].footprint).geometry,
+        geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,
@@ -211,7 +217,7 @@ describe('SeedingJobCreator', () => {
         fromZoomLevel: 5,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
-        geometry: feature(ingestionUpdateJob.parameters.partsData[0].footprint).geometry,
+        geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
         layerId: layerCacheName,
         grid: tilesSeedingConfig.grid,
@@ -250,6 +256,8 @@ describe('SeedingJobCreator', () => {
           },
         ],
       };
+
+      readProductGeometry.mockResolvedValue(productGeometry);
       jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
@@ -309,20 +317,12 @@ describe('SeedingJobCreator', () => {
           ingestionJob: ingestionUpdateJobHighRes,
         };
 
-        // Get unified geometry from all parts
-        const unifiedGeometry = unifyParts(ingestionUpdateJobHighRes.parameters.partsData);
-        const seedGeometry =
-          unifiedGeometry?.geometry ??
-          (() => {
-            throw new Error('Failed to unify parts geometry');
-          })();
-
         // Base task from 0 to zoomThreshold
         const baseSeedTaskOptions: SeedTaskOptions = {
           fromZoomLevel: 0,
           toZoomLevel: 16,
           skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: seedGeometry,
+          geometry: productGeometry,
           refreshBefore: '2024-11-05T13:50:27',
           layerId: layerCacheName,
           grid: tilesSeedingConfig.grid,
@@ -334,7 +334,7 @@ describe('SeedingJobCreator', () => {
           fromZoomLevel: 17,
           toZoomLevel: 17,
           skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: feature(ingestionUpdateJobHighRes.parameters.partsData[0].footprint).geometry,
+          geometry: productGeometry,
           refreshBefore: '2024-11-05T13:50:27',
           layerId: layerCacheName,
           grid: tilesSeedingConfig.grid,
@@ -345,7 +345,7 @@ describe('SeedingJobCreator', () => {
           fromZoomLevel: 18,
           toZoomLevel: tilesSeedingConfig.maxZoom,
           skipUncached: tilesSeedingConfig.skipUncached,
-          geometry: seedGeometry,
+          geometry: productGeometry,
           refreshBefore: '2024-11-05T13:50:27',
           layerId: layerCacheName,
           grid: tilesSeedingConfig.grid,
@@ -389,23 +389,15 @@ describe('SeedingJobCreator', () => {
           ingestionJob: ingestionUpdateJobHighResMaxTiles,
         };
 
-        // Get unified geometry from all parts
-        const unifiedGeometry = unifyParts(ingestionUpdateJobHighResMaxTiles.parameters.partsData);
-        const seedGeometry =
-          unifiedGeometry?.geometry ??
-          (() => {
-            throw new Error('Failed to unify parts geometry');
-          })();
-
         // Get the first part's geometry for high-res splitting
-        const firstPartGeometry = ingestionUpdateJobHighResMaxTiles.parameters.partsData[0].footprint;
+        const firstPartGeometry = productGeometry;
 
         // Split the first part geometry by tile count (zoom level 17, maxTiles from config)
         const maxTilesPerSeedTask = configMock.get<number>('jobManagement.ingestion.tasks.tilesSeeding.maxTilesPerSeedTask');
         const splitGeometries = splitGeometryByTileCount(firstPartGeometry, 17, maxTilesPerSeedTask);
 
         // Base task from 0 to zoomThreshold
-        const baseSeedTaskOptions = createBaseSeedTaskOptions(seedGeometry, layerCacheName, 16);
+        const baseSeedTaskOptions = createBaseSeedTaskOptions(productGeometry, layerCacheName, 16);
 
         // High-res tasks using the split geometries
         const highResSeedTaskOptions1 = createHighResSeedTaskOptions(splitGeometries[0], layerCacheName);
@@ -413,7 +405,7 @@ describe('SeedingJobCreator', () => {
         const highResSeedTaskOptions3 = createHighResSeedTaskOptions(splitGeometries[2], layerCacheName);
         const highResSeedTaskOptions4 = createHighResSeedTaskOptions(splitGeometries[3], layerCacheName);
 
-        const cleanTaskOptions = createCleanTaskOptions(seedGeometry, layerCacheName, 18, tilesSeedingConfig.maxZoom);
+        const cleanTaskOptions = createCleanTaskOptions(productGeometry, layerCacheName, 18, tilesSeedingConfig.maxZoom);
 
         const seedJob = createSeedJob(ingestionUpdateJobHighResMaxTiles, seedJobType, tilesSeedingConfig.type, [
           cleanTaskOptions,
