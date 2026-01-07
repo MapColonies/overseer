@@ -13,7 +13,7 @@ import type {
   IngestionSwapUpdateFinalizeTask,
   IngestionSwapUpdateCreateTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
-import { ReedProductGeometry } from '../../../utils/storage/productReader';
+import { ReadProductGeometry } from '../../../utils/storage/productReader';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
@@ -43,7 +43,7 @@ export class SwapJobHandler
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
-    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReadProductGeometry,
     private readonly taskMetrics: TaskMetrics
   ) {
     super(logger, config, queueClient, jobTrackerClient);
@@ -129,7 +129,7 @@ export class SwapJobHandler
 
         if (!updatedInMapproxy) {
           const layerRelativePath = `${job.internalId}/${displayPath}`;
-          logger.info({ msg: 'Updating layer in mapproxy', layerName: layerName, layerRelativePath, tileOutputFormat });
+          logger.info({ msg: 'Updating layer in mapproxy', layerName, layerRelativePath, tileOutputFormat });
           await this.mapproxyClient.update(layerName, layerRelativePath, tileOutputFormat);
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'updatedInMapproxy');
           activeSpan?.addEvent('updateMapproxy.success', { ...finalizeTaskParams });

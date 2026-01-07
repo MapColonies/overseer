@@ -133,7 +133,7 @@ The service can be configured using environment variables or a configuration fil
 | GEOSERVER_WORKSPACE | string | GeoServer workspace name | `"polygonParts"` |
 | GEOSERVER_DATASTORE | string | GeoServer datastore name | `"polygonParts"` |
 | MAX_TASK_ATTEMPTS | number | Maximum number of task execution attempts | `3` |
-| POLLING_MERGE_TASK_CREATION_TASK | string | createTasks task type for polling | `"create-tasks"` |
+| POLLING_CREATE_TASKS_TASK | string | createTasks task type for polling | `"create-tasks"` |
 | POLLING_FINALIZE_TASK | string | Finalize task type for polling | `"finalize"` |
 
 ## Ingestion Configuration

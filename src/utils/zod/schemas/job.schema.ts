@@ -52,9 +52,8 @@ export type IngestionNewFinalizeTask = z.infer<typeof ingestionNewFinalizeTaskSc
 //#endregion
 
 //#region IngestionUpdate
-export const ingestionUpdateCreateTasksJobSchema = createJobResponseSchema(ingestionUpdateJobParamsSchema).describe(
-  'IngestionUpdateCreateTasksJobSchema'
-);
+export const ingestionUpdateCreateTasksJobSchema =
+  createJobResponseSchema(ingestionUpdateJobParamsSchema).describe('IngestionUpdateCreateTasksJobSchema');
 export type IngestionUpdateCreateTasksJob = z.infer<typeof ingestionUpdateCreateTasksJobSchema>;
 
 //finalize

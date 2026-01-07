@@ -11,7 +11,7 @@ import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
 import { splitGeometryByTileCount } from '../../../utils/geoUtils';
-import { ReedProductGeometry } from '../../../utils/storage/productReader';
+import { ReadProductGeometry } from '../../../utils/storage/productReader';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 
 @injectable()
@@ -31,7 +31,7 @@ export class SeedingJobCreator {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
-    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReedProductGeometry,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReadProductGeometry,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
@@ -91,7 +91,7 @@ export class SeedingJobCreator {
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
           producerName: producerName ?? undefined,
-          productName: productName,
+          productName,
           productType,
           domain,
           tasks: seedTasks,
@@ -285,8 +285,8 @@ export class SeedingJobCreator {
     logger.debug({ msg: 'Getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN && job.type === this.swapUpdateJobType) {
       const layer = await this.catalogClient.findLayer(catalogId);
-      const geometry =
-        layer.metadata.footprint.type === 'Polygon' || layer.metadata.footprint.type === 'MultiPolygon' ? layer.metadata.footprint : undefined;
+      const footprint = layer.metadata.footprint;
+      const geometry = footprint.type === 'Polygon' || footprint.type === 'MultiPolygon' ? footprint : undefined;
       return geometry;
     }
 
