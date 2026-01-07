@@ -12,6 +12,7 @@ import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
 import { readProductGeometry } from '../../mocks/productReaderMock';
+import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export interface UpdateJobHandlerTestContext {
   updateJobHandler: UpdateJobHandler;
@@ -22,6 +23,8 @@ export interface UpdateJobHandlerTestContext {
   catalogClientMock: jest.Mocked<CatalogClient>;
   seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
   jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
+  readProductGeometry: jest.MockedFunction<typeof readProductGeometry>;
 }
 
 export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
@@ -57,5 +60,7 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
     catalogClientMock,
     seedingJobCreatorMock,
     jobTrackerClientMock,
+    polygonPartsManagerClientMock,
+    readProductGeometry,
   };
 };

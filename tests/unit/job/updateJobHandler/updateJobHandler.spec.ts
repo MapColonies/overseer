@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
-import { Grid, MergeTask } from '../../../../src/common/interfaces';
+import { Grid, MergeTask, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } from '../../mocks/tasksMockData';
+import { createFakeRandomPolygonalGeometry } from '../../mocks/geometryMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
@@ -15,13 +16,14 @@ describe('updateJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { updateJobHandler, queueClientMock, taskBuilderMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometry } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
+      const productGeometry = createFakeRandomPolygonalGeometry();
 
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 
-      const taskBuildParams = {
+      const taskBuildParams: MergeTilesTaskParams = {
         inputFiles: job.parameters.inputFiles,
         taskMetadata: {
           layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
@@ -29,8 +31,11 @@ describe('updateJobHandler', () => {
           isNewTarget: false,
           grid: Grid.TWO_ON_ONE,
         },
+        ingestionResolution: job.parameters.ingestionResolution,
+        productGeometry,
       };
 
+      readProductGeometry.mockResolvedValue(productGeometry);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
@@ -64,14 +69,18 @@ describe('updateJobHandler', () => {
       const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock, jobTrackerClientMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
+      const entityName = `${job.resourceId}_${job.productType.toLowerCase()}`;
 
       catalogClientMock.update.mockResolvedValue(undefined);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
 
       await updateJobHandler.handleJobFinalize(job, task);
 
-      expect(catalogClientMock.update).toHaveBeenCalledWith(job);
-      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, { parameters: { updatedInCatalog: true } });
+      expect(catalogClientMock.update).toHaveBeenCalledWith(job, entityName);
+      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
+        parameters: { processedParts: true, updatedInCatalog: false },
+      });
+      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, { parameters: { processedParts: true, updatedInCatalog: true } });
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
       expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
     });
