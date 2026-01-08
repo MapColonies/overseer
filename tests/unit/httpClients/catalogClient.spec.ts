@@ -2,7 +2,6 @@
 import { randomUUID } from 'crypto';
 import 'jest-extended';
 import nock from 'nock';
-import type { LayerName } from '@map-colonies/raster-shared';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';

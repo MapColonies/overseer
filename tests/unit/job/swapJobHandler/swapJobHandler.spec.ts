@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { type LayerName, PolygonPartsEntityName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
+import { type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { Grid, MergeTask, MergeTilesTaskParams, SeedJobParams } from '../../../../src/common/interfaces';

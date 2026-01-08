@@ -1,4 +1,4 @@
-import { feature, featureCollection, union, bbox, bboxPolygon, intersect } from '@turf/turf';
+import { feature, featureCollection, bbox, bboxPolygon, intersect } from '@turf/turf';
 import { featureToTilesCount } from '@map-colonies/mc-utils';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import type { BBox } from 'geojson';
