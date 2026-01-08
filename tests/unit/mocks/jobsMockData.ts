@@ -30,7 +30,7 @@ export const ingestionNewJob: IngestionNewCreateTasksJob = {
       srsName: 'WGS84GEO',
       productId: 'TestProduct',
       description: 'string',
-      productName: 'akProduct',
+      productName: 'test',
       productType: RasterProductTypes.ORTHOPHOTO,
       producerName: 'string',
       transparency: Transparency.TRANSPARENT,
@@ -56,7 +56,7 @@ export const ingestionNewJob: IngestionNewCreateTasksJob = {
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: '89bc4f63-8608-40bf-b845-3cbd4c0c4e03',
   producerName: 'string',
-  productName: 'akProduct',
+  productName: 'test',
   productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
@@ -129,7 +129,7 @@ export const ingestionUpdateJob: IngestionUpdateCreateTasksJob = {
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: 'a30e93fd-f1a7-480f-a395-47afc97f99b9',
   producerName: 'string',
-  productName: 'akProduct',
+  productName: 'test',
   productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
@@ -152,6 +152,7 @@ export const ingestionUpdateJobHighRes: IngestionUpdateFinalizeJob = {
     additionalParams: {
       ...ingestionUpdateJob.parameters.additionalParams,
     },
+    ingestionResolution: zoomLevelToResolutionDeg(17)!,
   },
 };
 
@@ -164,6 +165,7 @@ export const ingestionUpdateJobHighResMaxTiles: IngestionUpdateFinalizeJob = {
     additionalParams: {
       ...ingestionUpdateJob.parameters.additionalParams,
     },
+    ingestionResolution: zoomLevelToResolutionDeg(17)!,
   },
 };
 
@@ -197,7 +199,7 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: 'f3ceebf1-3791-43db-967a-317c22ac1897',
   producerName: 'string',
-  productName: 'akProduct',
+  productName: 'test',
   productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,

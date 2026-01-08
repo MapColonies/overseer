@@ -2,7 +2,7 @@
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { Grid, MergeTask, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } from '../../mocks/tasksMockData';
-import { createFakeRandomPolygonalGeometry } from '../../mocks/geometryMockData';
+import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
@@ -19,7 +19,7 @@ describe('updateJobHandler', () => {
       const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometry } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
-      const productGeometry = createFakeRandomPolygonalGeometry();
+      const productGeometry = createFakePolygonalGeometry();
 
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 

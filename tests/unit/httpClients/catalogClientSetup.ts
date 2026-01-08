@@ -14,7 +14,7 @@ import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { CatalogClient } from '../../../src/httpClients/catalogClient';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
-import { createFakeBBox, createFakeRandomPolygonalGeometry } from '../mocks/geometryMockData';
+import { createFakeBBox, createFakePolygonalGeometry } from '../mocks/geometryMockData';
 import { tracerMock } from '../mocks/tracerMock';
 import { AggregationLayerMetadata } from '../../../src/common/interfaces';
 
@@ -69,14 +69,14 @@ export const createFakeAggregationProperties = (): z.infer<typeof aggregationFea
 export const createFakeAggregatedPartData = (): AggregationLayerMetadata => {
   const aggregationProps = createFakeAggregationProperties();
   return {
-    footprint: createFakeRandomPolygonalGeometry(),
+    footprint: createFakePolygonalGeometry(),
     ...aggregationProps,
   };
 };
 
 export const createFakeAggregatedFeature = (): AggregationFeature => {
   return {
-    geometry: createFakeRandomPolygonalGeometry(),
+    geometry: createFakePolygonalGeometry(),
     type: 'Feature',
     properties: createFakeAggregationProperties(),
   };

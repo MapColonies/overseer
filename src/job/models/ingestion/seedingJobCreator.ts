@@ -228,7 +228,7 @@ export class SeedingJobCreator {
       const estimatedTiles = featureToTilesCount(feature(seedGeometry), zoom);
 
       if (estimatedTiles <= this.maxTilesPerSeedTask) {
-        // If tiles count is within limit, create a single task
+        // If tiles count is within limit, create a single  task
         const options = this.createSeedOptions(SeedMode.SEED, seedGeometry, cacheName, zoom, zoom);
         const taskParams = this.createTaskParams(catalogId, options);
         seedTasks.push({ type: seedTaskType, parameters: taskParams });

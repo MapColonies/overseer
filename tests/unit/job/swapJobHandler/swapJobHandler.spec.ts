@@ -2,7 +2,7 @@
 import crypto from 'crypto';
 import { type LayerName, PolygonPartsEntityName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
-import { createFakeRandomPolygonalGeometry } from '../../mocks/geometryMockData';
+import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { Grid, MergeTask, MergeTilesTaskParams, SeedJobParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionSwapUpdate, createTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
@@ -21,7 +21,7 @@ describe('swapJobHandler', () => {
       const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometry } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = createTasksTaskForIngestionSwapUpdate;
-      const productGeometry = createFakeRandomPolygonalGeometry();
+      const productGeometry = createFakePolygonalGeometry();
 
       const additionalParams = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 

@@ -8,7 +8,7 @@ import { JobManagerConfig, MergeTaskParameters, JobResumeState, MergeTilesTaskPa
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
-import { createFakeRandomPolygonalGeometry } from '../../mocks/geometryMockData';
+import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
 const TEST_INGESTION_RESOLUTION = zoomLevelToResolutionDeg(4)!;
@@ -89,6 +89,6 @@ export const createMergeTilesTaskParams = (): MergeTilesTaskParams => {
       productShapefilePath: '/originDirectory/product.shp',
     },
     ingestionResolution: TEST_INGESTION_RESOLUTION,
-    productGeometry: createFakeRandomPolygonalGeometry(),
+    productGeometry: createFakePolygonalGeometry(),
   };
 };
