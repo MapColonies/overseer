@@ -191,7 +191,7 @@ export class TileMergeTaskManager {
     const tilesSource = this.extractTilesSource(inputFiles);
     const zoomDefinitions: ZoomDefinitions = {
       maxZoom: degreesPerPixelToZoomLevel(ingestionResolution),
-      isMultiResolution: true, // TODO: When multi part resolution support is added, this should be determined accordingly
+      isMultiResolution: false, // TODO: When multi part resolution support is added, this should be determined accordingly
     };
     const product = feature(productGeometry, {
       tilesSource,
@@ -256,7 +256,7 @@ export class TileMergeTaskManager {
     for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom });
 
-      if (!isMultiResolution) {
+      if (isMultiResolution) {
         //TODO:send request to pp-manager and get the footprint of all the parts with the same zoom level.
       }
 
