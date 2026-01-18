@@ -84,5 +84,5 @@ export const createFakeAggregatedFeature = (): AggregationFeature => {
 
 export const layerNameFormats: LayerNameFormats = {
   layerName: 'layer-Orthophoto',
-  polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
+  polygonPartsEntityName: 'layer_orthophoto',
 };
