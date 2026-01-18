@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.4.0-alpha.0](https://github.com/MapColonies/overseer/compare/v2.3.1...v2.4.0-alpha.0) (2026-01-18)
+
+
+### Features
+
+* create merge task MAPCO-9380 + MAPCO-9381 ([#64](https://github.com/MapColonies/overseer/issues/64)) ([05e7219](https://github.com/MapColonies/overseer/commit/05e721959a37010852fcbde09e798ca1a0ae8920)), closes [#65](https://github.com/MapColonies/overseer/issues/65)
+
+
+### Bug Fixes
+
+* polygon-parts-process request ([#66](https://github.com/MapColonies/overseer/issues/66)) ([5a62c20](https://github.com/MapColonies/overseer/commit/5a62c201578f187ce5bf031644dfd16c658542cb))
+
 ### [2.3.1](https://github.com/MapColonies/overseer/compare/v2.3.0...v2.3.1) (2025-12-08)
 
 
