@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { join } from 'path';
 import jsLogger from '@map-colonies/js-logger';
-import { ShapefileChunkReader, ShapefileChunk, ChunkProcessor } from '@map-colonies/mc-utils';
+import { ShapefileChunkReader, ShapefileChunk } from '@map-colonies/mc-utils';
 import { Feature, Polygon, MultiPolygon } from 'geojson';
 import { DependencyContainer } from 'tsyringe';
 import { SERVICES } from '../../../src/common/constants';
@@ -9,6 +9,7 @@ import { ProductReadError } from '../../../src/common/errors';
 import { productReaderFactory, validateProduct } from '../../../src/utils/storage/productReader';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { createFakePolygon, createFakeMultiPolygon } from '../mocks/geometryMockData';
+import { mockShapefileReader } from '../mocks/productReaderMock';
 
 jest.mock('@map-colonies/mc-utils');
 
@@ -54,13 +55,7 @@ describe('productReader', () => {
         verticesCount: 100,
       };
 
-      const mockReadAndProcess = jest.fn(async (_path: string, processor: ChunkProcessor) => {
-        await processor.process(mockChunk);
-      });
-
-      (ShapefileChunkReader as jest.Mock).mockImplementation(() => ({
-        readAndProcess: mockReadAndProcess,
-      }));
+      const mockReadAndProcess = mockShapefileReader(mockChunk);
 
       const readProductGeometry = productReaderFactory(mockContainer);
       const result = await readProductGeometry(testProductPath);
@@ -85,13 +80,7 @@ describe('productReader', () => {
         verticesCount: 100,
       };
 
-      const mockReadAndProcess = jest.fn(async (_path: string, processor: ChunkProcessor) => {
-        await processor.process(mockChunk);
-      });
-
-      (ShapefileChunkReader as jest.Mock).mockImplementation(() => ({
-        readAndProcess: mockReadAndProcess,
-      }));
+      const mockReadAndProcess = mockShapefileReader(mockChunk);
 
       const readProductGeometry = productReaderFactory(mockContainer);
       const result = await readProductGeometry(testProductPath);
@@ -109,13 +98,7 @@ describe('productReader', () => {
         verticesCount: 100,
       };
 
-      const mockReadAndProcess = jest.fn(async (_path: string, processor: ChunkProcessor) => {
-        await processor.process(mockChunk);
-      });
-
-      (ShapefileChunkReader as jest.Mock).mockImplementation(() => ({
-        readAndProcess: mockReadAndProcess,
-      }));
+      mockShapefileReader(mockChunk);
 
       const readProductGeometry = productReaderFactory(mockContainer);
 
@@ -155,13 +138,7 @@ describe('productReader', () => {
         verticesCount: 200,
       };
 
-      const mockReadAndProcess = jest.fn(async (_path: string, processor: ChunkProcessor) => {
-        await processor.process(mockChunk);
-      });
-
-      (ShapefileChunkReader as jest.Mock).mockImplementation(() => ({
-        readAndProcess: mockReadAndProcess,
-      }));
+      mockShapefileReader(mockChunk);
 
       const readProductGeometry = productReaderFactory(mockContainer);
 
