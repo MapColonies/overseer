@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
+import { getEntityName, getMapServingLayerName, type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { Grid, MergeTask, MergeTilesTaskParams, SeedJobParams } from '../../../../src/common/interfaces';
@@ -91,8 +91,8 @@ describe('swapJobHandler', () => {
 
       const { displayPath, tileOutputFormat } = job.parameters.additionalParams;
       const productType = job.productType;
-      const layerName: LayerName = `${job.resourceId}-${productType}`;
-      const entityName = `${job.resourceId}_${productType.toLowerCase()}`;
+      const layerName: LayerName = getMapServingLayerName(job.resourceId, productType);
+      const entityName = getEntityName(job.resourceId, productType);
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
         ingestionJob: job,
