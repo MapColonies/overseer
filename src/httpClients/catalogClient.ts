@@ -1,7 +1,6 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
-import type { IJobResponse } from '@map-colonies/mc-priority-queue';
-import type { LayerName } from '@map-colonies/raster-shared';
+import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
@@ -11,7 +10,7 @@ import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { SERVICES } from '../common/constants';
-import type { IngestionNewExtendedJobParams, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
+import type { CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
@@ -37,13 +36,14 @@ export class CatalogClient extends HttpClient {
     this.geoserverDns = config.get<string>('servicesUrl.geoserverDns');
   }
 
-  public async publish(job: IngestionNewFinalizeJob, layerName: LayerName): Promise<void> {
+  public async publish(job: IngestionNewFinalizeJob, layerNameFormats: LayerNameFormats): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.publish.name}`)), async () => {
+      const { layerName } = layerNameFormats;
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttribute('layerName', layerName);
       try {
         const url = '/records';
-        const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerName);
+        const publishReq: IRasterCatalogUpsertRequestBody = await this.createPublishReqBody(job, layerNameFormats);
 
         activeSpan?.addEvent('createPublishReqBody.created', {
           metadata: JSON.stringify(publishReq.metadata),
@@ -63,14 +63,14 @@ export class CatalogClient extends HttpClient {
     });
   }
 
-  public async update(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Promise<void> {
+  public async update(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob, entityName: PolygonPartsEntityName): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.update.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const internalId = internalIdSchema.parse(job).internalId;
       const url = `/records/${internalId}`;
 
       try {
-        const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job);
+        const updateReq: CatalogUpdateRequestBody = await this.createUpdateReqBody(job, entityName);
 
         activeSpan?.setAttributes({ internalId, metadata: JSON.stringify(updateReq) });
         activeSpan?.addEvent('createUpdateReqBody.created');
@@ -119,11 +119,9 @@ export class CatalogClient extends HttpClient {
     });
   }
 
-  private async createPublishReqBody(
-    job: IJobResponse<IngestionNewExtendedJobParams, unknown>,
-    layerName: LayerName
-  ): Promise<IRasterCatalogUpsertRequestBody> {
-    const metadata = await this.mapToPublishCatalogRecordMetadata(job);
+  private async createPublishReqBody(job: IngestionNewFinalizeJob, layerNameFormats: LayerNameFormats): Promise<IRasterCatalogUpsertRequestBody> {
+    const { layerName, polygonPartsEntityName } = layerNameFormats;
+    const metadata = await this.mapToPublishCatalogRecordMetadata(job, polygonPartsEntityName);
 
     const links = this.buildLinks(layerName);
 
@@ -133,12 +131,11 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private async mapToPublishCatalogRecordMetadata(job: IngestionNewFinalizeJob): Promise<LayerMetadata> {
+  private async mapToPublishCatalogRecordMetadata(job: IngestionNewFinalizeJob, entityName: PolygonPartsEntityName): Promise<LayerMetadata> {
     const { parameters, version } = job;
-    const { metadata, additionalParams } = parameters;
-    const { polygonPartsEntityName } = additionalParams;
+    const { metadata } = parameters;
 
-    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+    const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(entityName);
 
     return {
       id: metadata.catalogId,
@@ -174,7 +171,10 @@ export class CatalogClient extends HttpClient {
     return this.linkBuilder.createLinks(linkBuildData);
   }
 
-  private async createUpdateReqBody(job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob): Promise<CatalogUpdateRequestBody> {
+  private async createUpdateReqBody(
+    job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
+    entityName: PolygonPartsEntityName
+  ): Promise<CatalogUpdateRequestBody> {
     // eslint-disable-next-line @typescript-eslint/return-await
     return await context.with(
       trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.createUpdateReqBody.name}`)),
@@ -184,10 +184,10 @@ export class CatalogClient extends HttpClient {
         try {
           const { parameters, version } = job;
           const { metadata, additionalParams } = parameters;
-          const { polygonPartsEntityName, displayPath } = additionalParams;
+          const { displayPath } = additionalParams;
 
-          activeSpan?.addEvent('getAggregatedLayerMetadata.start', { polygonPartsEntityName });
-          const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
+          activeSpan?.addEvent('getAggregatedLayerMetadata.start', { polygonPartsEntityName: entityName });
+          const aggregatedLayerMetadata = await this.polygonPartsMangerClient.getAggregatedLayerMetadata(entityName);
           activeSpan?.addEvent('getAggregatedLayerMetadata.success', { aggregatedLayerMetadata: JSON.stringify(aggregatedLayerMetadata) });
 
           activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Update request body created successfully' });

@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import crypto from 'crypto';
-import { type LayerName, type RasterProductTypes, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
+import { getEntityName, getMapServingLayerName, type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
-import { Grid, MergeTask, SeedJobParams } from '../../../../src/common/interfaces';
-import { finalizeTaskForIngestionSwapUpdate, initTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
+import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
+import { Grid, MergeTask, MergeTilesTaskParams, SeedJobParams } from '../../../../src/common/interfaces';
+import { finalizeTaskForIngestionSwapUpdate, createTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
 import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
 
 describe('swapJobHandler', () => {
+  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
@@ -16,9 +18,10 @@ describe('swapJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { swapJobHandler, queueClientMock, taskBuilderMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
-      const task = initTaskForIngestionSwapUpdate;
+      const task = createTasksTaskForIngestionSwapUpdate;
+      const productGeometry = createFakePolygonalGeometry();
 
       const additionalParams = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 
@@ -26,7 +29,7 @@ describe('swapJobHandler', () => {
 
       jest.spyOn(crypto, 'randomUUID').mockReturnValue(newDisplayPath);
 
-      const taskBuildParams = {
+      const taskBuildParams: MergeTilesTaskParams = {
         inputFiles: job.parameters.inputFiles,
         taskMetadata: {
           layerRelativePath: `${job.internalId}/${newDisplayPath}`,
@@ -34,11 +37,11 @@ describe('swapJobHandler', () => {
           isNewTarget: true,
           grid: Grid.TWO_ON_ONE,
         },
-        partsData: job.parameters.partsData,
+        productGeometry,
+        ingestionResolution: job.parameters.ingestionResolution,
       };
 
-      const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
-
+      readProductGeometryMock.mockResolvedValue(productGeometry);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
@@ -57,12 +60,11 @@ describe('swapJobHandler', () => {
       const { swapJobHandler, taskBuilderMock, queueClientMock } = setupSwapJobHandlerTest();
 
       const job = structuredClone(ingestionSwapUpdateJob);
-      const task = initTaskForIngestionSwapUpdate;
-      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+      const task = createTasksTaskForIngestionSwapUpdate;
 
       const error = new Error('Test error');
 
-      taskBuilderMock.buildTasks.mockReturnValue(tasks);
+      taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);
 
@@ -74,21 +76,30 @@ describe('swapJobHandler', () => {
 
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
-      const { swapJobHandler, queueClientMock, jobManagerClientMock, mapproxyClientMock, catalogClientMock, seedingJobCreatorMock } =
-        setupSwapJobHandlerTest();
+      const {
+        swapJobHandler,
+        queueClientMock,
+        jobManagerClientMock,
+        mapproxyClientMock,
+        catalogClientMock,
+        seedingJobCreatorMock,
+        polygonPartsManagerClientMock,
+      } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateFinalizeJob);
 
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 
       const { displayPath, tileOutputFormat } = job.parameters.additionalParams;
-      const productType = job.productType as RasterProductTypes;
-      const layerName: LayerName = `${job.resourceId}-${productType}`;
+      const productType = job.productType;
+      const layerName: LayerName = getMapServingLayerName(job.resourceId, productType);
+      const entityName = getEntityName(job.resourceId, productType);
       const layerRelativePath = `${job.internalId}/${displayPath}`;
       const createSeedingJobParams: SeedJobParams = {
         ingestionJob: job,
         layerName,
       };
 
+      polygonPartsManagerClientMock.process.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
       mapproxyClientMock.update.mockResolvedValue(undefined);
@@ -98,11 +109,14 @@ describe('swapJobHandler', () => {
 
       expect(mapproxyClientMock.update).toHaveBeenCalledWith(layerName, layerRelativePath, tileOutputFormat);
       expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
-        parameters: { updatedInCatalog: false, updatedInMapproxy: true },
+        parameters: { processedParts: true, updatedInCatalog: false, updatedInMapproxy: false },
       });
-      expect(catalogClientMock.update).toHaveBeenCalledWith(job);
       expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
-        parameters: { updatedInCatalog: true, updatedInMapproxy: true },
+        parameters: { processedParts: true, updatedInMapproxy: true, updatedInCatalog: false },
+      });
+      expect(catalogClientMock.update).toHaveBeenCalledWith(job, entityName);
+      expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
+        parameters: { processedParts: true, updatedInMapproxy: true, updatedInCatalog: true },
       });
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
       expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);

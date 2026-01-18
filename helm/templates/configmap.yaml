@@ -47,6 +47,7 @@ data:
   DEQUEUE_INTERVAL_MS: {{ $jobDefinitions.config.dequeueIntervalMs | quote }}
   MAX_TASK_ATTEMPTS: {{ $jobDefinitions.config.maxTaskAttempts | quote }}
   TILES_STORAGE_PROVIDER: {{ $storage.tilesStorageProvider | quote }}
+  POLLING_CREATE_TASKS_TASK: {{ $jobDefinitions.tasks.createTasks.type | quote }}
   POLLING_INIT_TASK: {{ $jobDefinitions.tasks.init.type | quote }}
   POLLING_FINALIZE_TASK: {{ $jobDefinitions.tasks.finalize.type | quote }}
   INGESTION_NEW_JOB_TYPE: {{ $jobDefinitions.jobs.new.type | quote }}
@@ -83,5 +84,6 @@ data:
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
   JOB_TRACKER_URL: {{ $serviceUrls.jobTracker | quote}}
-
+  SHAPEFILE_READER_MAX_VERTICES_PER_CHUNK: {{ .Values.env.shapefileReader.maxVerticesPerChunk | quote }}
+  INGESTION_SOURCES_DIR_PATH: {{ $storage.fs.ingestionSourcePvc.mountPath | quote }}
 {{- end }}

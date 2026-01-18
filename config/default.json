@@ -45,6 +45,7 @@
   "disableHttpClientLogs": true,
   "tilesStorageProvider": "FS",
   "gpkgStorageProvider": "FS",
+  "ingestionSourcesDirPath": "",
   "linkTemplatesPath": "config/linkTemplates.template",
   "servicesUrl": {
     "mapproxyApi": "http://localhost:8083",
@@ -73,6 +74,7 @@
     "polling": {
       "maxTaskAttempts": 3,
       "tasks": {
+        "createTasks": "create-tasks",
         "init": "init",
         "finalize": "finalize"
       }
@@ -130,5 +132,8 @@
         }
       }
     }
+  },
+  "shapefileReader": {
+    "maxVerticesPerChunk": 2500
   }
 }

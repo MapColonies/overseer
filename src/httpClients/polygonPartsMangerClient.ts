@@ -1,29 +1,45 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
-import type { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { AggregationFeature, RasterProductTypes, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
-import { SERVICES } from '../common/constants';
+import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
-import { LayerMetadataAggregationError } from '../common/errors';
+import { LayerMetadataAggregationError, PolygonPartsProcessingError } from '../common/errors';
 import { AggregationLayerMetadata } from '../common/interfaces';
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
   public constructor(@inject(SERVICES.CONFIG) private readonly config: IConfig, @inject(SERVICES.LOGGER) protected readonly logger: Logger) {
-    const serviceName = 'PolygonPartManger';
+    const serviceName = POLYGON_PARTS_MANAGER_SERVICE_NAME;
     const baseUrl = config.get<string>('servicesUrl.polygonPartsManager');
     const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');
     const disableHttpClientLogs = config.get<boolean>('disableHttpClientLogs');
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
   }
 
+  public async process(productName: string, productType: RasterProductTypes): Promise<void> {
+    try {
+      const url = '/polygonParts/process';
+
+      const body = {
+        productName,
+        productType,
+      };
+
+      await this.put<void>(url, body);
+    } catch (err) {
+      const processError = new PolygonPartsProcessingError(err, productName, productType);
+      throw processError;
+    }
+  }
+
   public async getAggregatedLayerMetadata(polygonPartsEntityName: string, filter?: RoiFeatureCollection): Promise<AggregationLayerMetadata> {
     try {
       this.logger.info({ msg: 'getAggregatedLayerMetadata', polygonPartsEntityName, filter });
 
-      const url = `polygonParts/${polygonPartsEntityName}/aggregate`;
+      const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
       const body = {
         filter: filter ?? null,
       };

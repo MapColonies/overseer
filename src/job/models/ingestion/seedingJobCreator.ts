@@ -1,5 +1,5 @@
 import { Logger } from '@map-colonies/js-logger';
-import { degreesPerPixelToZoomLevel, getUTCDate, zoomLevelToResolutionDeg, featureToTilesCount } from '@map-colonies/mc-utils';
+import { degreesPerPixelToZoomLevel, getUTCDate, featureToTilesCount } from '@map-colonies/mc-utils';
 import { feature } from '@turf/turf';
 import { MultiPolygon, Polygon } from 'geojson';
 import { ICreateJobBody, ICreateTaskBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -10,8 +10,9 @@ import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, Til
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
-import { extractMaxUpdateZoomLevel } from '../../../utils/partsDataUtil';
-import { unifyParts, splitGeometryByTileCount } from '../../../utils/geoUtils';
+import { splitGeometryByTileCount } from '../../../utils/geoUtils';
+import { ReadProductGeometry } from '../../../utils/storage/productReader';
+import { CatalogClient } from '../../../httpClients/catalogClient';
 
 @injectable()
 export class SeedingJobCreator {
@@ -29,7 +30,9 @@ export class SeedingJobCreator {
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
-    @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient
+    @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
+    @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReadProductGeometry,
+    @inject(CatalogClient) private readonly catalogClient: CatalogClient
   ) {
     this.tilesSeedingConfig = this.config.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
     this.seedJobType = this.config.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -67,8 +70,8 @@ export class SeedingJobCreator {
         const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
 
         // Handle different modes
-        const cleanModeTasks = this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
-        const seedModeTasks = this.handleSeedMode(ingestionJob, cacheName, validCatalogId);
+        const cleanModeTasks = await this.handleCleanMode(ingestionJob, cacheName, validCatalogId);
+        const seedModeTasks = await this.handleSeedMode(ingestionJob, cacheName, validCatalogId);
 
         seedTasks.push(...cleanModeTasks);
         seedTasks.push(...seedModeTasks);
@@ -88,7 +91,7 @@ export class SeedingJobCreator {
           parameters: {},
           status: OperationStatus.IN_PROGRESS,
           producerName: producerName ?? undefined,
-          productName: productName ?? undefined,
+          productName,
           productType,
           domain,
           tasks: seedTasks,
@@ -109,17 +112,17 @@ export class SeedingJobCreator {
     });
   }
 
-  private handleCleanMode(
+  private async handleCleanMode(
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
     catalogId: string
-  ): ICreateTaskBody<SeedTaskParams>[] {
+  ): Promise<ICreateTaskBody<SeedTaskParams>[]> {
     const activeSpan = trace.getActiveSpan();
     const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
     const seedTaskType = this.tilesSeedingConfig.type;
     const logger = this.logger.child({ mode: SeedMode.CLEAN, jobId: job.id, catalogId: job.internalId });
 
-    const cleanGeometry = this.calculateGeometryByMode(SeedMode.CLEAN, job);
+    const cleanGeometry = await this.calculateGeometryByMode(SeedMode.CLEAN, job, catalogId);
     if (!cleanGeometry) {
       activeSpan?.addEvent('calculateCleanGeometry.empty');
       logger.warn({ msg: 'No geometry found for CLEAN mode' });
@@ -137,7 +140,7 @@ export class SeedingJobCreator {
 
       seedTasks.push({ type: seedTaskType, parameters: taskParams });
     } else if (job.type === this.updateJobType) {
-      const maxUpdateZoomLevel = extractMaxUpdateZoomLevel(job.parameters.partsData);
+      const maxUpdateZoomLevel = degreesPerPixelToZoomLevel(job.parameters.ingestionResolution); //TODO: When we support multi parts resolution, we need to extract maxUpdateZoomLevel from polygon parts table
       if (maxUpdateZoomLevel + 1 <= this.maxZoom) {
         const cleanOptions = this.createSeedOptions(SeedMode.CLEAN, cleanGeometry, cacheName, maxUpdateZoomLevel + 1);
         activeSpan?.addEvent('createSeedOptions.success', { seedOptions: JSON.stringify(cleanOptions) });
@@ -189,11 +192,11 @@ export class SeedingJobCreator {
      */
   }
 
-  private handleSeedMode(
+  private async handleSeedMode(
     job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
     cacheName: string,
     catalogId: string
-  ): ICreateTaskBody<SeedTaskParams>[] {
+  ): Promise<ICreateTaskBody<SeedTaskParams>[]> {
     const activeSpan = trace.getActiveSpan();
     const seedTasks: ICreateTaskBody<SeedTaskParams>[] = [];
     const seedTaskType = this.tilesSeedingConfig.type;
@@ -204,21 +207,14 @@ export class SeedingJobCreator {
       return [];
     }
 
-    const seedGeometry = this.calculateGeometryByMode(SeedMode.SEED, job);
+    const seedGeometry = await this.calculateGeometryByMode(SeedMode.SEED, job, catalogId);
     if (!seedGeometry) {
       activeSpan?.addEvent('calculateSeedGeometry.empty');
       this.logger.warn({ msg: 'No geometry found for SEED mode' });
       return [];
     }
 
-    const partsData = job.parameters.partsData;
-    const thresholdZoom =
-      zoomLevelToResolutionDeg(this.zoomThreshold) ??
-      ((): never => {
-        throw new Error(`Failed to calculate resolution for zoom threshold: ${this.zoomThreshold}`);
-      })();
-    const highZoomParts = partsData.filter((p) => p.resolutionDegree < thresholdZoom);
-    const maxUpdatedZoom = extractMaxUpdateZoomLevel(partsData);
+    const maxUpdatedZoom = degreesPerPixelToZoomLevel(job.parameters.ingestionResolution); //TODO: When we support multi parts resolution, we need to extract maxUpdateZoomLevel from polygon parts table
 
     // Step 1: Handle all res from 0 to zoomThreshold in one seed task
     const baseZoomLevel = 0;
@@ -227,25 +223,22 @@ export class SeedingJobCreator {
     seedTasks.push({ type: seedTaskType, parameters: taskParams });
 
     // Step 2: Handle high-res parts individually by zoom level
-    for (const part of highZoomParts) {
-      const partZoomLevel = degreesPerPixelToZoomLevel(part.resolutionDegree);
-      for (let zoom = this.zoomThreshold + 1; zoom <= Math.min(partZoomLevel, this.maxZoom); zoom++) {
-        // the min between the parts updated zoom level and the max allowed zoom
-        const estimatedTiles = featureToTilesCount(feature(part.footprint), zoom);
+    for (let zoom = this.zoomThreshold + 1; zoom <= Math.min(maxUpdatedZoom, this.maxZoom); zoom++) {
+      // the min between the parts updated zoom level and the max allowed zoom- currently we are using the product, later we will use parts table to extract the zoom level
+      const estimatedTiles = featureToTilesCount(feature(seedGeometry), zoom);
 
-        if (estimatedTiles <= this.maxTilesPerSeedTask) {
-          // If tiles count is within limit, create a single task
-          const options = this.createSeedOptions(SeedMode.SEED, part.footprint, cacheName, zoom, zoom);
+      if (estimatedTiles <= this.maxTilesPerSeedTask) {
+        // If tiles count is within limit, create a single task
+        const options = this.createSeedOptions(SeedMode.SEED, seedGeometry, cacheName, zoom, zoom);
+        const taskParams = this.createTaskParams(catalogId, options);
+        seedTasks.push({ type: seedTaskType, parameters: taskParams });
+      } else {
+        // If tiles count exceeds limit, split the geometry
+        const splitGeometries = splitGeometryByTileCount(seedGeometry, zoom, this.maxTilesPerSeedTask);
+        for (const geometry of splitGeometries) {
+          const options = this.createSeedOptions(SeedMode.SEED, geometry, cacheName, zoom, zoom);
           const taskParams = this.createTaskParams(catalogId, options);
           seedTasks.push({ type: seedTaskType, parameters: taskParams });
-        } else {
-          // If tiles count exceeds limit, split the geometry
-          const splitGeometries = splitGeometryByTileCount(part.footprint, zoom, this.maxTilesPerSeedTask);
-          for (const geometry of splitGeometries) {
-            const options = this.createSeedOptions(SeedMode.SEED, geometry, cacheName, zoom, zoom);
-            const taskParams = this.createTaskParams(catalogId, options);
-            seedTasks.push({ type: seedTaskType, parameters: taskParams });
-          }
         }
       }
     }
@@ -283,20 +276,21 @@ export class SeedingJobCreator {
     };
   }
 
-  private calculateGeometryByMode(
+  private async calculateGeometryByMode(
     mode: SeedMode,
-    job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob
-  ): Polygon | MultiPolygon | undefined {
+    job: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob,
+    catalogId: string
+  ): Promise<Polygon | MultiPolygon | undefined> {
     const logger = this.logger.child({ mode });
     logger.debug({ msg: 'Getting geometry for seeding job' });
     if (mode === SeedMode.CLEAN && job.type === this.swapUpdateJobType) {
-      const footprint = job.parameters.additionalParams.footprint;
-      return footprint;
+      const layer = await this.catalogClient.findLayer(catalogId);
+      const footprint = layer.metadata.footprint;
+      const geometry = footprint.type === 'Polygon' || footprint.type === 'MultiPolygon' ? footprint : undefined;
+      return geometry;
     }
 
-    const unifiedFeature = unifyParts(job.parameters.partsData);
-    const geometry = unifiedFeature?.geometry;
-
+    const geometry = await this.readProductGeometry(job.parameters.inputFiles.productShapefilePath);
     return geometry;
   }
 }

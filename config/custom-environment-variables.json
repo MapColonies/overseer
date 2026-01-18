@@ -68,6 +68,7 @@
   },
   "tilesStorageProvider": "TILES_STORAGE_PROVIDER",
   "gpkgStorageProvider": "GPKG_STORAGE_PROVIDER",
+  "ingestionSourcesDirPath": "INGESTION_SOURCES_DIR_PATH",
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",
     "geoserverApi": "GEOSERVER_API_URL",
@@ -98,8 +99,9 @@
         "__format": "number"
       },
       "tasks": {
-        "init": "POLLING_INIT_TASK",
-        "finalize": "POLLING_FINALIZE_TASK"
+        "createTasks": "POLLING_CREATE_TASKS_TASK",
+        "finalize": "POLLING_FINALIZE_TASK",
+        "init": "POLLING_INIT_TASK"
       }
     },
     "ingestion": {
@@ -188,5 +190,8 @@
         }
       }
     }
+  },
+  "shapefileReader": {
+    "maxVerticesPerChunk": "SHAPEFILE_READER_MAX_VERTICES_PER_CHUNK"
   }
 }

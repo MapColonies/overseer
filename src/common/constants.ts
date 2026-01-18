@@ -14,6 +14,8 @@ export const IGNORED_INCOMING_TRACE_ROUTES = [/^.*\/docs.*$/];
 
 export const INSTANCE_TYPES = ['ingestion', 'export'] as const;
 
+export const POLYGON_PARTS_MANAGER_SERVICE_NAME = 'PolygonPartsManager';
+
 /* eslint-disable @typescript-eslint/naming-convention */
 export const SERVICES = {
   LOGGER: Symbol('Logger'),
@@ -24,6 +26,8 @@ export const SERVICES = {
   QUEUE_CLIENT: Symbol('QueueClient'),
   TILE_RANGER: Symbol('TileRanger'),
   INSTANCE_TYPE: Symbol('InstanceType'),
+  SHAPEFILE_READER: Symbol('ShapefileReader'),
+  PRODUCT_READER: Symbol('ProductReader'),
 } satisfies Record<string, symbol>;
 
 export const StorageProvider = {

@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import path from 'path';
+import { accessSync } from 'fs';
 import type { Logger, LoggerOptions } from '@map-colonies/js-logger';
 import jsLogger from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { TileRanger } from '@map-colonies/mc-utils';
 import { getOtelMixin } from '@map-colonies/telemetry';
 import { trace } from '@opentelemetry/api';
@@ -20,7 +22,47 @@ import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
 import { UpdateJobHandler } from './job/models/ingestion/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { getPollingJobs, parseInstanceType, validateAndGetHandlersTokens } from './utils/configUtil';
+import { productReaderFactory } from './utils/storage/productReader';
 import { InstanceType } from './utils/zod/schemas/instance.schema';
+
+const validateRequiredDirectories = (container: DependencyContainer): void => {
+  const config = container.resolve<IConfig>(SERVICES.CONFIG);
+  const logger = container.resolve<Logger>(SERVICES.LOGGER);
+  const instanceType = container.resolve<InstanceType>(SERVICES.INSTANCE_TYPE);
+
+  const requiredDirectories = [
+    {
+      name: 'ingestionSourcesDirPath',
+      path: path.join('/', config.get<string>('ingestionSourcesDirPath')),
+      shouldValidate: instanceType === 'ingestion',
+    },
+    // Add more required directories here in the future
+  ];
+
+  const missingDirectories: string[] = [];
+
+  for (const dir of requiredDirectories) {
+    if (!dir.shouldValidate) {
+      continue;
+    }
+    try {
+      accessSync(dir.path);
+      logger.info({
+        msg: 'Required directory exists',
+        name: dir.name,
+        path: dir.path,
+      });
+    } catch (error) {
+      missingDirectories.push(`${dir.name}: ${dir.path}`);
+    }
+  }
+
+  if (missingDirectories.length > 0) {
+    const errorMessage = `Required directories do not exist:${missingDirectories.join(', ')}`;
+    logger.fatal({ msg: errorMessage });
+    throw new Error(errorMessage);
+  }
+};
 
 const registerInstanceHandlers = (instanceType: InstanceType, handlersTokens: Record<string, string>): InjectionObject<unknown>[] => {
   switch (instanceType) {
@@ -92,6 +134,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     { token: SERVICES.INSTANCE_TYPE, provider: { useValue: instanceType } },
     { token: SERVICES.QUEUE_CLIENT, provider: { useFactory: instancePerContainerCachingFactory(queueClientFactory) } },
     { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
+    { token: SERVICES.PRODUCT_READER, provider: { useFactory: instancePerContainerCachingFactory(productReaderFactory) } },
     ...registerInstanceHandlers(instanceType, handlersTokens),
     ...registerInstanceDependencies(instanceType),
     {
@@ -120,6 +163,7 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
       },
     },
   ];
-
-  return registerDependencies(dependencies, options?.override, options?.useChild);
+  const registeredContainer = registerDependencies(dependencies, options?.override, options?.useChild);
+  validateRequiredDirectories(registeredContainer);
+  return registeredContainer;
 };

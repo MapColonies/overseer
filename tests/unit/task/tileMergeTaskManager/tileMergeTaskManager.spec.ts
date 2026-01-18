@@ -1,21 +1,27 @@
 /* eslint-disable jest/no-commented-out-tests */
 import { randomUUID } from 'crypto';
 import nock from 'nock';
-import { bbox } from '@turf/turf';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
-import { createFakeFeatureCollection, partsData } from '../../mocks/partsMockData';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
-import type { MergeTaskParameters, MergeTilesTaskParams, PPFeatureCollection, JobResumeState } from '../../../../src/common/interfaces';
-import { Grid } from '../../../../src/common/interfaces';
-import { createMockInitTask } from '../../mocks/tasksMockData';
-import { createTaskGenerator, type MergeTilesTaskBuilderContext, setupMergeTilesTaskBuilderTest } from './tileMergeTaskManagerSetup';
+import type { MergeTaskParameters, JobResumeState, MergeTilesTaskParams } from '../../../../src/common/interfaces';
+import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
+import { createFakeTask } from '../../mocks/tasksMockData';
+import {
+  createMergeTilesTaskParams,
+  createTaskGenerator,
+  type MergeTilesTaskBuilderContext,
+  setupMergeTilesTaskBuilderTest,
+} from './tileMergeTaskManagerSetup';
 
 describe('tileMergeTaskManager', () => {
+  const buildTasksParams = createMergeTilesTaskParams();
   let testContext: MergeTilesTaskBuilderContext;
+  let mockInitTask: IngestionCreateTasksTask;
   beforeEach(() => {
     registerDefaultConfig();
     testContext = setupMergeTilesTaskBuilderTest();
+    mockInitTask = createFakeTask<IngestionCreateTasksTask['parameters']>();
   });
 
   afterEach(() => {
@@ -25,18 +31,7 @@ describe('tileMergeTaskManager', () => {
   describe('buildTasks', () => {
     it('should handle initTask (fresh start)', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'layerRelativePath',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
-      const mockInitTask = createMockInitTask();
       // No taskIndex set - should default to fresh start
 
       const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
@@ -74,40 +69,24 @@ describe('tileMergeTaskManager', () => {
 
     it('should handle errors in buildTasks correctly', () => {
       const { tileMergeTaskManager } = testContext;
-      const mockInitTask = createMockInitTask();
-
-      const buildTasksParams = {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partsData,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['file1', 'file2'] },
+      const invalidBuildTasksParams: MergeTilesTaskParams = {
+        ...buildTasksParams,
+        inputFiles: {
+          ...buildTasksParams.inputFiles,
+          gpkgFilesPath: ['file1.gpkg', 'file2.gpkg'],
+        },
       };
 
-      let error: Error | null = null;
+      const action = () => tileMergeTaskManager.buildTasks(invalidBuildTasksParams, mockInitTask);
 
-      try {
-        tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
-      } catch (err) {
-        error = err as Error;
-      }
-
-      expect(error).not.toBeNull();
+      expect(action).toThrow();
     });
 
     it('resume state initialization - should handle initTask with valid resume parameters', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
+
       const resumeZoomLevel = 6;
 
-      const mockInitTask = createMockInitTask();
       mockInitTask.parameters.latestTaskState = {
         zoomLevel: resumeZoomLevel,
         lastInsertedTaskIndex: 2,
@@ -144,18 +123,7 @@ describe('tileMergeTaskManager', () => {
 
     it('resume state initialization - should handle initTask with boundary resume parameters', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
-      const mockInitTask = createMockInitTask();
       mockInitTask.parameters.latestTaskState = {
         zoomLevel: 0, // Minimum zoom
         lastInsertedTaskIndex: 0, // Start index
@@ -191,18 +159,7 @@ describe('tileMergeTaskManager', () => {
 
     it('resume state initialization - should handle high skip index values', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
-      const mockInitTask = createMockInitTask();
       mockInitTask.parameters.latestTaskState = {
         zoomLevel: 4,
         lastInsertedTaskIndex: 999, // High skip value
@@ -242,18 +199,7 @@ describe('tileMergeTaskManager', () => {
 
     it('should handle malformed resume parameters gracefully', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
-      const mockInitTask = createMockInitTask();
       // Set malformed taskIndex
       mockInitTask.parameters.latestTaskState = {
         zoomLevel: -1, // Invalid zoom level
@@ -297,19 +243,8 @@ describe('tileMergeTaskManager', () => {
 
     it('should complete full recovery cycle: build -> push with resume state', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
       const jobId = randomUUID();
-      const mockInitTask = createMockInitTask();
 
       // Simulate recovery scenario
       mockInitTask.parameters.latestTaskState = {
@@ -336,51 +271,6 @@ describe('tileMergeTaskManager', () => {
 
       // Verify successful completion
       expect(error).toBeNull();
-    });
-  });
-
-  describe('unifyParts', () => {
-    it('should unify parts correctly', () => {
-      const { tileMergeTaskManager } = testContext;
-      const partsData = createFakeFeatureCollection();
-      const result = tileMergeTaskManager['unifyParts'](partsData, { fileName: 'fileName', tilesPath: 'tilesPath' });
-
-      expect(result.extent).toEqual(bbox(result.footprint.geometry));
-      expect(result.footprint).not.toBeNull();
-    });
-  });
-
-  describe('createBufferedFeature', () => {
-    it('should return original feature when buffer out of bounds', () => {
-      const { tileMergeTaskManager } = testContext;
-
-      const partsData: PPFeatureCollection = {
-        features: [
-          {
-            type: 'Feature',
-            properties: {
-              maxZoom: 1,
-            },
-            geometry: {
-              type: 'Polygon',
-              coordinates: [
-                [
-                  [-180, -90],
-                  [-180, 90],
-                  [180, 90],
-                  [180, -90],
-                  [-180, -90],
-                ],
-              ],
-            },
-          },
-        ],
-        type: 'FeatureCollection',
-      };
-
-      const result = tileMergeTaskManager['createBufferedFeature'](partsData.features[0]);
-
-      expect(result).toEqual(partsData.features[0]);
     });
   });
 
@@ -449,14 +339,8 @@ describe('tileMergeTaskManager', () => {
   describe('pushTasks', () => {
     it('should push tasks in batches correctly', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partsData,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-      };
 
       const jobId = randomUUID();
-      const mockInitTask = createMockInitTask();
 
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const path = `/jobs/${jobId}/tasks`;
@@ -482,7 +366,6 @@ describe('tileMergeTaskManager', () => {
       const numberOfTasks = 3;
       const enqueueTasksTotal = Math.ceil(numberOfTasks / taskBatchSize);
       const jobId = randomUUID();
-      const mockInitTask = createMockInitTask();
 
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const path = `/jobs/${jobId}/tasks`;
@@ -507,11 +390,6 @@ describe('tileMergeTaskManager', () => {
 
     it('should handle errors in pushTasks correctly', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: { layerRelativePath: 'layerRelativePath', tileOutputFormat: TileOutputFormat.PNG, isNewTarget: true, grid: Grid.TWO_ON_ONE },
-        partsData,
-        inputFiles: { originDirectory: 'originDirectory', fileNames: ['fileNames'] },
-      };
 
       const jobId = randomUUID();
 
@@ -519,7 +397,6 @@ describe('tileMergeTaskManager', () => {
       const path = `/jobs/${jobId}/tasks`;
       nock(jobManagerBaseUrl).post(path).reply(500).persist();
 
-      const mockInitTask = createMockInitTask();
       const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
 
       const action = async () => tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
@@ -529,19 +406,8 @@ describe('tileMergeTaskManager', () => {
 
     it('should update initTask progress after pushTasks', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
       const jobId = randomUUID();
-      const mockInitTask = createMockInitTask();
 
       // Setup HTTP mocks for job manager interactions
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
@@ -568,19 +434,8 @@ describe('tileMergeTaskManager', () => {
 
     it('resume state initialization - should handle progress tracking with resume state on pushTasks', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
       const jobId = randomUUID();
-      const mockInitTask = createMockInitTask();
 
       // Set resume state
       mockInitTask.parameters.latestTaskState = {
@@ -608,19 +463,8 @@ describe('tileMergeTaskManager', () => {
 
     it('should handle recovery when HTTP requests fail', async () => {
       const { tileMergeTaskManager } = testContext;
-      const buildTasksParams: MergeTilesTaskParams = {
-        taskMetadata: {
-          layerRelativePath: 'test/layer',
-          tileOutputFormat: TileOutputFormat.PNG,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        partsData,
-        inputFiles: { originDirectory: 'test/origin', fileNames: ['test-file'] },
-      };
 
       const jobId = randomUUID();
-      const mockInitTask = createMockInitTask();
 
       // Setup HTTP mocks to simulate failures
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');

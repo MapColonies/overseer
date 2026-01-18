@@ -1,20 +1,22 @@
 import { Transparency, TileOutputFormat, RasterProductTypes, RASTER_DOMAIN } from '@map-colonies/raster-shared';
+import { zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
 import { OperationStatus, ICreateJobBody } from '@map-colonies/mc-priority-queue';
 import type {
   ExportJob,
+  IngestionNewCreateTasksJob,
   IngestionNewFinalizeJob,
-  IngestionNewInitJob,
   IngestionSwapUpdateFinalizeJob,
+  IngestionUpdateCreateTasksJob,
   IngestionUpdateFinalizeJob,
-  IngestionUpdateInitJob,
 } from '../../../src/utils/zod/schemas/job.schema';
 import { Grid, SeedTaskOptions, Footprint, SeedTaskParams } from '../../../src/common/interfaces';
 import { SeedMode, LayerCacheType } from '../../../src/common/constants';
-import { partsData, partsDataHighRes, partsDataHighResMaxTiles } from './partsMockData';
+
+// eslint-disable-next-line @typescript-eslint/no-magic-numbers
+const TEST_INGESTION_RESOLUTION = zoomLevelToResolutionDeg(5)!;
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-
-export const ingestionNewJob: IngestionNewInitJob = {
+export const ingestionNewJob: IngestionNewCreateTasksJob = {
   id: 'de57d743-3155-4a28-86c8-9c181faabd94',
   resourceId: 'some_product',
   version: '1.0',
@@ -28,21 +30,22 @@ export const ingestionNewJob: IngestionNewInitJob = {
       srsName: 'WGS84GEO',
       productId: 'TestProduct',
       description: 'string',
-      productName: 'akProduct',
+      productName: 'test',
       productType: RasterProductTypes.ORTHOPHOTO,
       producerName: 'string',
       transparency: Transparency.TRANSPARENT,
       classification: '6',
       productSubType: 'string',
     },
-    partsData,
     inputFiles: {
-      fileNames: ['blueMarble.gpkg'],
-      originDirectory: 'tests',
+      gpkgFilesPath: ['/test/blueMarble.gpkg'],
+      metadataShapefilePath: '/test/ShapeMetadata.shp',
+      productShapefilePath: '/test/Product.shp',
     },
     additionalParams: {
       jobTrackerServiceURL: 'http://job-tracker-service',
     },
+    ingestionResolution: TEST_INGESTION_RESOLUTION,
   },
   status: OperationStatus.PENDING,
   percentage: 0,
@@ -53,7 +56,7 @@ export const ingestionNewJob: IngestionNewInitJob = {
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: '89bc4f63-8608-40bf-b845-3cbd4c0c4e03',
   producerName: 'string',
-  productName: 'akProduct',
+  productName: 'test',
   productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
@@ -69,25 +72,33 @@ export const ingestionNewJob: IngestionNewInitJob = {
 
 export const ingestionNewJobExtended: IngestionNewFinalizeJob = {
   ...ingestionNewJob,
+  productName: 'test',
+  productType: RasterProductTypes.ORTHOPHOTO,
   parameters: {
     ...ingestionNewJob.parameters,
     metadata: {
+      ...ingestionNewJob.parameters.metadata,
       catalogId: '1844c1a5-d85d-4caf-9940-929eb6f818dc',
       displayPath: 'c1791a62-d0a3-4600-8e48-088d2a2dd145',
       layerRelativePath: '1844c1a5-d85d-4caf-9940-929eb6f818dc/c1791a62-d0a3-4600-8e48-088d2a2dd145',
       tileOutputFormat: TileOutputFormat.PNG,
       tileMimeType: 'image/png',
       grid: Grid.TWO_ON_ONE,
-      ...ingestionNewJob.parameters.metadata,
     },
+    inputFiles: {
+      gpkgFilesPath: ['/test/blueMarble.gpkg'],
+      metadataShapefilePath: '/test/ShapeMetadata.shp',
+      productShapefilePath: '/test/Product.shp',
+    },
+
+    ingestionResolution: TEST_INGESTION_RESOLUTION,
     additionalParams: {
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       jobTrackerServiceURL: 'http://job-tracker-service',
     },
   },
 };
 
-export const ingestionUpdateJob: IngestionUpdateInitJob = {
+export const ingestionUpdateJob: IngestionUpdateCreateTasksJob = {
   id: 'd027b3aa-272b-4dc9-91d7-ba8343af5ed1',
   resourceId: 'some_product',
   version: '1.0',
@@ -97,29 +108,16 @@ export const ingestionUpdateJob: IngestionUpdateInitJob = {
     metadata: {
       classification: '6',
     },
-    partsData,
     inputFiles: {
-      fileNames: ['blueMarble.gpkg'],
-      originDirectory: 'tests',
+      gpkgFilesPath: ['/test/blueMarble.gpkg'],
+      metadataShapefilePath: '/test/ShapeMetadata.shp',
+      productShapefilePath: '/test/Product.shp',
     },
+    ingestionResolution: TEST_INGESTION_RESOLUTION,
     additionalParams: {
       jobTrackerServiceURL: 'http://job-tracker-service',
       displayPath: 'd1e9fe74-2a8f-425f-ac46-d65bb5c5756d',
       tileOutputFormat: TileOutputFormat.PNG,
-      footprint: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [34.49104867432604, 31.594398316428197],
-            [34.215929673148224, 31.317949494133188],
-            [34.25987647128696, 31.224229844075623],
-            [34.379712437865265, 31.289166973102937],
-            [34.364514326679796, 31.371318172982612],
-            [34.56870209988847, 31.53542710418651],
-            [34.49104867432604, 31.594398316428197],
-          ],
-        ],
-      } as GeoJSON.Polygon,
     },
   },
   status: OperationStatus.PENDING,
@@ -131,7 +129,7 @@ export const ingestionUpdateJob: IngestionUpdateInitJob = {
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: 'a30e93fd-f1a7-480f-a395-47afc97f99b9',
   producerName: 'string',
-  productName: 'akProduct',
+  productName: 'test',
   productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
@@ -147,25 +145,27 @@ export const ingestionUpdateJob: IngestionUpdateInitJob = {
 
 export const ingestionUpdateJobHighRes: IngestionUpdateFinalizeJob = {
   ...ingestionUpdateJob,
+  productName: 'test',
+  productType: RasterProductTypes.ORTHOPHOTO,
   parameters: {
     ...ingestionUpdateJob.parameters,
-    partsData: partsDataHighRes,
     additionalParams: {
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       ...ingestionUpdateJob.parameters.additionalParams,
     },
+    ingestionResolution: zoomLevelToResolutionDeg(17)!,
   },
 };
 
 export const ingestionUpdateJobHighResMaxTiles: IngestionUpdateFinalizeJob = {
   ...ingestionUpdateJob,
+  productName: 'test',
+  productType: RasterProductTypes.ORTHOPHOTO,
   parameters: {
     ...ingestionUpdateJob.parameters,
-    partsData: partsDataHighResMaxTiles,
     additionalParams: {
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       ...ingestionUpdateJob.parameters.additionalParams,
     },
+    ingestionResolution: zoomLevelToResolutionDeg(17)!,
   },
 };
 
@@ -179,28 +179,16 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
     metadata: {
       classification: '6',
     },
-    partsData,
     inputFiles: {
-      fileNames: ['blueMarble.gpkg'],
-      originDirectory: 'tests',
+      gpkgFilesPath: ['/test/blueMarble.gpkg'],
+      metadataShapefilePath: '/test/ShapeMetadata.shp',
+      productShapefilePath: '/test/Product.shp',
     },
     additionalParams: {
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       jobTrackerServiceURL: 'http://job-tracker-service',
       tileOutputFormat: TileOutputFormat.PNG,
-      footprint: {
-        type: 'Polygon',
-        coordinates: [
-          [
-            [34.9, 32.9],
-            [34.9, 32.8],
-            [35.0, 32.8],
-            [35.0, 32.9],
-            [34.9, 32.9],
-          ],
-        ],
-      } as GeoJSON.Polygon,
     },
+    ingestionResolution: TEST_INGESTION_RESOLUTION,
   },
   status: OperationStatus.PENDING,
   percentage: 0,
@@ -211,7 +199,7 @@ export const ingestionSwapUpdateJob: IngestionSwapUpdateFinalizeJob = {
   expirationDate: new Date('2024-07-21T10:59:23.510Z'),
   internalId: 'f3ceebf1-3791-43db-967a-317c22ac1897',
   producerName: 'string',
-  productName: 'akProduct',
+  productName: 'test',
   productType: RasterProductTypes.ORTHOPHOTO,
   additionalIdentifiers: 'some-additional-identifiers',
   taskCount: 1,
@@ -306,10 +294,11 @@ export const exportJob: ExportJob = {
 
 export const ingestionUpdateFinalizeJob: IngestionUpdateFinalizeJob = {
   ...ingestionUpdateJob,
+  productName: 'test',
+  productType: RasterProductTypes.ORTHOPHOTO,
   parameters: {
     ...ingestionUpdateJob.parameters,
     additionalParams: {
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       ...ingestionUpdateJob.parameters.additionalParams,
     },
   },
@@ -317,10 +306,11 @@ export const ingestionUpdateFinalizeJob: IngestionUpdateFinalizeJob = {
 
 export const ingestionUpdateFinalizeJobHighRes: IngestionUpdateFinalizeJob = {
   ...ingestionUpdateJob,
+  productName: 'test',
+  productType: RasterProductTypes.ORTHOPHOTO,
   parameters: {
     ...ingestionUpdateJob.parameters,
     additionalParams: {
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
       ...ingestionUpdateJob.parameters.additionalParams,
     },
   },
@@ -333,7 +323,6 @@ export const ingestionSwapUpdateFinalizeJob: IngestionSwapUpdateFinalizeJob = {
     additionalParams: {
       ...ingestionSwapUpdateJob.parameters.additionalParams,
       displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37',
-      polygonPartsEntityName: 'some_polygon_parts_entity_name_orthophoto',
     },
   },
 };

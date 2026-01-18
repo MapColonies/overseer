@@ -6,6 +6,8 @@ import { configMock } from '../../mocks/configMock';
 import { SeedJobParams } from '../../../../src/common/interfaces';
 import { ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import { tracerMock } from '../../mocks/tracerMock';
+import { readProductGeometryMock } from '../../mocks/productReaderMock';
+import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 
 export interface SeedingJobCreatorTestContext {
   seedingJobCreator: SeedingJobCreator;
@@ -13,6 +15,8 @@ export interface SeedingJobCreatorTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   configMock: typeof configMock;
+  readProductGeometryMock: jest.MockedFunction<typeof readProductGeometryMock>;
+  catalogClientMock: jest.Mocked<CatalogClient>;
 }
 
 export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
@@ -25,8 +29,17 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
   } as unknown as jest.Mocked<QueueClient>;
 
   const mapproxyClientMock = { getCacheName: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
+  const catalogClientMock = { update: jest.fn(), findLayer: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
 
-  const seedingJobCreator = new SeedingJobCreator(jsLogger({ enabled: false }), tracerMock, configMock, queueClientMock, mapproxyClientMock);
+  const seedingJobCreator = new SeedingJobCreator(
+    jsLogger({ enabled: false }),
+    tracerMock,
+    configMock,
+    queueClientMock,
+    mapproxyClientMock,
+    readProductGeometryMock,
+    catalogClientMock
+  );
 
   return {
     seedingJobCreator,
@@ -34,6 +47,8 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
     jobManagerClientMock,
     mapproxyClientMock,
     configMock,
+    readProductGeometryMock,
+    catalogClientMock,
   };
 };
 

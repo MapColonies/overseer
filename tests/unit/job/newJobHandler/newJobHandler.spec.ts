@@ -1,13 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
-import { finalizeTaskForIngestionNew, initTaskForIngestionNew } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionNew, createTasksTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
 import { MergeTask } from '../../../../src/common/interfaces';
+import { IngestionNewFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { PublishLayerError } from '../../../../src/common/errors';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
 
 describe('NewJobHandler', () => {
+  const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
@@ -16,8 +18,8 @@ describe('NewJobHandler', () => {
     it('should handle job init successfully', async () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
-      const task = initTaskForIngestionNew;
-      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+      const task = createTasksTaskForIngestionNew;
+
       taskBuilderMock.buildTasks.mockReturnValue(tasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
@@ -38,8 +40,7 @@ describe('NewJobHandler', () => {
       const { newJobHandler, taskBuilderMock, queueClientMock } = setupNewJobHandlerTest();
 
       const job = ingestionNewJob;
-      const task = initTaskForIngestionNew;
-      const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+      const task = createTasksTaskForIngestionNew;
 
       const error = new Error('Test error');
 
@@ -82,16 +83,14 @@ describe('NewJobHandler', () => {
 
     it('should handle job finalize failure, reject the task and fail the job (zod validation error)', async () => {
       const { newJobHandler, queueClientMock, jobManagerClientMock, jobTrackerClientMock } = setupNewJobHandlerTest();
-      const job = { ...ingestionNewJobExtended };
+      const job = { ...ingestionNewJobExtended, productType: undefined };
       const task = finalizeTaskForIngestionNew;
-
-      delete job.productType;
 
       jobManagerClientMock.updateJob.mockResolvedValue(undefined);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
       queueClientMock.reject.mockResolvedValue(undefined);
 
-      await newJobHandler.handleJobFinalize(job, task);
+      await newJobHandler.handleJobFinalize(job as IngestionNewFinalizeJob, task);
 
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, expect.any(String));
       expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);

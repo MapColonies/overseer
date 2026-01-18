@@ -5,7 +5,7 @@ import { getPollingJobs, parseInstanceType } from '../../../../src/utils/configU
 import type { InstanceType } from '../../../../src/utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
-import { finalizeTestCases, initTestCases } from '../../mocks/testCasesData';
+import { createTasksTestCases, finalizeTestCases } from '../../mocks/testCasesData';
 import { JobProcessorTestContext, setupJobProcessorTest } from './jobProcessorSetup';
 
 jest.mock('timers/promises', () => ({
@@ -58,7 +58,7 @@ describe('JobProcessor', () => {
   });
 
   describe('consumeAndProcess', () => {
-    test.each(initTestCases)('should process job of type $jobType and init task successfully', async ({ job, task }) => {
+    test.each(createTasksTestCases)('should process job of type $jobType and $taskType task successfully', async ({ job, task }) => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
@@ -86,8 +86,10 @@ describe('JobProcessor', () => {
 
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
+      /* eslint-disable @typescript-eslint/no-unsafe-return */
       expect(() => jobSchema.parse(job)).not.toThrow();
       expect(() => taskSchema.parse(task)).not.toThrow();
+      /* eslint-enable @typescript-eslint/no-unsafe-return */
       expect(jobSchemaSpy).toHaveBeenCalledWith(job);
       expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
@@ -121,8 +123,10 @@ describe('JobProcessor', () => {
 
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledWith(task.jobId);
+      /* eslint-disable @typescript-eslint/no-unsafe-return */
       expect(() => jobSchema.parse(job)).not.toThrow();
       expect(() => taskSchema.parse(task)).not.toThrow();
+      /* eslint-enable @typescript-eslint/no-unsafe-return */
       expect(jobSchemaSpy).toHaveBeenCalledWith(job);
       expect(taskSchemaSpy).toHaveBeenCalledWith(task);
       expect(mockJobHandlerFactory).toHaveBeenCalledWith(job.type);
@@ -133,8 +137,8 @@ describe('JobProcessor', () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient, mockJobHandlerFactory } = testContext;
       const error = new Error('test error');
-      const job = initTestCases[0].job;
-      const task = initTestCases[0].task;
+      const job = createTasksTestCases[0].job;
+      const task = createTasksTestCases[0].task;
 
       mockDequeue.mockResolvedValueOnce(task);
       mockUpdateJob.mockResolvedValue(undefined);
@@ -149,7 +153,6 @@ describe('JobProcessor', () => {
       await jobProcessor['consumeAndProcess']();
 
       expect(mockDequeue).toHaveBeenCalledTimes(1);
-      expect(mockUpdateJob).toHaveBeenCalledTimes(1);
       expect(mockGetJob).toHaveBeenCalledTimes(1);
       expect(rejectSpy).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
@@ -157,8 +160,8 @@ describe('JobProcessor', () => {
     it('Should notify jobTracker if task is unrecoverable', async () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient, jobTrackerClientMock } = testContext;
-      const job = { ...initTestCases[0].job, id: 'invalidJobId' };
-      const task = { ...initTestCases[0].task, id: 'invalidTaskId' };
+      const job = { ...createTasksTestCases[0].job, id: 'invalidJobId' };
+      const task = { ...createTasksTestCases[0].task, id: 'invalidTaskId' };
 
       mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
       mockUpdateJob.mockResolvedValue(undefined);
@@ -177,7 +180,7 @@ describe('JobProcessor', () => {
   });
 
   describe('getJobAndTaskResponse', () => {
-    test.each([...initTestCases, ...finalizeTestCases])(
+    test.each([...createTasksTestCases, ...finalizeTestCases])(
       'dequeue $taskType task and get $jobType job with corresponding taskType',
       async ({ jobType, taskType, job, task, instanceType }) => {
         jest.useRealTimers();
@@ -236,8 +239,8 @@ describe('JobProcessor', () => {
       const { jobProcessor, configMock, queueClient, jobTrackerClientMock } = testContext;
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const heartbeatBaseUrl = configMock.get<string>('jobManagement.config.heartbeat.baseUrl');
-      const job = initTestCases[0].job;
-      const task = initTestCases[0].task;
+      const job = createTasksTestCases[0].job;
+      const task = createTasksTestCases[0].task;
       const jobType = job.type;
       const taskType = task.type;
 
@@ -283,8 +286,8 @@ describe('JobProcessor', () => {
 
       const { jobProcessor, configMock, queueClient } = testContext;
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
-      const jobType = initTestCases[0].jobType;
-      const taskType = initTestCases[0].taskType;
+      const jobType = createTasksTestCases[0].jobType;
+      const taskType = createTasksTestCases[0].taskType;
       const consumeTaskUrl = `/tasks/${jobType}/${taskType}/startPending`;
       const misMatchRegex = /^\/tasks\/[^/]+\/[^/]+\/startPending$/;
 
@@ -305,9 +308,9 @@ describe('JobProcessor', () => {
     it('should return a task if it exists', async () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue } = testContext;
-      const jobType = initTestCases[0].jobType;
-      const taskType = initTestCases[0].taskType;
-      const task = initTestCases[0].task;
+      const jobType = createTasksTestCases[0].jobType;
+      const taskType = createTasksTestCases[0].taskType;
+      const task = createTasksTestCases[0].task;
 
       mockDequeue.mockResolvedValueOnce(task);
 
@@ -319,8 +322,8 @@ describe('JobProcessor', () => {
     it('should return null if task does not exist', async () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue } = testContext;
-      const jobType = initTestCases[0].jobType;
-      const taskType = initTestCases[0].taskType;
+      const jobType = createTasksTestCases[0].jobType;
+      const taskType = createTasksTestCases[0].taskType;
 
       mockDequeue.mockResolvedValueOnce(null);
 
@@ -335,9 +338,9 @@ describe('JobProcessor', () => {
       setValue('jobManagement.polling.maxTaskAttempts', 3);
 
       const { jobProcessor, mockDequeue, mockReject, mockUpdateJob } = testContext;
-      const jobType = initTestCases[0].jobType;
-      const taskType = initTestCases[0].taskType;
-      const task = { ...initTestCases[0].task, attempts: 3 };
+      const jobType = createTasksTestCases[0].jobType;
+      const taskType = createTasksTestCases[0].taskType;
+      const task = { ...createTasksTestCases[0].task, attempts: 3 };
 
       mockDequeue.mockResolvedValueOnce(task as ITaskResponse<unknown>);
       mockReject.mockResolvedValueOnce(undefined);
@@ -353,8 +356,8 @@ describe('JobProcessor', () => {
     it('should throw an error if an error occurred during dequeue task', async () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue } = testContext;
-      const jobType = initTestCases[0].jobType;
-      const taskType = initTestCases[0].taskType;
+      const jobType = createTasksTestCases[0].jobType;
+      const taskType = createTasksTestCases[0].taskType;
       const error = new Error('test error');
 
       mockDequeue.mockRejectedValueOnce(error);
@@ -367,8 +370,8 @@ describe('JobProcessor', () => {
     it('should throw an error if no validation schemas exist for the job and task types', () => {
       testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor } = testContext;
-      const job = { ...initTestCases[0].job, type: 'nonExistingJobType' };
-      const task = { ...initTestCases[0].task, type: 'nonExistingTaskType' };
+      const job = { ...createTasksTestCases[0].job, type: 'nonExistingJobType' };
+      const task = { ...createTasksTestCases[0].task, type: 'nonExistingTaskType' };
 
       const action = () => {
         jobProcessor['validateTaskAndJob'](jobAndTask);

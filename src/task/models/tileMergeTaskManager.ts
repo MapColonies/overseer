@@ -1,13 +1,11 @@
-import { join } from 'path';
+import { basename } from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { bbox, buffer, truncate, featureCollection, polygon, union } from '@turf/turf';
-import type { Units } from '@turf/turf';
+import { bbox, feature } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import type { InputFiles, PolygonPart } from '@map-colonies/raster-shared';
+import { type InputFiles } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
@@ -20,15 +18,13 @@ import type {
   TaskSources,
   MergeTaskParameters,
   MergeTilesTaskParams,
-  PolygonFeature,
-  FeatureCollectionWitZoomDefinitions,
-  UnifiedPart,
   TilesSource,
   MergeTilesMetadata,
-  PPFeatureCollection,
   JobResumeState,
+  ZoomDefinitions,
+  FeatureTask,
 } from '../../common/interfaces';
-import { IngestionInitTask } from '../../utils/zod/schemas/job.schema';
+import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
 @injectable()
@@ -37,10 +33,7 @@ export class TileMergeTaskManager {
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
-  private readonly radiusBuffer: number;
-  private readonly radiusBufferUnits: Units;
-  private readonly truncatePrecision: number;
-  private readonly truncateCoordinates: number;
+
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
@@ -53,15 +46,11 @@ export class TileMergeTaskManager {
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
-    this.radiusBuffer = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.radiusBuffer');
-    this.radiusBufferUnits = this.config.get<Units>('jobManagement.ingestion.tasks.tilesMerging.radiusBufferUnits');
-    this.truncatePrecision = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncatePrecision');
-    this.truncateCoordinates = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.truncateCoordinates');
   }
 
   public buildTasks(
     taskBuildParams: MergeTilesTaskParams,
-    initTask: IngestionInitTask
+    initTask: IngestionCreateTasksTask
   ): AsyncGenerator<
     {
       mergeTasksGenerator: MergeTaskParameters;
@@ -74,7 +63,6 @@ export class TileMergeTaskManager {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttributes({
         taskType: this.taskType,
-        partsLength: taskBuildParams.partsData.length,
         ...taskBuildParams.taskMetadata,
         ...taskBuildParams.inputFiles,
       });
@@ -85,10 +73,7 @@ export class TileMergeTaskManager {
 
       try {
         const mergeParams = this.prepareMergeParameters(taskBuildParams);
-        activeSpan?.addEvent('Merge parameters prepared', {
-          ...mergeParams.zoomDefinitions,
-          ...mergeParams.tilesSource,
-        });
+        activeSpan?.addEvent('Merge parameters prepared');
 
         const tasks = this.createZoomLevelTasks(mergeParams, activeSpan, initTask);
 
@@ -108,7 +93,7 @@ export class TileMergeTaskManager {
   }
 
   public async pushTasks(
-    initTask: IngestionInitTask,
+    initTask: IngestionCreateTasksTask,
     jobId: string,
     jobType: string,
     mergeTasks: AsyncGenerator<
@@ -172,7 +157,7 @@ export class TileMergeTaskManager {
   private async enqueueTasks(
     jobId: string,
     tasks: ICreateTaskBody<MergeTaskParameters>[],
-    initTask: IngestionInitTask,
+    initTask: IngestionCreateTasksTask,
     latestTaskIndex: JobResumeState
   ): Promise<void> {
     const logger = this.logger.child({ jobId });
@@ -199,28 +184,33 @@ export class TileMergeTaskManager {
 
   private prepareMergeParameters(taskBuildParams: MergeTilesTaskParams): MergeParameters {
     const logger = this.logger.child({ taskType: this.taskType });
-    const { taskMetadata, inputFiles, partsData } = taskBuildParams;
+    const { taskMetadata, inputFiles, ingestionResolution, productGeometry } = taskBuildParams;
 
     logger.info({ msg: 'creating task parameters' });
 
-    const { ppCollection, zoomDefinitions } = this.createFeatureCollectionWithZoomDefinitions(partsData);
     const tilesSource = this.extractTilesSource(inputFiles);
+    const zoomDefinitions: ZoomDefinitions = {
+      maxZoom: degreesPerPixelToZoomLevel(ingestionResolution),
+      isMultiResolution: false, // TODO: When multi part resolution support is added, this should be determined accordingly
+    };
+    const product = feature(productGeometry, {
+      tilesSource,
+      zoomDefinitions,
+    });
 
     return {
-      ppCollection,
-      zoomDefinitions,
+      product,
       taskMetadata,
-      tilesSource,
     };
   }
 
   private extractTilesSource(inputFiles: InputFiles): TilesSource {
-    const { originDirectory, fileNames } = inputFiles;
-    if (fileNames.length > 1) {
+    const { gpkgFilesPath } = inputFiles;
+    if (gpkgFilesPath.length > 1) {
       throw new Error('Multiple files ingestion is currently not supported');
     }
-    const fileName = fileNames[0];
-    const tilesPath = join(originDirectory, fileName);
+    const tilesPath = gpkgFilesPath[0];
+    const fileName = basename(tilesPath);
 
     return {
       fileName,
@@ -228,57 +218,10 @@ export class TileMergeTaskManager {
     };
   }
 
-  private createFeatureCollectionWithZoomDefinitions(parts: PolygonPart[]): FeatureCollectionWitZoomDefinitions {
-    this.logger.info({
-      msg: 'Generating featureParts',
-      numberOfParts: parts.length,
-    });
-
-    let partsMaxZoom = 0;
-
-    const featureParts = parts.map((part) => {
-      const featurePart = this.createFeaturePolygon(part);
-      const currentZoom = featurePart.properties.maxZoom;
-
-      partsMaxZoom = Math.max(partsMaxZoom, currentZoom);
-      return featurePart;
-    });
-
-    const partsZoomLevelMatch = featureParts.every((part) => part.properties.maxZoom === partsMaxZoom);
-
-    const zoomDefinitions = {
-      maxZoom: partsMaxZoom,
-      partsZoomLevelMatch,
-    };
-
-    this.logger.info({
-      msg: 'Calculated parts zoom definitions',
-      partsMaxZoom,
-      partsZoomLevelMatch,
-    });
-
-    return {
-      ppCollection: featureCollection(featureParts),
-      zoomDefinitions,
-    };
-  }
-
-  private createFeaturePolygon(part: PolygonPart): PolygonFeature {
-    const logger = this.logger.child({
-      partName: part.sourceName,
-    });
-
-    const maxZoom = degreesPerPixelToZoomLevel(part.resolutionDegree);
-    logger.debug({ msg: `Part max zoom: ${maxZoom}` });
-    const featurePolygon = polygon(part.footprint.coordinates, { maxZoom });
-
-    return featurePolygon;
-  }
-
   private async *createZoomLevelTasks(
     params: MergeParameters,
     parentSpan: Span | undefined,
-    initTask: IngestionInitTask
+    initTask: IngestionCreateTasksTask
   ): AsyncGenerator<
     {
       mergeTasksGenerator: MergeTaskParameters;
@@ -289,14 +232,14 @@ export class TileMergeTaskManager {
   > {
     const span = createChildSpan(`${TileMergeTaskManager.name}.${this.createZoomLevelTasks.name}`, parentSpan);
 
-    const { ppCollection, taskMetadata, zoomDefinitions, tilesSource } = params;
-    const { maxZoom, partsZoomLevelMatch } = zoomDefinitions;
-    const logger = this.logger.child({ taskType: this.taskType, maxZoom, partsZoomLevelMatch });
+    const { taskMetadata, product } = params;
+    const { maxZoom, isMultiResolution } = product.properties.zoomDefinitions;
+    const telemetryParams = { taskType: this.taskType, maxZoom, isMultiResolution };
+    const logger = this.logger.child(telemetryParams);
 
-    let unifiedPart: UnifiedPart | null = partsZoomLevelMatch ? this.unifyParts(ppCollection, tilesSource) : null;
     logger.info({ msg: 'Creating tasks for zoom levels' });
 
-    span.setAttributes({ partsZoomLevelMatch, maxZoom, ppCollectionLength: ppCollection.features.length });
+    span.setAttributes(telemetryParams);
 
     // Store original resume state (NEVER changes during loop)
     const resumedFromZoom = initTask.parameters.latestTaskState?.zoomLevel ?? maxZoom;
@@ -313,10 +256,8 @@ export class TileMergeTaskManager {
     for (zoom; zoom >= 0; zoom--) {
       logger.info({ msg: 'Processing zoom level', zoom });
 
-      if (!partsZoomLevelMatch) {
-        const filteredFeatures = ppCollection.features.filter((feature) => feature.properties.maxZoom >= zoom);
-        const collection = featureCollection(filteredFeatures);
-        unifiedPart = this.unifyParts(collection, tilesSource);
+      if (isMultiResolution) {
+        //TODO:send request to pp-manager and get the footprint of all the parts with the same zoom level.
       }
 
       // Only skip tasks on the EXACT original resume zoom level
@@ -331,65 +272,13 @@ export class TileMergeTaskManager {
         tasksToSkip: targetTaskIndex,
       });
 
-      yield* this.createTasksForPart(unifiedPart!, zoom, taskMetadata, span, targetTaskIndex);
+      yield* this.createTasksForPart(product, zoom, taskMetadata, span, targetTaskIndex);
     }
     span.end();
   }
 
-  private unifyParts(featureCollection: PPFeatureCollection, tilesSource: TilesSource): UnifiedPart {
-    const { fileName, tilesPath } = tilesSource;
-    const isOnePart = featureCollection.features.length === 1;
-
-    if (isOnePart) {
-      const featurePart = featureCollection.features[0];
-      return {
-        fileName: fileName,
-        tilesPath: tilesPath,
-        footprint: featurePart,
-        extent: bbox(featurePart),
-      };
-    }
-
-    // trancate is recommended by turf: https://github.com/Turfjs/turf/issues/1983 due an open accuracy bug
-    const truncatedFeatureCollection = truncate(featureCollection, { precision: this.truncatePrecision, coordinates: this.truncateCoordinates });
-    const mergedFootprint = union(truncatedFeatureCollection);
-    if (mergedFootprint === null) {
-      throw new Error('Failed to merge parts because the union result is null');
-    }
-    const bufferedFeature = this.createBufferedFeature(mergedFootprint);
-
-    return {
-      fileName: fileName,
-      tilesPath: tilesPath,
-      footprint: bufferedFeature,
-      extent: bbox(bufferedFeature),
-    };
-  }
-
-  //strip out all gaps and holes in the polygon which simplifies the polygon(solved the issue with tileRanger intersect error)
-  private createBufferedFeature(feature: Feature<Polygon | MultiPolygon>): Feature<Polygon | MultiPolygon> {
-    const logger = this.logger.child({ featureType: feature.type, radiusBuffer: this.radiusBuffer });
-
-    const bufferOutFeature = buffer(feature.geometry, this.radiusBuffer, { units: this.radiusBufferUnits });
-
-    if (bufferOutFeature === undefined) {
-      logger.warn({ msg: 'Failed to buffer Out feature because the buffer result is undefined, returning original feature' });
-      return feature;
-    }
-
-    const bufferInFeature = buffer(bufferOutFeature.geometry, -this.radiusBuffer, { units: this.radiusBufferUnits });
-
-    if (bufferInFeature === undefined) {
-      logger.warn({ msg: 'Failed to buffer In feature because the buffer result is undefined, returning original feature' });
-      return feature;
-    }
-
-    logger.debug({ msg: 'Successfully created buffered feature' });
-    return bufferInFeature;
-  }
-
   private async *createTasksForPart(
-    part: UnifiedPart,
+    part: FeatureTask,
     zoom: number,
     tilesMetadata: MergeTilesMetadata,
     parentSpan: Span | undefined,
@@ -420,8 +309,7 @@ export class TileMergeTaskManager {
       targetTaskIndex,
     });
 
-    const footprint = part.footprint;
-    const rangeGenerator = this.tileRanger.encodeFootprint(footprint, zoom);
+    const rangeGenerator = this.tileRanger.encodeFootprint(part, zoom);
     const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
     const sources = this.createPartSources(part, grid, layerRelativePath);
 
@@ -482,21 +370,21 @@ export class TileMergeTaskManager {
     span.end();
   }
 
-  private createPartSources(part: UnifiedPart, grid: Grid, destPath: string): TaskSources[] {
+  private createPartSources(part: FeatureTask, grid: Grid, destPath: string): TaskSources[] {
     this.logger.debug({ msg: 'Creating source layers' });
 
     const sourceEntry: TaskSources = { type: this.tilesStorageProvider, path: destPath };
-    const fileExtension = fileExtensionExtractor(part.fileName);
-
+    const fileExtension = fileExtensionExtractor(part.properties.tilesSource.fileName);
+    const extent = bbox(part.geometry);
     const source: TaskSources = {
       type: fileExtension.toUpperCase(),
-      path: part.tilesPath,
+      path: part.properties.tilesSource.tilesPath,
       grid,
       extent: {
-        minX: part.extent[0],
-        minY: part.extent[1],
-        maxX: part.extent[2],
-        maxY: part.extent[3],
+        minX: extent[0],
+        minY: extent[1],
+        maxX: extent[2],
+        maxY: extent[3],
       },
     };
 

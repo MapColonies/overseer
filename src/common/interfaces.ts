@@ -7,7 +7,6 @@ import {
   type IngestionUpdateFinalizeTaskParams,
   type InputFiles,
   type LayerName,
-  type PolygonPart,
   type RasterLayerMetadata,
   type TileFormatStrategy,
   type TileOutputFormat,
@@ -86,6 +85,7 @@ export interface ExportTasksConfig {
 export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
 export interface PollingTasks {
+  createTasks: string;
   init: string;
   finalize: string;
 }
@@ -193,7 +193,7 @@ export interface FeatureCollectionWitZoomDefinitions {
 
 export interface ZoomDefinitions {
   maxZoom: number;
-  partsZoomLevelMatch: boolean;
+  isMultiResolution: boolean;
 }
 
 export interface TilesSource {
@@ -201,15 +201,16 @@ export interface TilesSource {
   tilesPath: string;
 }
 
-export type UnifiedPart = {
-  footprint: Feature<Polygon | MultiPolygon>;
-  extent: BBox;
-} & TilesSource;
+export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> {}
+export interface FeatureTask extends ProductFeature {}
 
 export interface MergeParameters {
-  ppCollection: PPFeatureCollection;
-  zoomDefinitions: ZoomDefinitions;
+  product: ProductFeature;
   taskMetadata: MergeTilesMetadata;
+}
+
+export interface ProductProperties {
+  zoomDefinitions: ZoomDefinitions;
   tilesSource: TilesSource;
 }
 
@@ -240,7 +241,8 @@ export interface IntersectionState {
 export interface MergeTilesTaskParams {
   inputFiles: InputFiles;
   taskMetadata: MergeTilesMetadata;
-  partsData: PolygonPart[];
+  ingestionResolution: number;
+  productGeometry: Polygon | MultiPolygon;
 }
 
 export interface MergeTilesMetadata {
