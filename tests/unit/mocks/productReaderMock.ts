@@ -1,1 +1,1 @@
-export const readProductGeometry = jest.fn();
+export const readProductGeometryMock = jest.fn();

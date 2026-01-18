@@ -41,7 +41,7 @@ describe('SeedingJobCreator', () => {
 
   describe('createSeedingJob', () => {
     it('should create seeding job successfully with clean task mode on swapUpdate', async () => {
-      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry, catalogClientMock } =
+      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometryMock, catalogClientMock } =
         seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -91,7 +91,7 @@ describe('SeedingJobCreator', () => {
         ],
       };
 
-      readProductGeometry.mockResolvedValue(productGeometry);
+      readProductGeometryMock.mockResolvedValue(productGeometry);
       catalogClientMock.findLayer.mockResolvedValue(layer);
       jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
@@ -109,7 +109,7 @@ describe('SeedingJobCreator', () => {
     });
 
     it('should create seeding job successfully with seed task and clean task on update', async () => {
-      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, catalogClientMock, readProductGeometry } =
+      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, catalogClientMock, readProductGeometryMock } =
         seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -178,7 +178,7 @@ describe('SeedingJobCreator', () => {
         ],
       };
 
-      readProductGeometry.mockResolvedValue(productGeometry);
+      readProductGeometryMock.mockResolvedValue(productGeometry);
       catalogClientMock.findLayer.mockResolvedValue(layer);
       jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
@@ -196,7 +196,7 @@ describe('SeedingJobCreator', () => {
     });
 
     it('should create seeding job successfully with seed task mode', async () => {
-      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry } =
+      const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometryMock } =
         seedingJobCreatorContext;
       const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
       const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -265,7 +265,7 @@ describe('SeedingJobCreator', () => {
         ],
       };
 
-      readProductGeometry.mockResolvedValue(productGeometry);
+      readProductGeometryMock.mockResolvedValue(productGeometry);
       jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
@@ -312,7 +312,7 @@ describe('SeedingJobCreator', () => {
 
     describe('multiple seed tasks', () => {
       it(`should create multiple seed tasks when high-res parts doesn't exceed maxTilesPerSeedTask`, async () => {
-        const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry } =
+        const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometryMock } =
           seedingJobCreatorContext;
         const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
         const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -368,7 +368,7 @@ describe('SeedingJobCreator', () => {
           highResSeedTaskOptions,
         ]);
 
-        readProductGeometry.mockResolvedValue(productGeometry);
+        readProductGeometryMock.mockResolvedValue(productGeometry);
         jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
         mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
         jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
@@ -387,7 +387,7 @@ describe('SeedingJobCreator', () => {
       });
 
       it('should create multiple seed tasks when high-res parts exceed maxTilesPerSeedTask', async () => {
-        const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometry } =
+        const { seedingJobCreator, queueClientMock, jobManagerClientMock, mapproxyClientMock, configMock, readProductGeometryMock } =
           seedingJobCreatorContext;
         const baseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
         const seedJobType = configMock.get<string>('jobManagement.ingestion.jobs.seed.type');
@@ -426,7 +426,7 @@ describe('SeedingJobCreator', () => {
           ...highResSeedTaskOptions,
         ]);
 
-        readProductGeometry.mockResolvedValue(productGeometry);
+        readProductGeometryMock.mockResolvedValue(productGeometry);
         jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
         mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
         jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });

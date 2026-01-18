@@ -11,7 +11,7 @@ import { tracerMock } from '../../mocks/tracerMock';
 import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { configMock } from '../../mocks/configMock';
 import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
-import { readProductGeometry } from '../../mocks/productReaderMock';
+import { readProductGeometryMock } from '../../mocks/productReaderMock';
 import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export interface SwapJobHandlerTestContext {
@@ -24,7 +24,7 @@ export interface SwapJobHandlerTestContext {
   seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
   jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
   polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
-  readProductGeometry: jest.MockedFunction<typeof readProductGeometry>;
+  readProductGeometryMock: jest.MockedFunction<typeof readProductGeometryMock>;
 }
 
 export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
@@ -48,7 +48,7 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
     seedingJobCreatorMock,
     jobTrackerClientMock,
     polygonPartsManagerClientMock,
-    readProductGeometry,
+    readProductGeometryMock,
     taskMetricsMock
   );
 
@@ -62,6 +62,6 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
     seedingJobCreatorMock,
     jobTrackerClientMock,
     polygonPartsManagerClientMock,
-    readProductGeometry,
+    readProductGeometryMock,
   };
 };

@@ -6,7 +6,7 @@ import { configMock } from '../../mocks/configMock';
 import { SeedJobParams } from '../../../../src/common/interfaces';
 import { ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import { tracerMock } from '../../mocks/tracerMock';
-import { readProductGeometry } from '../../mocks/productReaderMock';
+import { readProductGeometryMock } from '../../mocks/productReaderMock';
 import { CatalogClient } from '../../../../src/httpClients/catalogClient';
 
 export interface SeedingJobCreatorTestContext {
@@ -15,7 +15,7 @@ export interface SeedingJobCreatorTestContext {
   jobManagerClientMock: jest.Mocked<JobManagerClient>;
   mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
   configMock: typeof configMock;
-  readProductGeometry: jest.MockedFunction<typeof readProductGeometry>;
+  readProductGeometryMock: jest.MockedFunction<typeof readProductGeometryMock>;
   catalogClientMock: jest.Mocked<CatalogClient>;
 }
 
@@ -37,7 +37,7 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
     configMock,
     queueClientMock,
     mapproxyClientMock,
-    readProductGeometry,
+    readProductGeometryMock,
     catalogClientMock
   );
 
@@ -47,7 +47,7 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
     jobManagerClientMock,
     mapproxyClientMock,
     configMock,
-    readProductGeometry,
+    readProductGeometryMock,
     catalogClientMock,
   };
 };

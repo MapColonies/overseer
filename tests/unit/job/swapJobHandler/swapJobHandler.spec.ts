@@ -18,7 +18,7 @@ describe('swapJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometry } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = createTasksTaskForIngestionSwapUpdate;
       const productGeometry = createFakePolygonalGeometry();
@@ -41,7 +41,7 @@ describe('swapJobHandler', () => {
         ingestionResolution: job.parameters.ingestionResolution,
       };
 
-      readProductGeometry.mockResolvedValue(productGeometry);
+      readProductGeometryMock.mockResolvedValue(productGeometry);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
