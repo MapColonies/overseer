@@ -65,5 +65,5 @@ jobs:
       - name: Check out Git repository
         uses: actions/checkout@v4
       - name: build Docker image
-        run: docker build -t test-build:latest .
-  
+        run: docker build -t test-build:latest .        
+        
