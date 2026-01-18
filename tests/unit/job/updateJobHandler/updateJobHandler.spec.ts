@@ -16,7 +16,7 @@ describe('updateJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometry } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const productGeometry = createFakePolygonalGeometry();
@@ -35,7 +35,7 @@ describe('updateJobHandler', () => {
         productGeometry,
       };
 
-      readProductGeometry.mockResolvedValue(productGeometry);
+      readProductGeometryMock.mockResolvedValue(productGeometry);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);

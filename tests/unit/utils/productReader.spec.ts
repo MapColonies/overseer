@@ -100,35 +100,6 @@ describe('productReader', () => {
       expect(mockReadAndProcess).toHaveBeenCalledWith(fullProductPath, expect.any(Object));
     });
 
-    it('should handle absolute paths correctly by joining with root', async () => {
-      const mockPolygon = createFakePolygon();
-      const mockFeature: Feature<Polygon> = {
-        type: 'Feature',
-        properties: {},
-        geometry: mockPolygon,
-      };
-      const mockChunk: ShapefileChunk = {
-        features: [mockFeature],
-        skippedFeatures: [],
-        skippedVerticesCount: 0,
-        id: 1,
-        verticesCount: 100,
-      };
-
-      const mockReadAndProcess = jest.fn(async (_path: string, processor: ChunkProcessor) => {
-        await processor.process(mockChunk);
-      });
-
-      (ShapefileChunkReader as jest.Mock).mockImplementation(() => ({
-        readAndProcess: mockReadAndProcess,
-      }));
-
-      const readProductGeometry = productReaderFactory(mockContainer);
-      await readProductGeometry(testProductPath);
-
-      expect(mockReadAndProcess).toHaveBeenCalledWith(fullProductPath, expect.any(Object));
-    });
-
     it('should throw ProductReadError when no geometry is found in shapefile', async () => {
       const mockChunk: ShapefileChunk = {
         features: [],
@@ -164,7 +135,7 @@ describe('productReader', () => {
       await expect(readProductGeometry(testProductPath)).rejects.toThrow(ProductReadError);
     });
 
-    it('should throw ProductReadError when validation fails', async () => {
+    it('should throw ProductReadError when chunk contains multiple features', async () => {
       const mockPolygon = createFakePolygon();
       const mockFeature1: Feature<Polygon> = {
         type: 'Feature',

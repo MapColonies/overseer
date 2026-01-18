@@ -12,7 +12,7 @@ import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { configMock } from '../../mocks/configMock';
 import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
 import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
-import { readProductGeometry } from '../../mocks/productReaderMock';
+import { readProductGeometryMock } from '../../mocks/productReaderMock';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
@@ -47,7 +47,7 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
     geoserverClientMock,
     jobTrackerClientMock,
     polygonPartsManagerClientMock,
-    readProductGeometry,
+    readProductGeometryMock,
     taskMetricsMock
   );
 
