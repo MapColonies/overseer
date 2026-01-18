@@ -1,10 +1,11 @@
 import jsLogger from '@map-colonies/js-logger';
 import { faker } from '@faker-js/faker';
-import { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import { AggregationFeature, RasterProductTypes, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import nock from 'nock';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { createFakeRoiFeatureCollection } from '../mocks/exportMockData';
-import { LayerMetadataAggregationError } from '../../../src/common/errors';
+import { LayerMetadataAggregationError, PolygonPartsProcessingError } from '../../../src/common/errors';
+import { PolygonPartsProcessPayload } from '../../../src/common/interfaces';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { createFakeAggregatedFeature } from './catalogClientSetup';
 
@@ -16,6 +17,44 @@ describe('polygonPartsManagerClient', () => {
   afterEach(() => {
     nock.cleanAll();
     jest.resetAllMocks();
+  });
+
+  describe('process', () => {
+    it('should process polygon parts successfully', async () => {
+      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
+
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const payload: PolygonPartsProcessPayload = {
+        jobType: 'Ingestion_New',
+        productId: 'test_layer',
+        productType: RasterProductTypes.ORTHOPHOTO,
+      };
+      const url = '/polygonParts/process';
+      nock(baseUrl).put(url, payload).reply(200);
+
+      const action = polygonPartsManagerClient.process(payload);
+
+      await expect(action).resolves.toBeUndefined();
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it('should throw PolygonPartsProcessingError when the request fails', async () => {
+      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
+
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const payload: PolygonPartsProcessPayload = {
+        jobType: 'Ingestion_New',
+        productId: 'test_layer',
+        productType: RasterProductTypes.ORTHOPHOTO,
+      };
+      const url = '/polygonParts/process';
+      nock(baseUrl).put(url, payload).reply(500);
+
+      const action = polygonPartsManagerClient.process(payload);
+
+      await expect(action).rejects.toThrow(PolygonPartsProcessingError);
+      expect(nock.isDone()).toBe(true);
+    });
   });
 
   describe('getAggregatedLayerMetadata', () => {
