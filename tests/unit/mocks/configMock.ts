@@ -93,6 +93,10 @@ const registerDefaultConfig = (): void => {
       delay: 'exponential',
       shouldResetTimeout: true,
     },
+    shapefileReader: {
+      maxVerticesPerChunk: 2500,
+    },
+    ingestionSourcesDirPath: '/layerSources',
     tilesStorageProvider: 'FS',
     gpkgStorageProvider: 'FS',
     disableHttpClientLogs: true,
@@ -123,6 +127,7 @@ const registerDefaultConfig = (): void => {
       polling: {
         maxTaskAttempts: 3,
         tasks: {
+          createTasks: 'create-tasks',
           init: 'init',
           finalize: 'finalize',
         },
