@@ -1,13 +1,13 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
-import type { AggregationFeature, RasterProductTypes, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
 import { LayerMetadataAggregationError, PolygonPartsProcessingError } from '../common/errors';
-import { AggregationLayerMetadata } from '../common/interfaces';
+import { AggregationLayerMetadata, PolygonPartsProcessPayload } from '../common/interfaces';
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
@@ -19,18 +19,15 @@ export class PolygonPartsMangerClient extends HttpClient {
     super(logger, baseUrl, serviceName, httpRetryConfig, disableHttpClientLogs);
   }
 
-  public async process(productName: string, productType: RasterProductTypes): Promise<void> {
+  public async process(payload: PolygonPartsProcessPayload): Promise<void> {
     try {
       const url = '/polygonParts/process';
 
-      const body = {
-        productName,
-        productType,
-      };
+      this.logger.info({ msg: 'process polygon parts', url, payload });
 
-      await this.put<void>(url, body);
+      await this.put<void>(url, payload);
     } catch (err) {
-      const processError = new PolygonPartsProcessingError(err, productName, productType);
+      const processError = new PolygonPartsProcessingError(err, payload.productId, payload.productType);
       throw processError;
     }
   }

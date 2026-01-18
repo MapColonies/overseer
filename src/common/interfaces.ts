@@ -7,6 +7,7 @@ import {
   type IngestionUpdateFinalizeTaskParams,
   type InputFiles,
   type LayerName,
+  PolygonPartsPayload,
   type RasterLayerMetadata,
   type TileFormatStrategy,
   type TileOutputFormat,
@@ -341,6 +342,10 @@ export interface FindLayerResponse {
 export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
 
 //#endregion catalogClient
+
+//#region PolygonPartsManagerClient
+export type PolygonPartsProcessPayload = Pick<PolygonPartsPayload, 'productId' | 'productType' | 'jobType'>;
+//#endregion PolygonPartsManagerClient
 
 //#region seedingJobCreator
 

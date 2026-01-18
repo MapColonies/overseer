@@ -120,14 +120,12 @@ export class NewJobHandler
         activeSpan?.addEvent('layerNames.valid', { layerName });
 
         if (!processedParts) {
-          const { productName, productType } = job;
-          logger.info({ msg: 'processing polygon parts', productName, productType });
-
-          await this.polygonPartsMangerClient.process(productName, productType);
+          const { type, resourceId, productType } = job;
+          await this.polygonPartsMangerClient.process({ jobType: type, productId: resourceId, productType });
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'processedParts');
 
           activeSpan?.addEvent('processPolygonParts.success', { ...finalizeTaskParams });
-          logger.info({ msg: 'polygon parts processed successfully', productName, productType });
+          logger.info({ msg: 'polygon parts processed successfully', productId: resourceId, productType });
         }
 
         if (!insertedToMapproxy) {
