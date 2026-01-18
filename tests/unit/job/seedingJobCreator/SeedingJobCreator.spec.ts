@@ -116,6 +116,7 @@ describe('SeedingJobCreator', () => {
       const tilesSeedingConfig = configMock.get<TilesSeedingTaskConfig>('jobManagement.ingestion.tasks.tilesSeeding');
       const layerCacheName = 'cache-Name-s3';
       const layer: FindLayerResponse = { ...layerRecord, metadata: { ...layerRecord.metadata, footprint: productGeometry } };
+      const ingestionZoomLevel = degreesPerPixelToZoomLevel(ingestionUpdateJob.parameters.ingestionResolution);
       const taskId = randomUUID();
       const seedJobId = randomUUID();
       const seedJobParams: SeedJobParams = {
@@ -124,7 +125,7 @@ describe('SeedingJobCreator', () => {
 
       const seedTaskOptions: SeedTaskOptions = {
         fromZoomLevel: 0,
-        toZoomLevel: degreesPerPixelToZoomLevel(seedJobParams.ingestionJob.parameters.ingestionResolution),
+        toZoomLevel: ingestionZoomLevel,
         skipUncached: tilesSeedingConfig.skipUncached,
         geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
@@ -134,7 +135,7 @@ describe('SeedingJobCreator', () => {
       };
 
       const cleanTaskOptions: SeedTaskOptions = {
-        fromZoomLevel: degreesPerPixelToZoomLevel(seedJobParams.ingestionJob.parameters.ingestionResolution) + 1,
+        fromZoomLevel: ingestionZoomLevel + 1,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
         geometry: productGeometry,
@@ -203,6 +204,7 @@ describe('SeedingJobCreator', () => {
       const layerCacheName = 'cache-Name-s3';
       const taskId = randomUUID();
       const seedJobId = randomUUID();
+      const ingestionZoomLevel = degreesPerPixelToZoomLevel(ingestionUpdateJob.parameters.ingestionResolution);
 
       const seedJobParams: SeedJobParams = {
         ...seedJobParameters,
@@ -210,7 +212,7 @@ describe('SeedingJobCreator', () => {
 
       const seedTaskOptions: SeedTaskOptions = {
         fromZoomLevel: 0,
-        toZoomLevel: degreesPerPixelToZoomLevel(seedJobParams.ingestionJob.parameters.ingestionResolution),
+        toZoomLevel: ingestionZoomLevel,
         skipUncached: tilesSeedingConfig.skipUncached,
         geometry: productGeometry,
         refreshBefore: '2024-11-05T13:50:27',
@@ -220,7 +222,7 @@ describe('SeedingJobCreator', () => {
       };
 
       const cleanTaskOptions: SeedTaskOptions = {
-        fromZoomLevel: degreesPerPixelToZoomLevel(seedJobParams.ingestionJob.parameters.ingestionResolution) + 1,
+        fromZoomLevel: ingestionZoomLevel + 1,
         toZoomLevel: tilesSeedingConfig.maxZoom,
         skipUncached: tilesSeedingConfig.skipUncached,
         geometry: productGeometry,
