@@ -3,66 +3,66 @@ on: [pull_request]
 
 jobs:
   eslint:
-    name: Run eslint
+    name: Run TS Project eslint
     runs-on: ubuntu-latest
-    steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm ci
-      - name: Run linters
-        uses: wearerequired/lint-action@v1
-        with:
-          github_token: ${{ secrets.github_token }}
-          eslint: true
-          prettier: true
-          eslint_extensions: ts
 
-  security:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [24.x]
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Run Snyk to check for vulnerabilities
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Run TS Project linters
+        uses: MapColonies/shared-workflows/actions/eslint@eslint-v1.0.1
+        with: 
+          node_version: ${{ matrix.node }}
+
+  helm-lint:
+    name: Run Helm lint Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out TS Project Git repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Helm Lint Checks
+        uses: MapColonies/shared-workflows/actions/helm-lint@helm-lint-v1        
 
   tests:
     name: Run Tests
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        node: [20.x, 22.x]
+        node: [24.x]
+
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
+      - name: Check out TS Project Git repository
+        uses: actions/checkout@v6
+
       - name: Install GDAL
         run: |
           sudo apt-get update
           sudo apt-get install -y gdal-bin
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+
+      - name: Init Nodejs
+        uses: MapColonies/shared-workflows/actions/init-npm@init-npm-v1
         with:
           node-version: ${{ matrix.node }}
-      - name: Install Node.js dependencies
-        run: npm ci
+
       - name: Run tests
         run: npm run test
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Test Reporters Node-${{ matrix.node }}
-          path: reports/**
 
-  build_image:
-    name: Build Image
+      - uses: actions/upload-artifact@v5
+        with:
+          name: Test Reporters ${{ matrix.node }}
+          path: ./reports/**
+
+  build_docker_image:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v4
-      - name: build Docker image
-        run: docker build -t test-build:latest .        
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v6
+
