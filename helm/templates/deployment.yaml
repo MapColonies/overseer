@@ -145,7 +145,7 @@ spec:
         {{- tpl (toYaml .Values.sidecars) . | nindent 8 }}
         {{- end }}
       volumes:
-           {{- if and $storage.fs.internalPvc.enabled (not $samePvc) }}  
+        {{- if and $storage.fs.internalPvc.enabled (not $samePvc) }}  
         - name: internal-storage
           persistentVolumeClaim:
             claimName: {{ $storage.fs.internalPvc.name }}
