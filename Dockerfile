@@ -1,4 +1,4 @@
-FROM node:20.15.1-slim as build
+FROM node:24-slim AS build
 
 WORKDIR /tmp/buildApp
 
@@ -8,7 +8,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM node:20.15.1-slim as production
+FROM node:24-slim AS production
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \

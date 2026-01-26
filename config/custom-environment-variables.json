@@ -85,9 +85,15 @@
       "jobManagerBaseUrl": "JOB_MANAGER_BASE_URL",
       "heartbeat": {
         "baseUrl": "HEARTBEAT_BASE_URL",
-        "intervalMs": "HEARTBEAT_INTERVAL_MS"
+        "intervalMs": {
+          "__name": "HEARTBEAT_INTERVAL_MS",
+          "__format": "number"
+        }
       },
-      "dequeueIntervalMs": "DEQUEUE_INTERVAL_MS"
+      "dequeueIntervalMs": {
+        "__name": "DEQUEUE_INTERVAL_MS",
+        "__format": "number"
+      }
     },
     "geoserver": {
       "workspace": "GEOSERVER_WORKSPACE",
