@@ -8,6 +8,10 @@
 {{- $imageTag := include "overseer.tag" . -}}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 
+{{- /* PVC handling - check if both PVCs point to the same claim */ -}}
+{{- $samePvc := and $storage.fs.ingestionSourcePvc.enabled $storage.fs.internalPvc.enabled (eq $storage.fs.internalPvc.name $storage.fs.ingestionSourcePvc.name) }}
+{{- $internalVolumeName := ternary "ingestion-storage" "internal-storage" $samePvc }}
+
 {{ $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.mountPath $storage.fs.internalPvc.gpkgSubPath) }}
 
 {{- if .Values.enabled -}}
@@ -66,7 +70,7 @@ spec:
           {{- end }}
           volumeMounts:
             {{- if $storage.fs.internalPvc.enabled }}
-            - name: internal-storage
+            - name: {{ $internalVolumeName }}
               mountPath: {{ $storage.fs.internalPvc.mountPath }}
             {{- end }}
             {{- if $storage.fs.ingestionSourcePvc.enabled }}
@@ -141,7 +145,7 @@ spec:
         {{- tpl (toYaml .Values.sidecars) . | nindent 8 }}
         {{- end }}
       volumes:
-        {{- if $storage.fs.internalPvc.enabled }}  
+           {{- if and $storage.fs.internalPvc.enabled (not $samePvc) }}  
         - name: internal-storage
           persistentVolumeClaim:
             claimName: {{ $storage.fs.internalPvc.name }}
@@ -150,7 +154,7 @@ spec:
         - name: ingestion-storage
           persistentVolumeClaim:
             claimName: {{ $storage.fs.ingestionSourcePvc.name }}
-        {{- end }}          
+        {{- end }}
         - name: nginx-config
           configMap:
             name: 'nginx-extra-configmap'      
