@@ -77,8 +77,8 @@ storage:
     internalPvc:
       enabled: false
       name: ""
+      mountPath: ""
       gpkgSubPath: ""
-      outputPath: ""
 
 cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'
