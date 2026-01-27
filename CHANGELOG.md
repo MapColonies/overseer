@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.5.0](https://github.com/MapColonies/overseer/compare/v2.4.1...v2.5.0) (2026-01-27)
+
+
+### Features
+
+* add Dependabot configuration and update workflows, bridging boilerplate & dependencies gaps (MAPCO-7216) ([#68](https://github.com/MapColonies/overseer/issues/68)) ([bd79e25](https://github.com/MapColonies/overseer/commit/bd79e256940ae3422b4ce2a6bca74d40f5c6f2ad))
+
+
+### Bug Fixes
+
+* resolve duplicate volume claims in PVC handling logic ([#82](https://github.com/MapColonies/overseer/issues/82)) ([5c4172b](https://github.com/MapColonies/overseer/commit/5c4172b04845f2040ac2e0dd8143255e21153bf8))
+
 ### [2.4.1](https://github.com/MapColonies/overseer/compare/v2.4.0...v2.4.1) (2026-01-25)
 
 ## [2.4.0](https://github.com/MapColonies/overseer/compare/v2.4.0-alpha.0...v2.4.0) (2026-01-22)
