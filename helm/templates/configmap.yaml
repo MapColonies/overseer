@@ -4,7 +4,7 @@
 {{- $serviceUrls := (include "common.serviceUrls.merged" .) | fromYaml }}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 {{- $jobDefinitions := (include "common.jobDefinitions.merged" .) | fromYaml }}
-{{- $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.outputPath $storage.fs.internalPvc.gpkgSubPath) }}
+{{- $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.mountPath $storage.fs.internalPvc.gpkgSubPath) }}
 
 
 {{- if .Values.enabled -}}
