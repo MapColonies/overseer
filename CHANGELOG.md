@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.5.1](https://github.com/MapColonies/overseer/compare/v2.5.0...v2.5.1) (2026-01-27)
+
+
+### Bug Fixes
+
+* internal pvc mountPath for gpkgPath ([#83](https://github.com/MapColonies/overseer/issues/83)) ([f50f17b](https://github.com/MapColonies/overseer/commit/f50f17b7b814c3132878dcec22b198e3229bbd63))
+
 ## [2.5.0](https://github.com/MapColonies/overseer/compare/v2.4.1...v2.5.0) (2026-01-27)
 
 
