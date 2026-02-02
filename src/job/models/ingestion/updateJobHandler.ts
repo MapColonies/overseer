@@ -106,9 +106,9 @@ export class UpdateJobHandler
           activeSpan?.addEvent('layerNameFormat.valid', { layerName: layerNameFormats.layerName });
 
           if (!processedParts) {
-            const { type, resourceId, productType } = job;
+            const { resourceId, productType } = job;
 
-            await this.polygonPartsMangerClient.process({ jobType: type, productId: resourceId, productType });
+            await this.polygonPartsMangerClient.process({ productId: resourceId, productType });
             finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'processedParts');
 
             activeSpan?.addEvent('processPolygonParts.success', { ...finalizeTaskParams });
