@@ -37,7 +37,7 @@ describe('polygonPartsManagerClient', () => {
       expect(nock.isDone()).toBe(true);
     });
 
-        it('should process polygon parts and replacing old data successfully', async () => {
+    it('should process polygon parts and replacing old data successfully', async () => {
       polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
 
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
