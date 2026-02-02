@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.5.2](https://github.com/MapColonies/overseer/compare/v2.5.1...v2.5.2) (2026-02-02)
+
+
+### Bug Fixes
+
+* update PolygonPartsProcessPayload to include shouldClearEntities ([#85](https://github.com/MapColonies/overseer/issues/85)) ([762047a](https://github.com/MapColonies/overseer/commit/762047ade5a8d098dec01f39ac736f2f402646c1))
+
 ## [2.5.1](https://github.com/MapColonies/overseer/compare/v2.5.0...v2.5.1) (2026-01-27)
 
 
