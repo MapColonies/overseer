@@ -117,9 +117,9 @@ export class SwapJobHandler
         const { tileOutputFormat, displayPath } = job.parameters.additionalParams;
 
         if (!processedParts) {
-          const { type, resourceId, productType } = job;
+          const { resourceId, productType } = job;
 
-          await this.polygonPartsMangerClient.process({ jobType: type, productId: resourceId, productType });
+          await this.polygonPartsMangerClient.process({ shouldClearEntities: true, productId: resourceId, productType });
           finalizeTaskParams = await this.markFinalizeStepAsCompleted(job.id, task.id, finalizeTaskParams, 'processedParts');
 
           activeSpan?.addEvent('processPolygonParts.success', { ...finalizeTaskParams });

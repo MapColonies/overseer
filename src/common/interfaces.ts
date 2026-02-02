@@ -344,7 +344,7 @@ export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
 //#endregion catalogClient
 
 //#region PolygonPartsManagerClient
-export type PolygonPartsProcessPayload = Pick<PolygonPartsPayload, 'productId' | 'productType' | 'jobType'>;
+export type PolygonPartsProcessPayload = Pick<PolygonPartsPayload, 'productId' | 'productType'> & { shouldClearEntities?: boolean };
 //#endregion PolygonPartsManagerClient
 
 //#region seedingJobCreator

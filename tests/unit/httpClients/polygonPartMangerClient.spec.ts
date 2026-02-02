@@ -25,7 +25,24 @@ describe('polygonPartsManagerClient', () => {
 
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const payload: PolygonPartsProcessPayload = {
-        jobType: 'Ingestion_New',
+        productId: 'test_layer',
+        productType: RasterProductTypes.ORTHOPHOTO,
+      };
+      const url = '/polygonParts/process';
+      nock(baseUrl).put(url, payload).reply(200);
+
+      const action = polygonPartsManagerClient.process(payload);
+
+      await expect(action).resolves.toBeUndefined();
+      expect(nock.isDone()).toBe(true);
+    });
+
+        it('should process polygon parts and replacing old data successfully', async () => {
+      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, jsLogger({ enabled: false }));
+
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const payload: PolygonPartsProcessPayload = {
+        shouldClearEntities: true,
         productId: 'test_layer',
         productType: RasterProductTypes.ORTHOPHOTO,
       };
@@ -43,7 +60,6 @@ describe('polygonPartsManagerClient', () => {
 
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const payload: PolygonPartsProcessPayload = {
-        jobType: 'Ingestion_New',
         productId: 'test_layer',
         productType: RasterProductTypes.ORTHOPHOTO,
       };
