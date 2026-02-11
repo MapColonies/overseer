@@ -88,6 +88,5 @@ export class JobHandler {
     if (!isRecoverable) {
       await this.jobTrackerClient.notify(task);
     }
-
   }
 }
