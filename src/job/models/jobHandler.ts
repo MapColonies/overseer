@@ -5,6 +5,7 @@ import type { LayerNameFormats } from '@map-colonies/raster-shared';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
+import { ConflictError } from '@map-colonies/error-types';
 import type { IConfig, JobAndTaskTelemetry, PollingConfig, StepKey } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 
@@ -71,16 +72,22 @@ export class JobHandler {
     logger.info({ msg: 'task attempts', taskAttempts, maxAttempts: this.pollingConfig.maxTaskAttempts });
     const reachedMaxAttempts = taskAttempts >= this.pollingConfig.maxTaskAttempts;
     const isRecoverable = !(error instanceof ZodError) && !reachedMaxAttempts;
-
-    await this.queueClient.reject(job.id, task.id, isRecoverable, reason);
-
-    logger.error({ msg, reason, error, reachedMaxAttempts, isRecoverable });
+    const isAborted = error instanceof ConflictError;
     taskTracker?.failure(errName);
     tracingSpan?.setStatus({ code: SpanStatusCode.ERROR, message: reason });
     tracingSpan?.recordException(error instanceof Error ? error : new Error(reason));
 
+    if (isAborted) {
+      logger.warn({ msg: 'Task was aborted due to a conflict. Returning to polling loop.', reason, error });
+      return;
+    }
+
+    logger.error({ msg, reason, error, reachedMaxAttempts, isRecoverable });
+    await this.queueClient.reject(job.id, task.id, isRecoverable, reason);
+
     if (!isRecoverable) {
       await this.jobTrackerClient.notify(task);
     }
+
   }
 }
