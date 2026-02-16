@@ -71,16 +71,10 @@ export class JobHandler {
     const taskAttempts = task.attempts + 1; // rejecting the task increments the attempts
     logger.info({ msg: 'task attempts', taskAttempts, maxAttempts: this.pollingConfig.maxTaskAttempts });
     const reachedMaxAttempts = taskAttempts >= this.pollingConfig.maxTaskAttempts;
-    const isRecoverable = !(error instanceof ZodError) && !reachedMaxAttempts;
-    const isAborted = error instanceof ConflictError;
+    const isRecoverable = !(error instanceof ZodError) && !(error instanceof ConflictError) && !reachedMaxAttempts;
     taskTracker?.failure(errName);
     tracingSpan?.setStatus({ code: SpanStatusCode.ERROR, message: reason });
     tracingSpan?.recordException(error instanceof Error ? error : new Error(reason));
-
-    if (isAborted) {
-      logger.warn({ msg: 'Task was aborted due to a conflict. Returning to polling loop.', reason, error });
-      return;
-    }
 
     logger.error({ msg, reason, error, reachedMaxAttempts, isRecoverable });
     await this.queueClient.reject(job.id, task.id, isRecoverable, reason);
