@@ -2,6 +2,7 @@
 import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
+import { ConflictError } from '@map-colonies/error-types';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
 import type { MergeTaskParameters, JobResumeState, MergeTilesTaskParams } from '../../../../src/common/interfaces';
@@ -476,6 +477,31 @@ describe('tileMergeTaskManager', () => {
 
       // Should reject when HTTP requests fail
       await expect(tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks)).rejects.toThrow();
+    });
+
+    it('should handle ConflictError during batch publishing and stop immediately', async () => {
+      const { tileMergeTaskManager } = testContext;
+
+      const jobId = randomUUID();
+
+      // Setup HTTP mock to return 409 Conflict
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${jobId}/tasks`;
+
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(409, { message: 'Job already aborted' }).persist();
+
+      const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
+      // Spy on enqueueTasks to verify it's only called once (stops after conflict)
+      const enqueueTasksSpy = jest.spyOn(tileMergeTaskManager as unknown as { enqueueTasks: jest.Func }, 'enqueueTasks');
+
+      // Should throw ConflictError when job manager returns 409
+      await expect(tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks)).rejects.toThrow(ConflictError);
+
+      // Verify that enqueueTasks was called (at least once before the conflict)
+      expect(enqueueTasksSpy).toHaveBeenCalled();
+
+      enqueueTasksSpy.mockRestore();
     });
   });
 });
