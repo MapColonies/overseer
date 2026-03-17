@@ -14,7 +14,7 @@ import {
   type RoiFeature,
   type RoiFeatureCollection,
 } from '@map-colonies/raster-shared';
-import { bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
+import { BBox2d, bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, StorageProvider } from '../../common/constants';
 import { IConfig, type TaskSources, type ZoomBoundsParameters } from '../../common/interfaces';
@@ -62,7 +62,7 @@ export class ExportTaskManager {
 
             for (let zoom = minZoom; zoom <= maxZoom; zoom++) {
               logger.debug({ msg: 'generating tile range for zoom level', zoom });
-              const recordBatches = bboxToTileRange(bbox, zoom);
+              const recordBatches = bboxToTileRange(bbox as BBox2d, zoom);
               logger.debug({ msg: 'generated tile range', tileRange: recordBatches });
               batches.push(recordBatches);
             }

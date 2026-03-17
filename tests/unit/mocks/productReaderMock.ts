@@ -1,4 +1,4 @@
-import { ChunkProcessor, ShapefileChunk, ShapefileChunkReader } from '@map-colonies/mc-utils';
+import { ChunkProcessor, ShapefileChunk, ShapefileChunkReader } from '@map-colonies/shapefile-reader';
 
 export const readProductGeometryMock = jest.fn();
 
