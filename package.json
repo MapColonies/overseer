@@ -50,7 +50,7 @@
     "@map-colonies/mc-model-types": "^17.15.1",
     "@map-colonies/mc-priority-queue": "^9.1.0",
     "@map-colonies/mc-utils": "^5.1.0",
-    "@map-colonies/raster-shared": "^7.10.1",
+    "@map-colonies/raster-shared": "^7.10.2",
     "@map-colonies/read-pkg": "0.0.1",
     "@map-colonies/shapefile-reader": "^1.0.1",
     "@map-colonies/telemetry": "^7.0.1",
