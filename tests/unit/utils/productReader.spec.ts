@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { join } from 'path';
 import jsLogger from '@map-colonies/js-logger';
-import { ShapefileChunkReader, ShapefileChunk } from '@map-colonies/mc-utils';
+import { ShapefileChunkReader, ShapefileChunk } from '@map-colonies/shapefile-reader';
 import { Feature, Polygon, MultiPolygon } from 'geojson';
 import { DependencyContainer } from 'tsyringe';
 import { SERVICES } from '../../../src/common/constants';
@@ -11,7 +11,7 @@ import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { createFakePolygon, createFakeMultiPolygon } from '../mocks/geometryMockData';
 import { mockShapefileReader } from '../mocks/productReaderMock';
 
-jest.mock('@map-colonies/mc-utils');
+jest.mock('@map-colonies/shapefile-reader');
 
 describe('productReader', () => {
   registerDefaultConfig();

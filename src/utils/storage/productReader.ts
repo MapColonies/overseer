@@ -1,6 +1,6 @@
 import path from 'path';
 import { Logger } from '@map-colonies/js-logger';
-import { ChunkProcessor, ShapefileChunk, ShapefileChunkReader } from '@map-colonies/mc-utils';
+import { ChunkProcessor, ShapefileChunk, ShapefileChunkReader } from '@map-colonies/shapefile-reader';
 import { IConfig } from 'config';
 import { productFeatureSchema } from '@map-colonies/raster-shared';
 import { Feature, MultiPolygon, Polygon } from 'geojson';
