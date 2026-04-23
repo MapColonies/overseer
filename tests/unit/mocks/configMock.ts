@@ -108,6 +108,7 @@ const registerDefaultConfig = (): void => {
       mapproxyDns: 'http://mapproxy',
       polygonPartsManager: 'http://polygon-parts-manager',
       geoserverDns: 'http://geoserver',
+      downloadServerPublicDNS: 'http://download-server',
       jobTracker: 'http://job-tracker',
     },
     geoserver: {
@@ -169,7 +170,7 @@ const registerDefaultConfig = (): void => {
         pollingJobs: {
           export: {
             type: 'Export',
-            gpkgsPath: '/gpkgs',
+            gpkgsRootDir: 'gpkgs',
           },
         },
         tasks: {

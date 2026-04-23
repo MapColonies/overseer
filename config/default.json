@@ -122,7 +122,6 @@
         "export": {
           "type": "Export",
           "cleanupExpirationDays": 14,
-          "gpkgsPath": "/gpkgs",
           "gpkgsRootDir": "gpkgs"
         }
       },

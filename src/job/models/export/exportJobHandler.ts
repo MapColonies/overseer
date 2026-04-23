@@ -28,6 +28,7 @@ import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import {
   AggregationLayerMetadata,
   ExportFinalizeExecutionContext,
+  ExportFinalizeGpkgPaths,
   ExportTask,
   ExportTaskParameters,
   GpkgArtifactProperties,
@@ -51,7 +52,6 @@ import { buildUrl } from '../../../utils/urlUtil';
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
-  private readonly gpkgsPath: string;
   private readonly gpkgsRootDir: string;
   private readonly isS3GpkgProvider: boolean;
   private readonly cleanupExpirationDays: number;
@@ -72,7 +72,6 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   ) {
     super(logger, config, queueClient, jobTrackerClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
-    this.gpkgsPath = config.get<string>('jobManagement.export.pollingJobs.export.gpkgsPath');
     this.gpkgsRootDir = config.get<string>('jobManagement.export.pollingJobs.export.gpkgsRootDir');
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
@@ -150,7 +149,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
           logger.info({ msg: 'should send callbacks', shouldSendCallbacks, isTerminalStatus, isErrorCallback });
           if (shouldSendCallbacks) {
             tracingSpan?.addEvent('callbacks.sending.started');
-            await this.sendCallbacks(validJob, task.id, finalizeParams, paths.gpkgDirPath);
+            await this.sendCallbacks(validJob, task.id, finalizeParams, paths);
             tracingSpan?.addEvent('callbacks.sending.completed');
             if (isErrorCallback) {
               logger.info({ msg: 'Finalize task type is Error_Callback, Completing after callbacks sends' });
@@ -172,7 +171,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     activeSpan?.setAttributes(monitorAttributes);
 
     const gpkgRelativePath = job.parameters.additionalParams.packageRelativePath;
-    const gpkgFilePath = path.join(this.gpkgsPath, gpkgRelativePath);
+    const gpkgFilePath = path.join('/', this.gpkgsRootDir, gpkgRelativePath);
     const gpkgDirPath = path.dirname(gpkgFilePath);
 
     return {
@@ -197,7 +196,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   ): Promise<ExportFinalizeTaskParams> {
     const { job, task, paths, telemetry, logger } = context;
     const { taskTracker, tracingSpan: activeSpan } = telemetry;
-    const { gpkgFilePath, gpkgRelativePath } = paths;
+    const { gpkgFilePath } = paths;
 
     let fullProcessingParams = taskParams;
     let gpkgProcessingComplete = false;
@@ -220,7 +219,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
 
     if (shouldUploadToS3) {
       activeSpan?.addEvent('s3.upload.started');
-      fullProcessingParams = await this.uploadGpkgToS3(gpkgFilePath, gpkgRelativePath, job.id, task.id, fullProcessingParams);
+      fullProcessingParams = await this.uploadGpkgToS3(paths, job.id, task.id, fullProcessingParams);
       activeSpan?.addEvent('s3.upload.completed', { success: fullProcessingParams.gpkgUploadedToS3 });
     }
 
@@ -359,21 +358,21 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   }
 
   private async uploadGpkgToS3(
-    gpkgPath: string,
-    gpkgRelativePath: string,
+    paths: ExportFinalizeGpkgPaths,
     jobId: string,
     taskId: string,
     taskParams: ExportFinalizeFullProcessingParams
   ): Promise<ExportFinalizeFullProcessingParams> {
-    const gpkgS3Key = `${this.gpkgsRootDir}/${gpkgRelativePath}`;
+    const { gpkgFilePath } = paths;
+    const gpkgS3Key = path.posix.join(this.gpkgsRootDir, paths.gpkgRelativePath);
+    const jsonFilePath = gpkgFilePath.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
     const jsonS3Key = gpkgS3Key.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
-    const jsonPath = gpkgPath.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
 
     await this.s3Service.uploadFiles([
-      { filePath: gpkgPath, s3Key: gpkgS3Key, contentType: GPKG_CONTENT_TYPE },
-      { filePath: jsonPath, s3Key: jsonS3Key, contentType: JSON_CONTENT_TYPE },
+      { filePath: gpkgFilePath, s3Key: gpkgS3Key, contentType: GPKG_CONTENT_TYPE },
+      { filePath: jsonFilePath, s3Key: jsonS3Key, contentType: JSON_CONTENT_TYPE },
     ]);
-    await this.fsService.deleteFileAndParentDir(gpkgPath);
+    await this.fsService.deleteFileAndParentDir(gpkgFilePath);
     const updatedParams = await this.markFinalizeStepAsCompleted(jobId, taskId, taskParams, 'gpkgUploadedToS3');
     return updatedParams;
   }
@@ -390,11 +389,11 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     await this.queueClient.jobManagerClient.updateJob(job.id, { parameters: { ...job.parameters } });
   }
 
-  private async sendCallbacks(job: ExportJob, taskId: string, taskParams: ExportFinalizeTaskParams, dirPath: string): Promise<void> {
+  private async sendCallbacks(job: ExportJob, taskId: string, taskParams: ExportFinalizeTaskParams, paths: ExportFinalizeGpkgPaths): Promise<void> {
     try {
       const cleanupExpirationTimeUTC = createExpirationDate(this.cleanupExpirationDays);
-      const cleanupDataParams: CleanupData = { cleanupExpirationTimeUTC, directoryPath: dirPath };
-      const callbackParams = this.createCallbacksParams(job, cleanupExpirationTimeUTC);
+      const cleanupDataParams: CleanupData = { cleanupExpirationTimeUTC, directoryPath: paths.gpkgDirPath };
+      const callbackParams = this.createCallbacksParams(job, cleanupExpirationTimeUTC, paths);
 
       await this.queueClient.jobManagerClient.updateJob(job.id, {
         parameters: { ...job.parameters, cleanupDataParams, callbackParams },
@@ -429,9 +428,9 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     }
   }
 
-  private createCallbacksParams(job: ExportJob, expirationDate: Date): CallbackExportResponse {
+  private createCallbacksParams(job: ExportJob, expirationDate: Date, paths: ExportFinalizeGpkgPaths): CallbackExportResponse {
     const { additionalParams, callbackParams } = job.parameters;
-    const { packageRelativePath, fileNamesTemplates } = additionalParams;
+    const { fileNamesTemplates } = additionalParams;
     const validCallbackParams = callbackExportResponseSchema.parse(callbackParams);
     const { jsonFileData, ...clientsCallbackParams } = validCallbackParams;
 
@@ -445,8 +444,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     };
 
     if (job.status === OperationStatus.COMPLETED) {
-      const gpkgDownloadUrl = buildUrl(this.downloadServerUrl, this.gpkgsRootDir, packageRelativePath);
-      const jsonDownloadUrl = buildUrl(this.downloadServerUrl, this.gpkgsRootDir, packageRelativePath.replace(/\.gpkg$/, '.json')); //TODO: In future, we will remove the json metadata file and support only gpkg
+      const gpkgDownloadUrl = buildUrl(this.downloadServerUrl, paths.gpkgFilePath);
+      const jsonDownloadUrl = gpkgDownloadUrl.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
 
       callbackResponse.artifacts = [
         {
