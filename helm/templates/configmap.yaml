@@ -57,7 +57,7 @@ data:
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
   EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}
   EXPORT_GPKGS_PATH: {{ $gpkgPath | quote }}
-  EXPORT_DOWNLOAD_PATH: {{ $jobDefinitions.jobs.export.downloadPath | quote }}
+  EXPORT_GPKGS_ROOT_DIR: {{ $jobDefinitions.jobs.export.gpkgsRootDir | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}

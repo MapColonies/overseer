@@ -19,7 +19,6 @@ import {
   EXPORT_FAILURE_MESSAGE,
   EXPORT_SUCCESS_MESSAGE,
   GPKG_CONTENT_TYPE,
-  GPKGS_PREFIX,
   JSON_CONTENT_TYPE,
   SERVICES,
   StorageProvider,
@@ -47,14 +46,16 @@ import { CallbackClient } from '../../../httpClients/callbackClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { convertObjectKeysToSnakeCase } from '../../../utils/db/dbUtils';
+import { buildUrl } from '../../../utils/urlUtil';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
   private readonly exportTaskType: string;
   private readonly gpkgsPath: string;
+  private readonly gpkgsRootDir: string;
   private readonly isS3GpkgProvider: boolean;
   private readonly cleanupExpirationDays: number;
-  private readonly downloadUrl: string;
+  private readonly downloadServerUrl: string;
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) config: IConfig,
@@ -72,13 +73,12 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     super(logger, config, queueClient, jobTrackerClient);
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
     this.gpkgsPath = config.get<string>('jobManagement.export.pollingJobs.export.gpkgsPath');
+    this.gpkgsRootDir = config.get<string>('jobManagement.export.pollingJobs.export.gpkgsRootDir');
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
     this.isS3GpkgProvider = gpkgProvider === StorageProvider.S3;
     this.cleanupExpirationDays = config.get<number>('jobManagement.export.pollingJobs.export.cleanupExpirationDays');
-    const downloadServerUrl = config.get<string>('servicesUrl.downloadServerPublicDNS');
-    const downloadPath = config.get<string>('jobManagement.export.pollingJobs.export.downloadPath');
-    this.downloadUrl = `${downloadServerUrl}/${downloadPath}`;
+    this.downloadServerUrl = config.get<string>('servicesUrl.downloadServerPublicDNS');
   }
   public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${ExportJobHandler.name}.${this.handleJobInit.name}`)), async () => {
@@ -365,7 +365,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     taskId: string,
     taskParams: ExportFinalizeFullProcessingParams
   ): Promise<ExportFinalizeFullProcessingParams> {
-    const gpkgS3Key = `${GPKGS_PREFIX}/${gpkgRelativePath}`;
+    const gpkgS3Key = `${this.gpkgsRootDir}/${gpkgRelativePath}`;
     const jsonS3Key = gpkgS3Key.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
     const jsonPath = gpkgPath.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
 
@@ -445,8 +445,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     };
 
     if (job.status === OperationStatus.COMPLETED) {
-      const gpkgDownloadUrl = `${this.downloadUrl}/${GPKGS_PREFIX}/${packageRelativePath}`;
-      const jsonDownloadUrl = gpkgDownloadUrl.replace(/\.gpkg$/, '.json'); //TODO: In future, we will remove the json metadata file and support only gpkg
+      const gpkgDownloadUrl = buildUrl(this.downloadServerUrl, this.gpkgsRootDir, packageRelativePath);
+      const jsonDownloadUrl = buildUrl(this.downloadServerUrl, this.gpkgsRootDir, packageRelativePath.replace(/\.gpkg$/, '.json')); //TODO: In future, we will remove the json metadata file and support only gpkg
 
       callbackResponse.artifacts = [
         {
