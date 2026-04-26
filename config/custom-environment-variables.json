@@ -186,8 +186,7 @@
             "__name": "EXPORT_CLEANUP_EXPIRATION_DAYS",
             "__format": "number"
           },
-          "gpkgsPath": "EXPORT_GPKGS_PATH",
-          "downloadPath": "EXPORT_DOWNLOAD_PATH"
+          "gpkgsRootDir": "EXPORT_GPKGS_ROOT_DIR"
         }
       },
       "tasks": {

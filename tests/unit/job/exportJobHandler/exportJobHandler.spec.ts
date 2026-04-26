@@ -112,9 +112,9 @@ describe('ExportJobHandler', () => {
   });
 
   describe('handleJobFinalize', () => {
-    const gpkgsPath = '/gpkgs';
+    const gpkgsRootDir = 'gpkgs';
     const gpkgRelativePath = 'package.gpkg';
-    const gpkgFilePath = `${gpkgsPath}/${gpkgRelativePath}`;
+    const gpkgFilePath = path.join('/', gpkgsRootDir, gpkgRelativePath);
     const jsonFilePath = gpkgFilePath.replace('.gpkg', '.json');
     const gpkgDirPath = '/path/to/gpkgs';
     let joinSpy: jest.SpyInstance;
@@ -165,7 +165,7 @@ describe('ExportJobHandler', () => {
         await exportJobHandler.handleJobFinalize(job, task);
 
         // Verify path methods were called correctly
-        expect(joinSpy).toHaveBeenCalledWith(gpkgsPath, gpkgRelativePath);
+        expect(joinSpy).toHaveBeenCalledWith('/', gpkgsRootDir, gpkgRelativePath);
         expect(dirnameSpy).toHaveBeenCalledWith(gpkgFilePath);
 
         // Verify metadata processing
@@ -229,7 +229,6 @@ describe('ExportJobHandler', () => {
     describe('when handling S3 upload', () => {
       it('should upload GPKG to S3 and delete local file when storage provider is S3', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        setValue('jobManagement.jobs.export.gpkgsPath', '/gpkgs');
         const { exportJobHandler, s3ServiceMock, fsServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
 
         const job = {
@@ -258,7 +257,7 @@ describe('ExportJobHandler', () => {
 
         await exportJobHandler.handleJobFinalize(job, task);
 
-        expect(joinSpy).toHaveBeenCalledWith(gpkgsPath, gpkgRelativePath);
+        expect(joinSpy).toHaveBeenCalledWith('/', gpkgsRootDir, gpkgRelativePath);
 
         expect(s3ServiceMock.uploadFiles).toHaveBeenCalledWith([
           {
