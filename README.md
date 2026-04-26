@@ -162,8 +162,7 @@ The service can be configured using environment variables or a configuration fil
 |--------------|------|-------------|---------|
 | EXPORT_JOB_TYPE | string | Export job type | `"Export"` |
 | EXPORT_CLEANUP_EXPIRATION_DAYS | number | Days until exported files are cleaned up | `7` |
-| EXPORT_GPKGS_PATH | string | Path to store geopackage files | `"/tmp/gpkgs"` |
-| EXPORT_DOWNLOAD_PATH | string | Download path for exported files | `"/downloads"` |
+| EXPORT_GPKGS_ROOT_DIR | string | Root directory for storing exported geopackage (GPKG) files | `"gpkgs"` |
 | TILES_EXPORTING_TASK_TYPE | string | Tiles exporting task type | `"tiles-exporting"` |
 
 # Core Functionality

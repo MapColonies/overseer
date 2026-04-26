@@ -47,7 +47,7 @@ import { CallbackClient } from '../../../httpClients/callbackClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { convertObjectKeysToSnakeCase } from '../../../utils/db/dbUtils';
-import { buildUrl } from '../../../utils/urlUtil';
+import { buildUrl } from '../../../utils/url';
 
 @injectable()
 export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJob, ExportInitTask, ExportJob, ExportFinalizeTask> {
