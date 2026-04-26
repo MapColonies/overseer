@@ -114,7 +114,7 @@ describe('ExportJobHandler', () => {
   describe('handleJobFinalize', () => {
     const gpkgsRootDir = 'gpkgs';
     const gpkgRelativePath = 'package.gpkg';
-    const gpkgFilePath = `/${gpkgsRootDir}/${gpkgRelativePath}`;
+    const gpkgFilePath = path.join('/', gpkgsRootDir, gpkgRelativePath);
     const jsonFilePath = gpkgFilePath.replace('.gpkg', '.json');
     const gpkgDirPath = '/path/to/gpkgs';
     let joinSpy: jest.SpyInstance;
