@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.6.1](https://github.com/MapColonies/overseer/compare/v2.6.0...v2.6.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* remove downloadPath and add gpkgsRootDir in configuration (MAPCO-10121) ([#93](https://github.com/MapColonies/overseer/issues/93)) ([47fd33f](https://github.com/MapColonies/overseer/commit/47fd33f51fc5668a31415358b2d3ec06a17bc222))
+
 ## [2.6.0](https://github.com/MapColonies/overseer/compare/v2.5.2...v2.6.0) (2026-03-17)
 
 
