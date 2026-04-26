@@ -26,6 +26,11 @@ import {
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
+enum SourceProviders {
+  S3 = 's3',
+  FS = 'fs',
+}
+
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
 //#region config interfaces
@@ -228,6 +233,12 @@ export interface MergeTaskParameters {
   sources: TaskSources[];
   batches: ITileRange[];
 }
+
+export interface DeletionTaskParameters {
+  relativePath: string; // e.g., "7a2f5130-c22f-430e-aff7-2edd39253741/9b10a124..."
+  batches: ITileRange[];
+  sourceProvider: SourceProviders;
+} //move to raster shared
 
 export interface PartsIntersection {
   parts: PolygonFeature[];

@@ -26,14 +26,13 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
-{
+  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask> {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) protected readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
-    @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
+    @inject(TileMergeTaskManager) private readonly mergeTaskManager: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
@@ -74,9 +73,11 @@ export class UpdateJobHandler
         };
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
+        const mergeTasks = this.mergeTaskManager.buildTasks(taskBuildParams, task);
 
-        await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
+        await this.mergeTaskManager.pushTasks(task, job.id, job.type, mergeTasks);
+
+        //TODO: create tiles deletion tasks.
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {

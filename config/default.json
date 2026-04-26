@@ -114,6 +114,9 @@
           "zoomThreshold": 16,
           "maxTilesPerSeedTask": 500000,
           "maxTilesPerCleanTask": 4000000
+        },
+        "validation": {
+          "type": "validation"
         }
       }
     },

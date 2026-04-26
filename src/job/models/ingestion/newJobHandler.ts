@@ -31,8 +31,7 @@ import { ReadProductGeometry } from '../../../utils/storage/productReader';
 /* eslint-disable @typescript-eslint/brace-style */
 export class NewJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionNewCreateTasksJob, IngestionCreateTasksTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
-{
+  implements IJobHandler<IngestionNewCreateTasksJob, IngestionCreateTasksTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask> {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
