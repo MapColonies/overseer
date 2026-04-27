@@ -26,7 +26,7 @@ import {
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
-enum SourceProviders {
+export enum SourceProviders {
   S3 = 's3',
   FS = 'fs',
 }
@@ -82,11 +82,15 @@ export interface ExportPollingJobsConfig {
 export interface IngestionTasksConfig {
   tilesMerging: TilesMergingTaskConfig;
   tilesSeeding: TilesSeedingTaskConfig;
+  tilesDeletion: TilesDeletionTaskConfig;
 }
 
 export interface ExportTasksConfig {
   tilesExporting: TilesExportingTaskConfig;
 }
+
+export type IntersectionPayload = FeatureCollection<Polygon | MultiPolygon, { maxResolutionDeg: number; minResolutionDeg?: number }>;
+export type IntersectionResponse = FeatureCollection<Polygon | MultiPolygon>;
 
 export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
@@ -109,6 +113,12 @@ export interface TilesMergingTaskConfig {
   radiusBufferUnits: Units;
   truncatePrecision: number;
   truncateCoordinates: number;
+}
+
+export interface TilesDeletionTaskConfig {
+  type: string;
+  tileBatchSize: number;
+  taskBatchSize: number;
 }
 
 export interface TilesSeedingTaskConfig {
@@ -207,8 +217,8 @@ export interface TilesSource {
   tilesPath: string;
 }
 
-export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> {}
-export interface FeatureTask extends ProductFeature {}
+export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> { }
+export interface FeatureTask extends ProductFeature { }
 
 export interface MergeParameters {
   product: ProductFeature;
@@ -392,9 +402,9 @@ export interface TraceParentContext {
 
 export type TaskProcessingTracker =
   | {
-      success: () => void;
-      failure: (errorType: string) => void;
-    }
+    success: () => void;
+    failure: (errorType: string) => void;
+  }
   | undefined;
 
 export interface JobAndTaskTelemetry {

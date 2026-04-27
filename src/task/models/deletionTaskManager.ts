@@ -1,46 +1,272 @@
-import { inject, injectable } from "tsyringe";
-import { context, SpanStatusCode, trace, Tracer } from "@opentelemetry/api";
-import { IConfig } from "config";
+import { context, SpanStatusCode, trace } from '@opentelemetry/api';
+import type { Span, Tracer } from '@opentelemetry/api';
+import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
+import { feature as turfFeature, featureCollection as turfFeatureCollection, union } from '@turf/turf';
+import { inject, injectable } from 'tsyringe';
+import type { Logger } from '@map-colonies/js-logger';
+import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
+import type { IngestionValidationTaskParams } from '@map-colonies/raster-shared';
+import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { SERVICES, StorageProvider } from "../../common/constants";
-import { TaskMetrics } from "../../utils/metrics/taskMetrics";
-import { DeletionTaskParameters } from "../../common/interfaces";
-import { IngestionCreateTasksTask } from "../../utils/zod/schemas/job.schema";
-import { TaskTypes } from "@map-colonies/raster-shared";
-
+import type { IConfig } from 'config';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import { SERVICES, StorageProvider } from '../../common/constants';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
+import { createChildSpan } from '../../common/tracing';
+import type { DeletionTaskParameters, IntersectionPayload, SourceProviders } from '../../common/interfaces';
+import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
+import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
 
 @injectable()
 export class TileDeletionTaskManager {
-  private readonly tilesStorageProvider: string;
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
+  private readonly validationTaskType: string;
+  private readonly sourceProvider: SourceProviders;
+  private readonly shapefileReader: ShapefileChunkReader;
 
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
+    @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
+    @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
     private readonly taskMetrics: TaskMetrics
   ) {
-    this.tilesStorageProvider = this.config.get<StorageProvider>('tilesStorageProvider');
-    this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.tileBatchSize');
-    this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesMerging.taskBatchSize');
-    this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesMerging.type');
-  }
-
-  public buildTasks(
-    taskBuildParams: DeletionTaskParameters,
-    initTask: IngestionCreateTasksTask
-  ): AsyncGenerator<
-    void,
-    void
-  > {
-    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.buildTasks.name}`)), () => {
-
-      validationTask = this.queueClient.jobManagerClient.findTasks({ jobId: initTask.jobId, taskType: TaskTypes})
+    this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.tileBatchSize');
+    this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.taskBatchSize');
+    this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
+    this.validationTaskType = this.config.get<string>('jobManagement.ingestion.tasks.validation.type');
+    this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider').toLowerCase() as SourceProviders;
+    this.shapefileReader = new ShapefileChunkReader({
+      maxVerticesPerChunk: this.config.get<number>('shapefileReader.maxVerticesPerChunk'),
     });
   }
 
+  public buildTasks(
+    initTask: IngestionCreateTasksTask,
+    polygonPartsEntityName: string,
+    layerRelativePath: string
+  ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.buildTasks.name}`)), () => {
+      const activeSpan = trace.getActiveSpan();
+      return this.buildDeletionTasksGenerator(initTask, polygonPartsEntityName, layerRelativePath, activeSpan);
+    });
+  }
 
+  public async pushTasks(
+    jobId: string,
+    jobType: string,
+    deletionTasks: AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void>
+  ): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.pushTasks.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
+
+      this.taskMetrics.resetTrackTasksEnqueue(jobType, this.taskType);
+      let taskBatch: ICreateTaskBody<DeletionTaskParameters>[] = [];
+
+      try {
+        for await (const task of deletionTasks) {
+          taskBatch.push(task);
+          this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.parameters.batches.length);
+
+          if (taskBatch.length === this.taskBatchSize) {
+            logger.info({ msg: 'Pushing deletion task batch to queue', batchLength: taskBatch.length });
+            activeSpan?.addEvent('enqueueDeletionTasks', { currentTaskBatchSize: taskBatch.length });
+            await this.queueClient.jobManagerClient.createTaskForJob(jobId, taskBatch);
+            taskBatch = [];
+          }
+        }
+
+        if (taskBatch.length > 0) {
+          logger.info({ msg: 'Pushing leftover deletion task batch to queue', batchLength: taskBatch.length });
+          activeSpan?.addEvent('enqueueDeletionTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
+          await this.queueClient.jobManagerClient.createTaskForJob(jobId, taskBatch);
+          taskBatch = [];
+        }
+
+        logger.info({ msg: 'Successfully pushed all deletion tasks to queue' });
+      } catch (error) {
+        if (error instanceof Error) {
+          activeSpan?.recordException(error);
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+        }
+        logger.error({ msg: 'Failed to push deletion tasks to queue', error });
+        throw error;
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
+
+  private async *buildDeletionTasksGenerator(
+    initTask: IngestionCreateTasksTask,
+    polygonPartsEntityName: string,
+    layerRelativePath: string,
+    parentSpan: Span | undefined
+  ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
+    const span = createChildSpan(`${TileDeletionTaskManager.name}.buildDeletionTasksGenerator`, parentSpan);
+    const logger = this.logger.child({ jobId: initTask.jobId, polygonPartsEntityName });
+
+    try {
+      // 1. Fetch the validation task
+      const validationTasks = await this.queueClient.jobManagerClient.findTasks<IngestionValidationTaskParams>({
+        jobId: initTask.jobId,
+        type: this.validationTaskType,
+      });
+
+      if (!validationTasks || validationTasks.length === 0) {
+        throw new Error(`Validation task for job ${initTask.jobId} not found. Cannot build deletion tasks.`);
+      }
+
+      const validationTask = validationTasks[0];
+
+      // 2. Check for resolution conflicts
+      const resolutionErrorCount = validationTask.parameters.errorsSummary?.errorsCount.resolution ?? 0;
+      if (resolutionErrorCount === 0) {
+        logger.info({ msg: 'No resolution conflicts found, skipping deletion task creation' });
+        return;
+      }
+
+      logger.info({ msg: 'Resolution conflicts detected, building deletion tasks', resolutionErrorCount });
+      span.addEvent('resolution conflicts found', { resolutionErrorCount });
+
+      // 3. Get report path
+      const reportPath = validationTask.parameters.report?.path;
+      if (reportPath === undefined) {
+        throw new Error(`Validation task report path not found for job ${initTask.jobId}`);
+      }
+
+      // 4. Read conflict features from the shapefile inside the ZIP report
+      const conflictFeatures = await this.readConflictFeatures(reportPath);
+
+      if (conflictFeatures.length === 0) {
+        logger.info({ msg: 'No conflict features found in report shapefile, skipping deletion task creation' });
+        return;
+      }
+
+      logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
+
+      // 5. Group features by resolutionDegree
+      const featuresByResolution = this.groupFeaturesByResolution(conflictFeatures);
+
+      // 6. For each resolution group: get intersection from PP manager and create deletion tasks
+      for (const [resolutionDegree, features] of featuresByResolution.entries()) {
+        const zoom = degreesPerPixelToZoomLevel(resolutionDegree);
+
+        logger.info({ msg: 'Processing resolution group', resolutionDegree, zoom, featureCount: features.length });
+
+        const unionedGeometry = this.unionGeometries(features);
+        if (!unionedGeometry) {
+          logger.warn({ msg: 'Failed to union geometries for resolution group, skipping', resolutionDegree });
+          continue;
+        }
+
+        const payload: IntersectionPayload = turfFeatureCollection([turfFeature(unionedGeometry, { maxResolutionDeg: resolutionDegree })]);
+
+        logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, resolutionDegree, zoom });
+        const intersectionResponse = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
+
+        if (intersectionResponse.features.length === 0) {
+          logger.info({ msg: 'No intersection found for resolution group, skipping', resolutionDegree });
+          continue;
+        }
+
+        logger.info({ msg: 'Intersection received, creating deletion tasks', featureCount: intersectionResponse.features.length, zoom });
+
+        for (const intersectionFeature of intersectionResponse.features) {
+          yield* this.createTasksForPart(intersectionFeature.geometry, zoom, layerRelativePath, span);
+        }
+      }
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+      span.recordException(error);
+      throw error;
+    } finally {
+      span.end();
+    }
+  }
+
+  private async readConflictFeatures(reportPath: string): Promise<Feature[]> {
+    const conflictFeatures: Feature[] = [];
+    const zipPath = `/vsizip/${reportPath}`;
+
+    const processor: ChunkProcessor = {
+      // eslint-disable-next-line @typescript-eslint/require-await
+      process: async (chunk: ShapefileChunk): Promise<void> => {
+        conflictFeatures.push(...chunk.features);
+      },
+    };
+
+    this.logger.info({ msg: 'Reading conflict features from report shapefile', zipPath });
+    await this.shapefileReader.readAndProcess(zipPath, processor);
+    return conflictFeatures;
+  }
+
+  private groupFeaturesByResolution(features: Feature[]): Map<number, Feature[]> {
+    const groups = new Map<number, Feature[]>();
+
+    for (const feat of features) {
+      const resolutionDegree = (feat.properties as Record<string, unknown> | null)?.['resolutionDegree'];
+      if (typeof resolutionDegree !== 'number') {
+        this.logger.warn({ msg: 'Feature missing numeric resolutionDegree property, skipping', properties: feat.properties });
+        continue;
+      }
+      const existing = groups.get(resolutionDegree) ?? [];
+      existing.push(feat);
+      groups.set(resolutionDegree, existing);
+    }
+
+    return groups;
+  }
+
+  private unionGeometries(features: Feature[]): Polygon | MultiPolygon | null {
+    if (features.length === 0) {
+      return null;
+    }
+
+    if (features.length === 1) {
+      return features[0].geometry as Polygon | MultiPolygon;
+    }
+
+    const featureCol = turfFeatureCollection(features.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon)));
+    const unionResult = union(featureCol);
+
+    return unionResult ? unionResult.geometry : null;
+  }
+
+  private async *createTasksForPart(
+    geometry: Polygon | MultiPolygon,
+    zoom: number,
+    layerRelativePath: string,
+    parentSpan: Span | undefined
+  ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
+    const span = createChildSpan(`${TileDeletionTaskManager.name}.createTasksForPart.zoom.${zoom}`, parentSpan);
+
+    try {
+      const part = turfFeature(geometry);
+      const rangeGenerator = this.tileRanger.encodeFootprint(part, zoom);
+      const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
+
+      for await (const batch of batches) {
+        const taskParameters: DeletionTaskParameters = {
+          relativePath: layerRelativePath,
+          batches: batch,
+          sourceProvider: this.sourceProvider,
+        };
+
+        yield {
+          description: 'deletion tiles task',
+          parameters: taskParameters,
+          type: this.taskType,
+        };
+      }
+    } finally {
+      span.end();
+    }
+  }
 }

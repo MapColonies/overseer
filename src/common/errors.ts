@@ -117,9 +117,8 @@ export class LayerMetadataAggregationError extends PolygonPartsError {
 
 export class PolygonPartsProcessingError extends PolygonPartsError {
   public constructor(err: unknown, productName: string, productType: string) {
-    const message = `Failed to process polygon parts for product "${productName}" of type "${productType}": ${
-      err instanceof Error ? err.message : 'unknown'
-    }`;
+    const message = `Failed to process polygon parts for product "${productName}" of type "${productType}": ${err instanceof Error ? err.message : 'unknown'
+      }`;
     super(message);
     this.name = PolygonPartsProcessingError.name;
     this.stack = err instanceof Error ? err.stack : undefined;
@@ -131,6 +130,15 @@ export class ProductReadError extends Error {
     const message = `Failed to handle product from path ${productPath}: ${err instanceof Error ? err.message : 'unknown'}`;
     super(message);
     this.name = ProductReadError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}
+
+export class IntersectionError extends PolygonPartsError {
+  public constructor(err: unknown, polygonPartsEntityName: string) {
+    const message = `Failed to get intersection for entity ${polygonPartsEntityName}: ${err instanceof Error ? err.message : 'unknown'}`;
+    super(message);
+    this.name = IntersectionError.name;
     this.stack = err instanceof Error ? err.stack : undefined;
   }
 }

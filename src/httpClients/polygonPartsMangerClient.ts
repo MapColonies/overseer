@@ -6,8 +6,8 @@ import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
-import { LayerMetadataAggregationError, PolygonPartsProcessingError } from '../common/errors';
-import { AggregationLayerMetadata, PolygonPartsProcessPayload } from '../common/interfaces';
+import { LayerMetadataAggregationError, PolygonPartsProcessingError, IntersectionError } from '../common/errors';
+import { AggregationLayerMetadata, PolygonPartsProcessPayload, IntersectionPayload, IntersectionResponse } from '../common/interfaces';
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
@@ -48,6 +48,20 @@ export class PolygonPartsMangerClient extends HttpClient {
       const aggregationError = new LayerMetadataAggregationError(err, polygonPartsEntityName);
       this.logger.error({ msg: aggregationError.message, polygonPartsEntityName, err });
       throw aggregationError;
+    }
+  }
+
+  public async getIntersection(polygonPartsEntityName: string, payload: IntersectionPayload): Promise<IntersectionResponse> {
+    try {
+      this.logger.info({ msg: 'getIntersection', polygonPartsEntityName });
+
+      const url = `/polygonParts/${polygonPartsEntityName}/intersection`;
+      const res = await this.post<IntersectionResponse>(url, payload);
+      return res;
+    } catch (err) {
+      const intersectionError = new IntersectionError(err, polygonPartsEntityName);
+      this.logger.error({ msg: intersectionError.message, polygonPartsEntityName, err });
+      throw intersectionError;
     }
   }
 

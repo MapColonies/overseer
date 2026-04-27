@@ -19,6 +19,7 @@ import { Grid } from '../../../common/interfaces';
 import { SERVICES } from '../../../common/constants';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
+import { TileDeletionTaskManager } from '../../../task/models/deletionTaskManager';
 import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
@@ -33,6 +34,7 @@ export class UpdateJobHandler
     @inject(SERVICES.CONFIG) protected readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(TileMergeTaskManager) private readonly mergeTaskManager: TileMergeTaskManager,
+    @inject(TileDeletionTaskManager) private readonly tileDeletionTaskManager: TileDeletionTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
@@ -73,11 +75,16 @@ export class UpdateJobHandler
         };
 
         logger.info({ msg: 'building tasks' });
+
+        const { polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
+        const layerRelativePath = taskBuildParams.taskMetadata.layerRelativePath;
+
+        const deletionTasks = this.tileDeletionTaskManager.buildTasks(task, polygonPartsEntityName, layerRelativePath);
+        await this.tileDeletionTaskManager.pushTasks(job.id, job.type, deletionTasks);
+
         const mergeTasks = this.mergeTaskManager.buildTasks(taskBuildParams, task);
 
         await this.mergeTaskManager.pushTasks(task, job.id, job.type, mergeTasks);
-
-        //TODO: create tiles deletion tasks.
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {
