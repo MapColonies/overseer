@@ -1,3 +1,7 @@
+import { execFile } from 'child_process';
+import fs from 'fs/promises';
+import os from 'os';
+import path from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
@@ -193,17 +197,46 @@ export class TileDeletionTaskManager {
 
   private async readConflictFeatures(reportPath: string): Promise<Feature[]> {
     const conflictFeatures: Feature[] = [];
-    const zipPath = `/vsizip/${reportPath}`;
+    const zipPath = `/${reportPath}`;
 
-    const processor: ChunkProcessor = {
-      // eslint-disable-next-line @typescript-eslint/require-await
-      process: async (chunk: ShapefileChunk): Promise<void> => {
-        conflictFeatures.push(...chunk.features);
-      },
-    };
+    this.logger.info({ msg: 'Extracting ZIP report to read conflict shapefile', zipPath });
 
-    this.logger.info({ msg: 'Reading conflict features from report shapefile', zipPath });
-    await this.shapefileReader.readAndProcess(zipPath, processor);
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'conflict-report-'));
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        execFile('unzip', ['-o', zipPath, '-d', tempDir], (error) => {
+          if (error !== null) {
+            reject(error);
+          } else {
+            resolve();
+          }
+        });
+      });
+
+      const entries = await fs.readdir(tempDir, { recursive: true });
+      const shpEntry = entries.find((entry) => entry.toString().endsWith('.shp'));
+
+      if (shpEntry === undefined) {
+        throw new Error(`No shapefile found in ZIP report: ${zipPath}`);
+      }
+
+      const shpPath = path.join(tempDir, shpEntry.toString());
+
+      this.logger.info({ msg: 'Reading conflict features from shapefile', shpPath });
+
+      const processor: ChunkProcessor = {
+        // eslint-disable-next-line @typescript-eslint/require-await
+        process: async (chunk: ShapefileChunk): Promise<void> => {
+          conflictFeatures.push(...chunk.features);
+        },
+      };
+
+      await this.shapefileReader.readAndProcess(shpPath, processor);
+    } finally {
+      await fs.rm(tempDir, { recursive: true, force: true });
+    }
+
     return conflictFeatures;
   }
 
