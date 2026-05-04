@@ -4,8 +4,8 @@ import os from 'os';
 import path from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
-import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
-import { feature as turfFeature, featureCollection as turfFeatureCollection, union } from '@turf/turf';
+import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
+import { feature as turfFeature, featureCollection as turfFeatureCollection } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
@@ -52,11 +52,12 @@ export class TileDeletionTaskManager {
   public buildTasks(
     initTask: IngestionCreateTasksTask,
     polygonPartsEntityName: string,
-    layerRelativePath: string
+    layerRelativePath: string,
+    ingestionResolution: number
   ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
-      return this.buildDeletionTasksGenerator(initTask, polygonPartsEntityName, layerRelativePath, activeSpan);
+      return this.buildDeletionTasksGenerator(initTask, polygonPartsEntityName, layerRelativePath, ingestionResolution, activeSpan);
     });
   }
 
@@ -110,6 +111,7 @@ export class TileDeletionTaskManager {
     initTask: IngestionCreateTasksTask,
     polygonPartsEntityName: string,
     layerRelativePath: string,
+    ingestionResolution: number,
     parentSpan: Span | undefined
   ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
     const span = createChildSpan(`${TileDeletionTaskManager.name}.buildDeletionTasksGenerator`, parentSpan);
@@ -154,36 +156,43 @@ export class TileDeletionTaskManager {
 
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
 
-      // 5. Group features by resolutionDegree
-      const featuresByResolution = this.groupFeaturesByResolution(conflictFeatures);
+      // 5. For each conflict feature, sweep upward through zoom levels starting at its resolution zoom+1,
+      //    collecting intersecting geometries until the endpoint returns empty
+      const intersections: { geometry: Polygon | MultiPolygon; zoom: number }[] = [];
 
-      // 6. For each resolution group: get intersection from PP manager and create deletion tasks
-      for (const [resolutionDegree, features] of featuresByResolution.entries()) {
-        const zoom = degreesPerPixelToZoomLevel(resolutionDegree);
+      for (const feat of conflictFeatures) {
+        const startZoom = degreesPerPixelToZoomLevel(ingestionResolution) + 1;
+        logger.info({ msg: 'Sweeping zoom levels for conflict feature', ingestionResolution, startZoom });
 
-        logger.info({ msg: 'Processing resolution group', resolutionDegree, zoom, featureCount: features.length });
+        for (let zoom = startZoom; ; zoom++) {
+          const resDeg = zoomLevelToResolutionDeg(zoom);
+          if (resDeg === undefined) {
+            logger.warn({ msg: 'Reached end of valid zoom range while sweeping, stopping', zoom });
+            break;
+          }
 
-        const unionedGeometry = this.unionGeometries(features);
-        if (!unionedGeometry) {
-          logger.warn({ msg: 'Failed to union geometries for resolution group, skipping', resolutionDegree });
-          continue;
+          const payload: IntersectionPayload = turfFeatureCollection([
+            turfFeature(feat.geometry as Polygon | MultiPolygon, { maxResolutionDeg: resDeg }),
+          ]);
+
+          logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resDeg });
+          const response = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
+
+          if (response.features.length === 0) {
+            logger.info({ msg: 'No intersection found at zoom level, stopping sweep', zoom });
+            break;
+          }
+
+          logger.info({ msg: 'Intersection received, collecting for deletion tasks', featureCount: response.features.length, zoom });
+          for (const intersectionFeature of response.features) {
+            intersections.push({ geometry: intersectionFeature.geometry, zoom });
+          }
         }
+      }
 
-        const payload: IntersectionPayload = turfFeatureCollection([turfFeature(unionedGeometry, { maxResolutionDeg: resolutionDegree })]);
-
-        logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, resolutionDegree, zoom });
-        const intersectionResponse = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
-
-        if (intersectionResponse.features.length === 0) {
-          logger.info({ msg: 'No intersection found for resolution group, skipping', resolutionDegree });
-          continue;
-        }
-
-        logger.info({ msg: 'Intersection received, creating deletion tasks', featureCount: intersectionResponse.features.length, zoom });
-
-        for (const intersectionFeature of intersectionResponse.features) {
-          yield* this.createTasksForPart(intersectionFeature.geometry, zoom, layerRelativePath, span);
-        }
+      // 6. Create deletion tasks from all collected intersections
+      for (const { geometry, zoom } of intersections) {
+        yield* this.createTasksForPart(geometry, zoom, layerRelativePath, span);
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -238,38 +247,6 @@ export class TileDeletionTaskManager {
     }
 
     return conflictFeatures;
-  }
-
-  private groupFeaturesByResolution(features: Feature[]): Map<number, Feature[]> {
-    const groups = new Map<number, Feature[]>();
-
-    for (const feat of features) {
-      const resolutionDegree = (feat.properties as Record<string, unknown> | null)?.['resolutionDegree'];
-      if (typeof resolutionDegree !== 'number') {
-        this.logger.warn({ msg: 'Feature missing numeric resolutionDegree property, skipping', properties: feat.properties });
-        continue;
-      }
-      const existing = groups.get(resolutionDegree) ?? [];
-      existing.push(feat);
-      groups.set(resolutionDegree, existing);
-    }
-
-    return groups;
-  }
-
-  private unionGeometries(features: Feature[]): Polygon | MultiPolygon | null {
-    if (features.length === 0) {
-      return null;
-    }
-
-    if (features.length === 1) {
-      return features[0].geometry as Polygon | MultiPolygon;
-    }
-
-    const featureCol = turfFeatureCollection(features.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon)));
-    const unionResult = union(featureCol);
-
-    return unionResult ? unionResult.geometry : null;
   }
 
   private async *createTasksForPart(
