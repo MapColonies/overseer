@@ -68,6 +68,7 @@
   },
   "tilesStorageProvider": "TILES_STORAGE_PROVIDER",
   "gpkgStorageProvider": "GPKG_STORAGE_PROVIDER",
+  "reportStorageProvider": "REPORT_STORAGE_PROVIDER",
   "ingestionSourcesDirPath": "INGESTION_SOURCES_DIR_PATH",
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",

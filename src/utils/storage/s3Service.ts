@@ -1,8 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
+import { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { inject, injectable } from 'tsyringe';
 import { Upload } from '@aws-sdk/lib-storage';
-import { S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer, SpanStatusCode } from '@opentelemetry/api';
 import { SERVICES } from '../../common/constants';
@@ -35,6 +37,37 @@ export class S3Service {
       endpoint: endpointUrl,
       region: 'us-east-1', //For MinIo the region has no significance but it is required for the S3Client
       forcePathStyle: true,
+    });
+  }
+
+  public async downloadFile(s3Key: string, localFilePath: string): Promise<void> {
+    return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${S3Service.name}.${this.downloadFile.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      const { bucket } = this.s3Config;
+      try {
+        activeSpan?.setAttributes({ bucket, s3Key, localFilePath });
+        this.logger.info({ msg: 'Downloading file from S3', bucket, s3Key, localFilePath });
+
+        const command = new GetObjectCommand({ Bucket: bucket, Key: s3Key });
+        const response = await this.client.send(command);
+
+        if (!response.Body) {
+          throw new S3Error(new Error('Empty response body'), `Empty S3 response body for key: ${s3Key}`);
+        }
+
+        const writeStream = fs.createWriteStream(localFilePath);
+        await pipeline(response.Body as Readable, writeStream);
+
+        this.logger.info({ msg: 'File downloaded from S3 successfully', s3Key, localFilePath });
+      } catch (err) {
+        const error = err instanceof S3Error ? err : new S3Error(err, `Failed to download file from S3: ${s3Key}`);
+        this.logger.error({ msg: error.message, error });
+        activeSpan?.recordException(error);
+        activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+        throw error;
+      } finally {
+        activeSpan?.end();
+      }
     });
   }
 

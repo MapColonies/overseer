@@ -13,6 +13,7 @@ FROM node:24-slim AS production
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dumb-init \
     gdal-bin \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production

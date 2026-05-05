@@ -66,6 +66,7 @@ args: []
 sidecars: []
 
 storage:
+  reportProvider: ""  # FS | S3
   gpkgProvider: ""
   tilesStorageProvider: ""
   s3:

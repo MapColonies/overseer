@@ -20,6 +20,7 @@ import { createChildSpan } from '../../common/tracing';
 import type { DeletionTaskParameters, IntersectionPayload, SourceProviders } from '../../common/interfaces';
 import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
+import { S3Service } from '../../utils/storage/s3Service';
 
 @injectable()
 export class TileDeletionTaskManager {
@@ -28,6 +29,7 @@ export class TileDeletionTaskManager {
   private readonly taskType: string;
   private readonly validationTaskType: string;
   private readonly sourceProvider: SourceProviders;
+  private readonly reportProvider: StorageProvider;
   private readonly shapefileReader: ShapefileChunkReader;
 
   public constructor(
@@ -37,13 +39,15 @@ export class TileDeletionTaskManager {
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
-    private readonly taskMetrics: TaskMetrics
+    private readonly taskMetrics: TaskMetrics,
+    @inject(S3Service) private readonly s3Service: S3Service
   ) {
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
     this.validationTaskType = this.config.get<string>('jobManagement.ingestion.tasks.validation.type');
     this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider').toLowerCase() as SourceProviders;
+    this.reportProvider = this.config.get<StorageProvider>('reportStorageProvider');
     this.shapefileReader = new ShapefileChunkReader({
       maxVerticesPerChunk: this.config.get<number>('shapefileReader.maxVerticesPerChunk'),
     });
@@ -206,13 +210,23 @@ export class TileDeletionTaskManager {
 
   private async readConflictFeatures(reportPath: string): Promise<Feature[]> {
     const conflictFeatures: Feature[] = [];
-    const zipPath = `/${reportPath}`;
 
-    this.logger.info({ msg: 'Extracting ZIP report to read conflict shapefile', zipPath });
+    this.logger.info({ msg: 'Extracting ZIP report to read conflict shapefile', reportPath, reportProvider: this.reportProvider });
 
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'conflict-report-'));
 
     try {
+      let zipPath: string;
+
+      if (this.reportProvider === StorageProvider.S3) {
+        const tempZipPath = path.join(tempDir, 'report.zip');
+        this.logger.info({ msg: 'Downloading ZIP report from S3', s3Key: reportPath });
+        await this.s3Service.downloadFile(reportPath, tempZipPath);
+        zipPath = tempZipPath;
+      } else {
+        zipPath = `/${reportPath}`;
+      }
+
       await new Promise<void>((resolve, reject) => {
         execFile('unzip', ['-o', zipPath, '-d', tempDir], (error) => {
           if (error !== null) {

@@ -78,13 +78,15 @@ const registerInstanceHandlers = (instanceType: InstanceType, handlersTokens: Re
 };
 
 const registerInstanceDependencies = (instanceType: InstanceType): InjectionObject<unknown>[] => {
+  const s3Config = config.get<IS3Config>('S3');
   switch (instanceType) {
     case 'ingestion':
-      return [{ token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } }];
-    case 'export': {
-      const s3Config = config.get<IS3Config>('S3');
+      return [
+        { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
+        { token: SERVICES.S3CONFIG, provider: { useValue: s3Config } },
+      ];
+    case 'export':
       return [{ token: SERVICES.S3CONFIG, provider: { useValue: s3Config } }];
-    }
   }
 };
 

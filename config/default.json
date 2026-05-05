@@ -61,6 +61,7 @@
   "disableHttpClientLogs": true,
   "tilesStorageProvider": "FS",
   "gpkgStorageProvider": "FS",
+  "reportStorageProvider": "FS",
   "ingestionSourcesDirPath": "",
   "linkTemplatesPath": "config/linkTemplates.template",
   "servicesUrl": {

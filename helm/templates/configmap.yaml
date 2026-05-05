@@ -26,7 +26,7 @@ data:
   TELEMETRY_METRICS_INTERVAL: {{ $metrics.interval | quote }}
   TELEMETRY_METRICS_BUCKETS: {{ $metrics.buckets | toJson | quote }}
   {{ end }}
-  {{- if eq (upper $storage.gpkgProvider) "S3" }}
+  {{- if or (eq (upper $storage.gpkgProvider) "S3") (eq (upper $storage.reportProvider) "S3") }}
   {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled -}}
   S3_ENDPOINT_URL: {{ printf "%s%s" $s3HttpProtocol $storage.s3.endpointUrl | quote }}
   S3_ARTIFACTS_BUCKET: {{ $storage.s3.artifactsBucket | quote }}
@@ -80,6 +80,7 @@ data:
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
+  REPORT_STORAGE_PROVIDER: {{ $storage.reportProvider | quote }}
   JOB_TRACKER_URL: {{ $serviceUrls.jobTracker | quote}}
   SHAPEFILE_READER_MAX_VERTICES_PER_CHUNK: {{ .Values.env.shapefileReader.maxVerticesPerChunk | quote }}
   INGESTION_SOURCES_DIR_PATH: {{ $storage.fs.ingestionSourcePvc.mountPath | quote }}
