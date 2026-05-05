@@ -1,13 +1,13 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
-import type { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { AggregationFeature, IntersectedFeatureCollection, IntersectionFeatureCollection, RoiFeatureCollection } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
 import { LayerMetadataAggregationError, PolygonPartsProcessingError, IntersectionError } from '../common/errors';
-import { AggregationLayerMetadata, PolygonPartsProcessPayload, IntersectionPayload, IntersectionResponse } from '../common/interfaces';
+import { AggregationLayerMetadata, PolygonPartsProcessPayload } from '../common/interfaces';
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
@@ -51,12 +51,12 @@ export class PolygonPartsMangerClient extends HttpClient {
     }
   }
 
-  public async getIntersection(polygonPartsEntityName: string, payload: IntersectionPayload): Promise<IntersectionResponse> {
+  public async getIntersection(polygonPartsEntityName: string, payload: IntersectionFeatureCollection): Promise<IntersectedFeatureCollection> {
     try {
       this.logger.info({ msg: 'getIntersection', polygonPartsEntityName });
 
       const url = `/polygonParts/${polygonPartsEntityName}/intersection`;
-      const res = await this.post<IntersectionResponse>(url, payload);
+      const res = await this.post<IntersectedFeatureCollection>(url, payload);
       return res;
     } catch (err) {
       const intersectionError = new IntersectionError(err, polygonPartsEntityName);

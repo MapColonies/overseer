@@ -16,7 +16,7 @@ import {
 } from '@map-colonies/raster-shared';
 import { BBox2d, bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
-import { SERVICES, StorageProvider } from '../../common/constants';
+import { SERVICES } from '../../common/constants';
 import { IConfig, type TaskSources, type ZoomBoundsParameters } from '../../common/interfaces';
 import type { ExportJob } from '../../utils/zod/schemas/job.schema';
 import { createChildSpan } from '../../common/tracing';
@@ -24,13 +24,13 @@ import { createChildSpan } from '../../common/tracing';
 @injectable()
 export class ExportTaskManager {
   private readonly allWorldBounds: BBox;
-  private readonly tilesProvider: StorageProvider;
+  private readonly tilesProvider: SourceType;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer
   ) {
-    this.tilesProvider = this.config.get<StorageProvider>('tilesStorageProvider');
+    this.tilesProvider = this.config.get<SourceType>('tilesStorageProvider');
     // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     this.allWorldBounds = [-180, -90, 180, 90];
   }
@@ -137,7 +137,7 @@ export class ExportTaskManager {
   }
 
   private getSeparator(): string {
-    return this.tilesProvider === StorageProvider.S3 ? '/' : sep;
+    return this.tilesProvider === SourceType.S3 ? '/' : sep;
   }
 
   private calculateZoomLevelsAndBbox(roiFeature: RoiFeature, targetFeature: Feature<Polygon | MultiPolygon>): ZoomBoundsParameters {

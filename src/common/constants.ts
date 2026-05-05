@@ -1,4 +1,16 @@
+import { SourceType } from '@map-colonies/raster-shared';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
+
+export { SourceType } from '@map-colonies/raster-shared';
+
+/* eslint-disable @typescript-eslint/naming-convention */
+export const StorageProvider = {
+  FS: SourceType.FS,
+  S3: SourceType.S3,
+} as const;
+/* eslint-enable @typescript-eslint/naming-convention */
+
+export type StorageProvider = (typeof StorageProvider)[keyof typeof StorageProvider];
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const SERVICE_VERSION = readPackageJsonSync().version ?? 'unknown_version';
@@ -30,13 +42,6 @@ export const SERVICES = {
   PRODUCT_READER: Symbol('ProductReader'),
 } satisfies Record<string, symbol>;
 
-export const StorageProvider = {
-  FS: 'FS',
-  S3: 'S3',
-} as const;
-
-export type StorageProvider = (typeof StorageProvider)[keyof typeof StorageProvider];
-
 export const LayerCacheType = {
   FS: 'file',
   S3: 's3',
@@ -46,8 +51,8 @@ export const LayerCacheType = {
 export type LayerCacheType = (typeof LayerCacheType)[keyof typeof LayerCacheType];
 
 export const storageProviderToCacheTypeMap = new Map([
-  [StorageProvider.FS, LayerCacheType.FS],
-  [StorageProvider.S3, LayerCacheType.S3],
+  [SourceType.FS, LayerCacheType.FS],
+  [SourceType.S3, LayerCacheType.S3],
 ]);
 
 export const SeedMode = {

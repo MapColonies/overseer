@@ -9,7 +9,7 @@ import { feature as turfFeature, featureCollection as turfFeatureCollection } fr
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
-import type { IngestionValidationTaskParams } from '@map-colonies/raster-shared';
+import type { IngestionValidationTaskParams, IntersectionFeatureCollection, TilesDeletionParams } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
@@ -17,7 +17,6 @@ import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, StorageProvider } from '../../common/constants';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
-import type { DeletionTaskParameters, IntersectionPayload, SourceProviders } from '../../common/interfaces';
 import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
 import { S3Service } from '../../utils/storage/s3Service';
@@ -28,7 +27,7 @@ export class TileDeletionTaskManager {
   private readonly taskBatchSize: number;
   private readonly taskType: string;
   private readonly validationTaskType: string;
-  private readonly sourceProvider: SourceProviders;
+  private readonly sourceProvider: StorageProvider;
   private readonly reportProvider: StorageProvider;
   private readonly shapefileReader: ShapefileChunkReader;
 
@@ -46,7 +45,7 @@ export class TileDeletionTaskManager {
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
     this.validationTaskType = this.config.get<string>('jobManagement.ingestion.tasks.validation.type');
-    this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider').toLowerCase() as SourceProviders;
+    this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     this.reportProvider = this.config.get<StorageProvider>('reportStorageProvider');
     this.shapefileReader = new ShapefileChunkReader({
       maxVerticesPerChunk: this.config.get<number>('shapefileReader.maxVerticesPerChunk'),
@@ -57,30 +56,31 @@ export class TileDeletionTaskManager {
     initTask: IngestionCreateTasksTask,
     polygonPartsEntityName: string,
     layerRelativePath: string,
-    ingestionResolution: number
-  ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
+    ingestionResolution: number,
+    tileOutputFormat: string
+  ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
-      return this.buildDeletionTasksGenerator(initTask, polygonPartsEntityName, layerRelativePath, ingestionResolution, activeSpan);
+      return this.buildDeletionTasksGenerator(initTask, polygonPartsEntityName, layerRelativePath, ingestionResolution, tileOutputFormat, activeSpan);
     });
   }
 
   public async pushTasks(
     jobId: string,
     jobType: string,
-    deletionTasks: AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void>
+    deletionTasks: AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void>
   ): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.pushTasks.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const logger = this.logger.child({ jobId, jobType, taskType: this.taskType });
 
       this.taskMetrics.resetTrackTasksEnqueue(jobType, this.taskType);
-      let taskBatch: ICreateTaskBody<DeletionTaskParameters>[] = [];
+      let taskBatch: ICreateTaskBody<TilesDeletionParams>[] = [];
 
       try {
         for await (const task of deletionTasks) {
           taskBatch.push(task);
-          this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.parameters.batches.length);
+          this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.parameters.ranges.length);
 
           if (taskBatch.length === this.taskBatchSize) {
             logger.info({ msg: 'Pushing deletion task batch to queue', batchLength: taskBatch.length });
@@ -116,8 +116,9 @@ export class TileDeletionTaskManager {
     polygonPartsEntityName: string,
     layerRelativePath: string,
     ingestionResolution: number,
+    tileOutputFormat: string,
     parentSpan: Span | undefined
-  ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
+  ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
     const span = createChildSpan(`${TileDeletionTaskManager.name}.buildDeletionTasksGenerator`, parentSpan);
     const logger = this.logger.child({ jobId: initTask.jobId, polygonPartsEntityName });
 
@@ -175,8 +176,8 @@ export class TileDeletionTaskManager {
             break;
           }
 
-          const payload: IntersectionPayload = turfFeatureCollection([
-            turfFeature(feat.geometry as Polygon | MultiPolygon, { maxResolutionDeg: resDeg }),
+          const payload: IntersectionFeatureCollection = turfFeatureCollection([
+            turfFeature(feat.geometry as Polygon | MultiPolygon, { resolutionDegree: resDeg }),
           ]);
 
           logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resDeg });
@@ -194,9 +195,10 @@ export class TileDeletionTaskManager {
         }
       }
 
+      //todo: need to think how to union and increase the tiles amount in each task.
       // 6. Create deletion tasks from all collected intersections
       for (const { geometry, zoom } of intersections) {
-        yield* this.createTasksForPart(geometry, zoom, layerRelativePath, span);
+        yield* this.createTasksForPart(geometry, zoom, layerRelativePath, tileOutputFormat, span);
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -267,8 +269,9 @@ export class TileDeletionTaskManager {
     geometry: Polygon | MultiPolygon,
     zoom: number,
     layerRelativePath: string,
+    tileOutputFormat: string,
     parentSpan: Span | undefined
-  ): AsyncGenerator<ICreateTaskBody<DeletionTaskParameters>, void, void> {
+  ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
     const span = createChildSpan(`${TileDeletionTaskManager.name}.createTasksForPart.zoom.${zoom}`, parentSpan);
 
     try {
@@ -277,9 +280,10 @@ export class TileDeletionTaskManager {
       const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
 
       for await (const batch of batches) {
-        const taskParameters: DeletionTaskParameters = {
-          relativePath: layerRelativePath,
-          batches: batch,
+        const taskParameters: TilesDeletionParams = {
+          tilesPath: layerRelativePath,
+          ranges: batch,
+          fileExtension: tileOutputFormat.toLowerCase(),
           sourceProvider: this.sourceProvider,
         };
 

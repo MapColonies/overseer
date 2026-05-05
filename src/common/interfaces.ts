@@ -26,10 +26,7 @@ import {
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
-export enum SourceProviders {
-  S3 = 's3',
-  FS = 'fs',
-}
+
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
@@ -89,8 +86,7 @@ export interface ExportTasksConfig {
   tilesExporting: TilesExportingTaskConfig;
 }
 
-export type IntersectionPayload = FeatureCollection<Polygon | MultiPolygon, { maxResolutionDeg: number; minResolutionDeg?: number }>;
-export type IntersectionResponse = FeatureCollection<Polygon | MultiPolygon>;
+
 
 export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
@@ -244,11 +240,7 @@ export interface MergeTaskParameters {
   batches: ITileRange[];
 }
 
-export interface DeletionTaskParameters {
-  relativePath: string; // e.g., "7a2f5130-c22f-430e-aff7-2edd39253741/9b10a124..."
-  batches: ITileRange[];
-  sourceProvider: SourceProviders;
-} //move to raster shared
+
 
 export interface PartsIntersection {
   parts: PolygonFeature[];

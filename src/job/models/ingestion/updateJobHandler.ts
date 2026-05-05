@@ -79,7 +79,7 @@ export class UpdateJobHandler
         const { polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
         const layerRelativePath = taskBuildParams.taskMetadata.layerRelativePath;
 
-        const deletionTasks = this.tileDeletionTaskManager.buildTasks(task, polygonPartsEntityName, layerRelativePath, job.parameters.ingestionResolution);
+        const deletionTasks = this.tileDeletionTaskManager.buildTasks(task, polygonPartsEntityName, layerRelativePath, job.parameters.ingestionResolution, additionalParams.tileOutputFormat);
         await this.tileDeletionTaskManager.pushTasks(job.id, job.type, deletionTasks);
 
         const mergeTasks = this.mergeTaskManager.buildTasks(taskBuildParams, task);
