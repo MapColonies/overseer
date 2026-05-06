@@ -5,7 +5,7 @@ import path from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
-import { feature as turfFeature, featureCollection as turfFeatureCollection } from '@turf/turf';
+import { feature as turfFeature, featureCollection as turfFeatureCollection, union } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
@@ -161,44 +161,46 @@ export class TileDeletionTaskManager {
 
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
 
-      // 5. For each conflict feature, sweep upward through zoom levels starting at its resolution zoom+1,
-      //    collecting intersecting geometries until the endpoint returns empty
-      const intersections: { geometry: Polygon | MultiPolygon; zoom: number }[] = [];
+      // 5. Union all conflict geometries into one entity
+      const conflictGeometries = conflictFeatures.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon));
+      const unionedConflict = union(turfFeatureCollection(conflictGeometries));
 
-      for (const feat of conflictFeatures) {
-        const startZoom = degreesPerPixelToZoomLevel(ingestionResolution) + 1;
-        logger.info({ msg: 'Sweeping zoom levels for conflict feature', ingestionResolution, startZoom });
-
-        for (let zoom = startZoom; ; zoom++) {
-          const resDeg = zoomLevelToResolutionDeg(zoom);
-          if (resDeg === undefined) {
-            logger.warn({ msg: 'Reached end of valid zoom range while sweeping, stopping', zoom });
-            break;
-          }
-
-          const payload: IntersectionFeatureCollection = turfFeatureCollection([
-            turfFeature(feat.geometry as Polygon | MultiPolygon, { resolutionDegree: resDeg }),
-          ]);
-
-          logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resDeg });
-          const response = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
-
-          if (response.features.length === 0) {
-            logger.info({ msg: 'No intersection found at zoom level, stopping sweep', zoom });
-            break;
-          }
-
-          logger.info({ msg: 'Intersection received, collecting for deletion tasks', featureCount: response.features.length, zoom });
-          for (const intersectionFeature of response.features) {
-            intersections.push({ geometry: intersectionFeature.geometry, zoom });
-          }
-        }
+      if (unionedConflict === null) {
+        logger.info({ msg: 'Union of conflict features resulted in null, skipping deletion task creation' });
+        return;
       }
 
-      //todo: need to think how to union and increase the tiles amount in each task.
-      // 6. Create deletion tasks from all collected intersections
-      for (const { geometry, zoom } of intersections) {
-        yield* this.createTasksForPart(geometry, zoom, layerRelativePath, tileOutputFormat, span);
+      const unionedGeometry = unionedConflict.geometry;
+
+      logger.info({ msg: 'Unioned conflict features into single geometry' });
+
+      // 6. Sweep upward through zoom levels on the unioned geometry until an empty response
+      const startZoom = degreesPerPixelToZoomLevel(ingestionResolution) + 1;
+      logger.info({ msg: 'Sweeping zoom levels for unioned conflict geometry', ingestionResolution, startZoom });
+
+      for (let zoom = startZoom; ; zoom++) {
+        const resDeg = zoomLevelToResolutionDeg(zoom);
+        if (resDeg === undefined) {
+          logger.warn({ msg: 'Reached end of valid zoom range while sweeping, stopping', zoom });
+          break;
+        }
+
+        const payload: IntersectionFeatureCollection = turfFeatureCollection([
+          turfFeature(unionedGeometry, { resolutionDegree: resDeg }),
+        ]);
+
+        logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resDeg });
+        const response = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
+
+        if (response.features.length === 0) {
+          logger.info({ msg: 'No intersection found at zoom level, stopping sweep', zoom });
+          break;
+        }
+
+        logger.info({ msg: 'Intersection received, creating deletion tasks', featureCount: response.features.length, zoom });
+        for (const intersectionFeature of response.features) {
+          yield* this.createTasksForPart(intersectionFeature.geometry, zoom, layerRelativePath, tileOutputFormat, span);
+        }
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
