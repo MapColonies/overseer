@@ -38,7 +38,7 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
   const tileDeletionTaskManagerMock = {
     buildTasks: jest.fn().mockReturnValue(
       // eslint-disable-next-line @typescript-eslint/require-await
-      (async function* () { })()
+      (async function* () {})()
     ),
     pushTasks: jest.fn().mockResolvedValue(undefined),
   } as unknown as jest.Mocked<TileDeletionTaskManager>;
