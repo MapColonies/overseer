@@ -117,8 +117,9 @@ export class LayerMetadataAggregationError extends PolygonPartsError {
 
 export class PolygonPartsProcessingError extends PolygonPartsError {
   public constructor(err: unknown, productName: string, productType: string) {
-    const message = `Failed to process polygon parts for product "${productName}" of type "${productType}": ${err instanceof Error ? err.message : 'unknown'
-      }`;
+    const message = `Failed to process polygon parts for product "${productName}" of type "${productType}": ${
+      err instanceof Error ? err.message : 'unknown'
+    }`;
     super(message);
     this.name = PolygonPartsProcessingError.name;
     this.stack = err instanceof Error ? err.stack : undefined;

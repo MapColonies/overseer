@@ -185,9 +185,7 @@ export class TileDeletionTaskManager {
           break;
         }
 
-        const payload: IntersectionFeatureCollection = turfFeatureCollection([
-          turfFeature(unionedGeometry, { resolutionDegree: resDeg }),
-        ]);
+        const payload: IntersectionFeatureCollection = turfFeatureCollection([turfFeature(unionedGeometry, { resolutionDegree: resDeg })]);
 
         logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resDeg });
         const response = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);

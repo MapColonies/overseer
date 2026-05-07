@@ -1,6 +1,11 @@
 import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
-import type { AggregationFeature, IntersectedFeatureCollection, IntersectionFeatureCollection, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type {
+  AggregationFeature,
+  IntersectedFeatureCollection,
+  IntersectionFeatureCollection,
+  RoiFeatureCollection,
+} from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';

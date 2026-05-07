@@ -26,8 +26,6 @@ import {
 } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerCacheType, SeedMode } from './constants';
 
-
-
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
 //#region config interfaces
@@ -85,8 +83,6 @@ export interface IngestionTasksConfig {
 export interface ExportTasksConfig {
   tilesExporting: TilesExportingTaskConfig;
 }
-
-
 
 export type PollingJobs = IngestionPollingJobsConfig | ExportPollingJobsConfig;
 
@@ -213,8 +209,8 @@ export interface TilesSource {
   tilesPath: string;
 }
 
-export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> { }
-export interface FeatureTask extends ProductFeature { }
+export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> {}
+export interface FeatureTask extends ProductFeature {}
 
 export interface MergeParameters {
   product: ProductFeature;
@@ -239,8 +235,6 @@ export interface MergeTaskParameters {
   sources: TaskSources[];
   batches: ITileRange[];
 }
-
-
 
 export interface PartsIntersection {
   parts: PolygonFeature[];
@@ -394,9 +388,9 @@ export interface TraceParentContext {
 
 export type TaskProcessingTracker =
   | {
-    success: () => void;
-    failure: (errorType: string) => void;
-  }
+      success: () => void;
+      failure: (errorType: string) => void;
+    }
   | undefined;
 
 export interface JobAndTaskTelemetry {
