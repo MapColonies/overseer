@@ -1,25 +1,22 @@
-import { execFile } from 'child_process';
-import fs from 'fs/promises';
-import os from 'os';
-import path from 'path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
 import { feature as turfFeature, featureCollection as turfFeatureCollection, union } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
-import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
+import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
 import type { IngestionValidationTaskParams, IntersectionFeatureCollection, TilesDeletionParams } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import type { MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, StorageProvider } from '../../common/constants';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
 import { S3Service } from '../../utils/storage/s3Service';
+import { readConflictFeatures } from '../../utils/reportUtil';
 
 @injectable()
 export class TileDeletionTaskManager {
@@ -152,7 +149,7 @@ export class TileDeletionTaskManager {
       }
 
       // 4. Read conflict features from the shapefile inside the ZIP report
-      const conflictFeatures = await this.readConflictFeatures(reportPath);
+      const conflictFeatures = await readConflictFeatures(reportPath, this.reportProvider, this.s3Service, this.shapefileReader, this.logger);
 
       if (conflictFeatures.length === 0) {
         logger.info({ msg: 'No conflict features found in report shapefile, skipping deletion task creation' });
@@ -208,61 +205,6 @@ export class TileDeletionTaskManager {
     } finally {
       span.end();
     }
-  }
-
-  private async readConflictFeatures(reportPath: string): Promise<Feature[]> {
-    const conflictFeatures: Feature[] = [];
-
-    this.logger.info({ msg: 'Extracting ZIP report to read conflict shapefile', reportPath, reportProvider: this.reportProvider });
-
-    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'conflict-report-'));
-
-    try {
-      let zipPath: string;
-
-      if (this.reportProvider === StorageProvider.S3) {
-        const tempZipPath = path.join(tempDir, 'report.zip');
-        this.logger.info({ msg: 'Downloading ZIP report from S3', s3Key: reportPath });
-        await this.s3Service.downloadFile(reportPath, tempZipPath);
-        zipPath = tempZipPath;
-      } else {
-        zipPath = `/${reportPath}`;
-      }
-
-      await new Promise<void>((resolve, reject) => {
-        execFile('unzip', ['-o', zipPath, '-d', tempDir], (error) => {
-          if (error !== null) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
-
-      const entries = await fs.readdir(tempDir, { recursive: true });
-      const shpEntry = entries.find((entry) => entry.toString().endsWith('.shp'));
-
-      if (shpEntry === undefined) {
-        throw new Error(`No shapefile found in ZIP report: ${zipPath}`);
-      }
-
-      const shpPath = path.join(tempDir, shpEntry.toString());
-
-      this.logger.info({ msg: 'Reading conflict features from shapefile', shpPath });
-
-      const processor: ChunkProcessor = {
-        // eslint-disable-next-line @typescript-eslint/require-await
-        process: async (chunk: ShapefileChunk): Promise<void> => {
-          conflictFeatures.push(...chunk.features);
-        },
-      };
-
-      await this.shapefileReader.readAndProcess(shpPath, processor);
-    } finally {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    }
-
-    return conflictFeatures;
   }
 
   private async *createTasksForPart(
