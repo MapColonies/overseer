@@ -36,11 +36,8 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
   } as unknown as jest.Mocked<TileMergeTaskManager>;
 
   const tileDeletionTaskManagerMock = {
-    buildTasks: jest.fn().mockReturnValue(
-      // eslint-disable-next-line @typescript-eslint/require-await
-      (async function* () {})()
-    ),
-    pushTasks: jest.fn().mockResolvedValue(undefined),
+    buildTasks: jest.fn(),
+    pushTasks: jest.fn(),
   } as unknown as jest.Mocked<TileDeletionTaskManager>;
 
   const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
