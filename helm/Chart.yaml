@@ -2,8 +2,8 @@ apiVersion: v2
 name: overseer
 description: Helm chart for overseer service
 type: application
-version: 2.6.0
-appVersion: 2.6.0
+version: 2.6.0-beta1
+appVersion: 2.6.0-beta1
 dependencies:
   - name: mclabels
     version: 1.0.1

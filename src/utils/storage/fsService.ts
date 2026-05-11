@@ -11,7 +11,7 @@ import { FSError } from '../../common/errors';
 
 @injectable()
 export class FSService {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.TRACER) private readonly tracer: Tracer) {}
+  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.TRACER) private readonly tracer: Tracer) { }
 
   public async uploadJsonFile(filePath: string, data: Record<string, unknown>): Promise<void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.uploadJsonFile.name}`)), async () => {
@@ -207,7 +207,7 @@ export class FSService {
         const hash = crypto.createHash('sha256');
         const fileStream = createReadStream(filePath);
 
-        fileStream.on('data', (data) => {
+        fileStream.on('data', (data: string | Uint8Array<ArrayBuffer>) => {
           hash.update(data);
         });
 

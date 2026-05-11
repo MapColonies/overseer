@@ -80,7 +80,6 @@ data:
   GEOSERVER_WORKSPACE: {{ .Values.global.geoserver.workspace | quote }}
   GEOSERVER_DATASTORE: {{ .Values.global.geoserver.dataStore | quote }}
   GPKG_STORAGE_PROVIDER: {{ $storage.gpkgProvider | quote }}
-  REPORT_STORAGE_PROVIDER: {{ $storage.reportProvider | quote }}
   JOB_TRACKER_URL: {{ $serviceUrls.jobTracker | quote}}
   SHAPEFILE_READER_MAX_VERTICES_PER_CHUNK: {{ .Values.env.shapefileReader.maxVerticesPerChunk | quote }}
   INGESTION_SOURCES_DIR_PATH: {{ $storage.fs.ingestionSourcePvc.mountPath | quote }}

@@ -15,7 +15,6 @@ import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
-import { S3Service } from '../../utils/storage/s3Service';
 import { readConflictFeatures } from '../../utils/reportUtil';
 
 @injectable()
@@ -34,8 +33,7 @@ export class TileDeletionTaskManager {
     @inject(SERVICES.QUEUE_CLIENT) private readonly queueClient: QueueClient,
     @inject(SERVICES.TILE_RANGER) private readonly tileRanger: TileRanger,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
-    private readonly taskMetrics: TaskMetrics,
-    @inject(S3Service) private readonly s3Service: S3Service
+    private readonly taskMetrics: TaskMetrics
   ) {
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.taskBatchSize');
@@ -140,14 +138,14 @@ export class TileDeletionTaskManager {
       logger.info({ msg: 'Resolution conflicts detected, building deletion tasks', resolutionErrorCount });
       span.addEvent('resolution conflicts found', { resolutionErrorCount });
 
-      // 3. Get report path
-      const reportPath = validationTask.parameters.report?.path;
-      if (reportPath === undefined) {
-        throw new Error(`Validation task report path not found for job ${initTask.jobId}`);
+      // 3. Get report download URL
+      const reportUrl = validationTask.parameters.report?.url;
+      if (reportUrl === undefined) {
+        throw new Error(`Validation task report URL not found for job ${initTask.jobId}`);
       }
 
       // 4. Read conflict features from the shapefile inside the ZIP report
-      const conflictFeatures = await readConflictFeatures(reportPath, this.reportProvider, this.s3Service, this.shapefileReader, this.logger);
+      const conflictFeatures = await readConflictFeatures(reportUrl, this.shapefileReader, this.logger);
 
       if (conflictFeatures.length === 0) {
         logger.info({ msg: 'No conflict features found in report shapefile, skipping deletion task creation' });
@@ -158,7 +156,7 @@ export class TileDeletionTaskManager {
 
       // 5. Union all conflict geometries into one entity
       const conflictGeometries = conflictFeatures.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon));
-      const unionedConflict = union(turfFeatureCollection(conflictGeometries));
+      const unionedConflict = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
 
       if (unionedConflict === null) {
         logger.info({ msg: 'Union of conflict features resulted in null, skipping deletion task creation' });

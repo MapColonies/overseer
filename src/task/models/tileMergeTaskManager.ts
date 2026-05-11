@@ -69,7 +69,7 @@ export class TileMergeTaskManager {
 
       const logger = this.logger.child({ taskType: this.taskType });
 
-      logger.debug({ msg: `Building tasks for ${this.taskType} task` });
+      logger.debug({ msg: `Building merging tasks for ${this.taskType} task` });
 
       try {
         const mergeParams = this.prepareMergeParameters(taskBuildParams);
