@@ -26,7 +26,7 @@ data:
   TELEMETRY_METRICS_INTERVAL: {{ $metrics.interval | quote }}
   TELEMETRY_METRICS_BUCKETS: {{ $metrics.buckets | toJson | quote }}
   {{ end }}
-  {{- if or (eq (upper $storage.gpkgProvider) "S3") (eq (upper $storage.reportProvider) "S3") }}
+  {{- if (eq (upper $storage.gpkgProvider) "S3") }}
   {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled -}}
   S3_ENDPOINT_URL: {{ printf "%s%s" $s3HttpProtocol $storage.s3.endpointUrl | quote }}
   S3_ARTIFACTS_BUCKET: {{ $storage.s3.artifactsBucket | quote }}

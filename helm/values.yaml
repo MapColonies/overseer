@@ -8,13 +8,13 @@ global:
 
   geoserver:
     workspace: ''
-    dataStore: ''  
-  ca:    
+    dataStore: ''
+  ca:
     secretName: ''
     path: '/usr/local/share/ca-certificates'
     key: 'ca.crt'
   gracefulReloadMaxSeconds: 300
-  storage: {}  
+  storage: {}
 
 mclabels:
   #environment: development
@@ -66,7 +66,6 @@ args: []
 sidecars: []
 
 storage:
-  reportProvider: ""  # FS | S3
   gpkgProvider: ""
   tilesStorageProvider: ""
   s3:
@@ -130,50 +129,50 @@ metrics:
 
 instanceType: "" # supported values: ingestion | export
 jobDefinitions:
-    jobs:
-     new:
-       type: ""
-     update:
-       type: ""
-     swapUpdate:
-       type: ""
-     seed:
-        type: ""
-     export:
+  jobs:
+    new:
+      type: ""
+    update:
+      type: ""
+    swapUpdate:
+      type: ""
+    seed:
+      type: ""
+    export:
       type: ""
       cleanupExpirationDays: 14
       gpkgsRootDir: "gpkgs"
-    tasks:
-      createTasks:
-        type: ""
-      init: 
-        type: ""  
-      finalize:
-        type: ""
-      merge:
-        type: ""
-        tileBatchSize: 10000
-        taskBatchSize: 5
-        radiusBuffer: 0.000006
-        radiusBufferUnits: "degrees" # supported values are: "degrees" | "centimeters" | "meters" | "millimeters" | "kilometers" | "miles" | "inches" | "yards" | "feet" | "radians"
-        truncatePrecision: 11 # coordinate decimal precision 
-        truncateCoordinates: 2 # maximum number of coordinates (primarly used to remove z coordinates)
-      seed:
-        type: ""
-        grid: "WorldCRS84"
-        maxZoom: 21
-        skipUncached: true
-        zoomThreshold: 16 #zoom level threshold for high res seeding first seeding task will be 0->zoomThreshold
-        maxTilesPerSeedTask: 250000
-        maxTilesPerCleanTask: 500000
-      export: 
-        type: ""
+  tasks:
+    createTasks:
+      type: ""
+    init:
+      type: ""
+    finalize:
+      type: ""
+    merge:
+      type: ""
+      tileBatchSize: 10000
+      taskBatchSize: 5
+      radiusBuffer: 0.000006
+      radiusBufferUnits: "degrees" # supported values are: "degrees" | "centimeters" | "meters" | "millimeters" | "kilometers" | "miles" | "inches" | "yards" | "feet" | "radians"
+      truncatePrecision: 11 # coordinate decimal precision 
+      truncateCoordinates: 2 # maximum number of coordinates (primarly used to remove z coordinates)
+    seed:
+      type: ""
+      grid: "WorldCRS84"
+      maxZoom: 21
+      skipUncached: true
+      zoomThreshold: 16 #zoom level threshold for high res seeding first seeding task will be 0->zoomThreshold
+      maxTilesPerSeedTask: 250000
+      maxTilesPerCleanTask: 500000
+    export:
+      type: ""
 
-    config:
-      dequeueIntervalMs: 3000
-      heartBeat:
-        intervalMs: 3000 
-      maxTaskAttempts: 3   
+  config:
+    dequeueIntervalMs: 3000
+    heartBeat:
+      intervalMs: 3000
+    maxTaskAttempts: 3
 
 env:
   port: 8080

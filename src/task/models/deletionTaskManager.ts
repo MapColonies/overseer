@@ -25,7 +25,6 @@ export class TileDeletionTaskManager {
   private readonly taskType: string;
   private readonly validationTaskType: string;
   private readonly sourceProvider: StorageProvider;
-  private readonly reportProvider: StorageProvider;
   private readonly shapefileReader: ShapefileChunkReader;
 
   public constructor(
@@ -43,7 +42,6 @@ export class TileDeletionTaskManager {
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
     this.validationTaskType = this.config.get<string>('jobManagement.ingestion.tasks.validation.type');
     this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider');
-    this.reportProvider = this.config.get<StorageProvider>('reportStorageProvider');
     this.shapefileReader = new ShapefileChunkReader({
       maxVerticesPerChunk: this.config.get<number>('shapefileReader.maxVerticesPerChunk'),
     });
