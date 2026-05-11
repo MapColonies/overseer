@@ -10,11 +10,7 @@ import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
 import type { Feature } from 'geojson';
 
-export async function readConflictFeatures(
-  reportUrl: string,
-  shapefileReader: ShapefileChunkReader,
-  logger: Logger
-): Promise<Feature[]> {
+export async function readConflictFeatures(reportUrl: string, shapefileReader: ShapefileChunkReader, logger: Logger): Promise<Feature[]> {
   const conflictFeatures: Feature[] = [];
 
   logger.info({ msg: 'Downloading ZIP report to read conflict shapefile', reportUrl });
