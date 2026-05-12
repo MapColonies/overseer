@@ -29,7 +29,8 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask> {
+  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
+{
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,

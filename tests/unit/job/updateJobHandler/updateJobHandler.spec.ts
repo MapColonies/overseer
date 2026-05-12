@@ -8,7 +8,7 @@ import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobs
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
-  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () { })();
+  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
