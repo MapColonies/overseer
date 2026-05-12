@@ -17,8 +17,8 @@ describe('fsService', () => {
   let fsService: FSService;
   const testFilePath = '/path/to/test/file.gpkg';
   const testDirPath = '/path/to/test';
-  const mockFilesList: Dirent[] = [new Dirent()];
-  const mockEmptyList: Dirent[] = [];
+  const mockFilesList: Dirent<NonSharedBuffer>[] = [new Dirent()];
+  const mockEmptyList: Dirent<NonSharedBuffer>[] = [];
 
   beforeEach(() => {
     jest.clearAllMocks();

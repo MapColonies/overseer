@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { Grid, MergeTask, MergeTilesTaskParams } from '../../../../src/common/interfaces';
-import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } from '../../mocks/tasksMockData';
+import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate, validationTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
-  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () { })();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
@@ -16,7 +16,7 @@ describe('updateJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock, jobManagerClientMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const productGeometry = createFakePolygonalGeometry();
@@ -35,6 +35,7 @@ describe('updateJobHandler', () => {
         productGeometry,
       };
 
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskForIngestionUpdate]);
       readProductGeometryMock.mockResolvedValue(productGeometry);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
@@ -48,13 +49,14 @@ describe('updateJobHandler', () => {
     });
 
     it('should handle job init failure and reject the task', async () => {
-      const { updateJobHandler, taskBuilderMock, queueClientMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupUpdateJobHandlerTest();
 
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
 
       const error = new Error('Test error');
 
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskForIngestionUpdate]);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);

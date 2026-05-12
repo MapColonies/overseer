@@ -6,6 +6,7 @@ export const jobManagerClientMock = {
   updateTask: jest.fn(),
   createTaskForJob: jest.fn(),
   getJob: jest.fn(),
+  findTasks: jest.fn(),
 } as unknown as jest.Mocked<JobManagerClient>;
 
 export const queueClientMock = {

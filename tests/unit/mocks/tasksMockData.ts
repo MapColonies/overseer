@@ -5,6 +5,7 @@ import {
   IngestionNewFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
+  IngestionValidationTaskParams,
   TaskBlockDuplicationParam,
 } from '@map-colonies/raster-shared';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
@@ -75,6 +76,11 @@ export const finalizeTaskForIngestionNew = createFakeTask<IngestionNewFinalizeTa
     insertedToMapproxy: false,
     processedParts: false,
   }
+);
+
+export const validationTaskForIngestionUpdate = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  { checksums: [] }
 );
 
 export const finalizeTaskForIngestionUpdate = createFakeTask<IngestionUpdateFinalizeTaskParams>(
