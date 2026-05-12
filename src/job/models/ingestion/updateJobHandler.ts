@@ -29,7 +29,8 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask> {
+  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
+{
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
@@ -63,7 +64,7 @@ export class UpdateJobHandler
         activeSpan?.addEvent('validateAdditionalParams.success');
 
         const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
-        const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`
+        const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`;
 
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
@@ -172,7 +173,6 @@ export class UpdateJobHandler
       if (err instanceof NotFoundError) {
         logger.info({ msg: 'No resolution conflicts found, skipping deletion tasks generation' });
         return;
-
       } else {
         logger.error({ msg: 'Error occurred while building deletion tasks', error: err });
         throw err;

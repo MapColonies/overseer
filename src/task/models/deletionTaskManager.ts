@@ -115,8 +115,12 @@ export class TileDeletionTaskManager {
       const conflictFeatures = await readConflictFeatures(reportUrl, this.shapefileReader, this.logger);
 
       if (conflictFeatures.length === 0) {
-        this.logger.error({ msg: 'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report' });
-        throw new UnprocessableEntityError('No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report');
+        this.logger.error({
+          msg: 'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report',
+        });
+        throw new UnprocessableEntityError(
+          'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report'
+        );
       }
 
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
@@ -132,7 +136,6 @@ export class TileDeletionTaskManager {
       }
 
       const unionedGeometry = unionedConflictGeometry.geometry;
-
 
       // 3. iterating upward through zoom levels on the unioned geometry until an empty response
       const startZoom = degreesPerPixelToZoomLevel(ingestionResolution) + 1;
@@ -152,7 +155,12 @@ export class TileDeletionTaskManager {
           logger.info({ msg: 'No intersection found at zoom level, stopping iteration', zoom });
           continue;
         }
-        logger.debug({ msg: 'Intersection received from polygon parts manager', polygonPartsEntityName, zoom, intersectionFeatures: response.features });
+        logger.debug({
+          msg: 'Intersection received from polygon parts manager',
+          polygonPartsEntityName,
+          zoom,
+          intersectionFeatures: response.features,
+        });
 
         logger.info({ msg: 'Intersection received, creating deletion tasks', zoom });
         for (const intersectionFeature of response.features) {
