@@ -63,11 +63,12 @@ export class UpdateJobHandler
         activeSpan?.addEvent('validateAdditionalParams.success');
 
         const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
+        const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`
 
         const taskBuildParams: MergeTilesTaskParams = {
           inputFiles,
           taskMetadata: {
-            layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
+            layerRelativePath,
             tileOutputFormat: additionalParams.tileOutputFormat,
             isNewTarget: false,
             grid: Grid.TWO_ON_ONE,
@@ -79,7 +80,6 @@ export class UpdateJobHandler
         logger.info({ msg: 'building tasks' });
 
         const { polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
-        const layerRelativePath = taskBuildParams.taskMetadata.layerRelativePath;
 
         await this.buildAndPushDeletionTasks(job, task, polygonPartsEntityName, layerRelativePath);
 

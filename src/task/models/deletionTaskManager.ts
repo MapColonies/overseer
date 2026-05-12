@@ -10,6 +10,7 @@ import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
 import type { MultiPolygon, Polygon } from 'geojson';
+import { UnprocessableEntityError } from '@map-colonies/error-types';
 import { SERVICES, StorageProvider } from '../../common/constants';
 import type { DeletionTilesTaskParams } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
@@ -114,44 +115,42 @@ export class TileDeletionTaskManager {
       const conflictFeatures = await readConflictFeatures(reportUrl, this.shapefileReader, this.logger);
 
       if (conflictFeatures.length === 0) {
-        logger.info({ msg: 'No conflict features found in report shapefile, skipping deletion task creation' });
-        return;
+        this.logger.error({ msg: 'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report' });
+        throw new UnprocessableEntityError('No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report');
       }
 
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
 
       // 2. Union all conflict geometries into one entity
       const conflictGeometries = conflictFeatures.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon));
-      const unionedConflict = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
+      logger.info({ msg: 'Union conflict features into single geometry' });
+      const unionedConflictGeometry = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
 
-      if (unionedConflict === null) {
-        logger.info({ msg: 'Union of conflict features resulted in null, skipping deletion task creation' });
-        return;
+      if (unionedConflictGeometry === null) {
+        logger.error({ msg: 'Union conflicted features returned null' });
+        throw new UnprocessableEntityError('Union of conflict features resulted in null');
       }
 
-      const unionedGeometry = unionedConflict.geometry;
+      const unionedGeometry = unionedConflictGeometry.geometry;
 
-      logger.info({ msg: 'Unioned conflict features into single geometry' });
 
-      // 3. Sweep upward through zoom levels on the unioned geometry until an empty response
+      // 3. iterating upward through zoom levels on the unioned geometry until an empty response
       const startZoom = degreesPerPixelToZoomLevel(ingestionResolution) + 1;
-      logger.info({ msg: 'Sweeping zoom levels for unioned conflict geometry', ingestionResolution, startZoom });
+      logger.info({ msg: 'Iterating zoom levels for unioned conflict geometry', ingestionResolution, startZoom });
 
-      for (let zoom = startZoom; ; zoom++) {
-        const resolutionDegree = zoomLevelToResolutionDeg(zoom);
-        if (resolutionDegree === undefined) {
-          logger.warn({ msg: 'Reached end of valid zoom range while sweeping, stopping', zoom });
-          break;
-        }
+      let hasIntersections = true;
+      for (let zoom = startZoom; zoomLevelToResolutionDeg(zoom) !== undefined && hasIntersections; zoom++) {
+        const resolutionDegree = zoomLevelToResolutionDeg(zoom) as number;
 
         const payload: IntersectionFeatureCollection = turfFeatureCollection([turfFeature(unionedGeometry, { resolutionDegree })]);
 
         logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resolutionDegree });
         const response = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
 
-        if (response.features.length === 0) {
-          logger.info({ msg: 'No intersection found at zoom level, stopping sweep', zoom });
-          break;
+        hasIntersections = response.features.length > 0;
+        if (!hasIntersections) {
+          logger.info({ msg: 'No intersection found at zoom level, stopping iteration', zoom });
+          continue;
         }
         logger.debug({ msg: 'Intersection received from polygon parts manager', polygonPartsEntityName, zoom, intersectionFeatures: response.features });
 
