@@ -26,7 +26,7 @@ data:
   TELEMETRY_METRICS_INTERVAL: {{ $metrics.interval | quote }}
   TELEMETRY_METRICS_BUCKETS: {{ $metrics.buckets | toJson | quote }}
   {{ end }}
-  {{- if (eq (upper $storage.gpkgProvider) "S3") }}
+  {{- if eq (upper $storage.gpkgProvider) "S3" }}
   {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled -}}
   S3_ENDPOINT_URL: {{ printf "%s%s" $s3HttpProtocol $storage.s3.endpointUrl | quote }}
   S3_ARTIFACTS_BUCKET: {{ $storage.s3.artifactsBucket | quote }}
@@ -55,6 +55,9 @@ data:
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
   EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}
   EXPORT_GPKGS_ROOT_DIR: {{ $jobDefinitions.jobs.export.gpkgsRootDir | quote }}
+  TILES_DELETION_TASK_TYPE: {{ $jobDefinitions.tasks.tilesDeletion.type | quote }}
+  TILES_DELETION_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.tilesDeletion.tileBatchSize | quote }}
+  TILES_DELETION_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.tilesDeletion.taskBatchSize | quote }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}

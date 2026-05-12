@@ -167,6 +167,10 @@ jobDefinitions:
       maxTilesPerCleanTask: 500000
     export:
       type: ""
+    tilesDeletion:
+      type: ""
+      tileBatchSize: 10000
+      taskBatchSize: 5
 
   config:
     dequeueIntervalMs: 3000
