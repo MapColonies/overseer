@@ -11,6 +11,7 @@ import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, StorageProvider } from '../../common/constants';
+import type { DeletionTilesTaskParams } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
@@ -47,14 +48,11 @@ export class TileDeletionTaskManager {
 
   public buildTasks(
     initTask: IngestionCreateTasksTask,
-    polygonPartsEntityName: string,
-    layerRelativePath: string,
-    ingestionResolution: number,
-    tileOutputFormat: string
+    taskBuildParams: DeletionTilesTaskParams
   ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
-      return this.buildDeletionTasksGenerator(initTask, polygonPartsEntityName, layerRelativePath, ingestionResolution, tileOutputFormat, activeSpan);
+      return this.buildDeletionTasksGenerator(initTask, taskBuildParams, activeSpan);
     });
   }
 
@@ -106,12 +104,10 @@ export class TileDeletionTaskManager {
 
   private async *buildDeletionTasksGenerator(
     initTask: IngestionCreateTasksTask,
-    polygonPartsEntityName: string,
-    layerRelativePath: string,
-    ingestionResolution: number,
-    tileOutputFormat: string,
+    taskBuildParams: DeletionTilesTaskParams,
     parentSpan: Span | undefined
   ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
+    const { polygonPartsEntityName, layerRelativePath, ingestionResolution, tileOutputFormat } = taskBuildParams;
     const span = createChildSpan(`${TileDeletionTaskManager.name}.buildDeletionTasksGenerator`, parentSpan);
     const logger = this.logger.child({ jobId: initTask.jobId, polygonPartsEntityName });
 
@@ -172,21 +168,22 @@ export class TileDeletionTaskManager {
       logger.info({ msg: 'Sweeping zoom levels for unioned conflict geometry', ingestionResolution, startZoom });
 
       for (let zoom = startZoom; ; zoom++) {
-        const resDeg = zoomLevelToResolutionDeg(zoom);
-        if (resDeg === undefined) {
+        const resolutionDegree = zoomLevelToResolutionDeg(zoom);
+        if (resolutionDegree === undefined) {
           logger.warn({ msg: 'Reached end of valid zoom range while sweeping, stopping', zoom });
           break;
         }
 
-        const payload: IntersectionFeatureCollection = turfFeatureCollection([turfFeature(unionedGeometry, { resolutionDegree: resDeg })]);
+        const payload: IntersectionFeatureCollection = turfFeatureCollection([turfFeature(unionedGeometry, { resolutionDegree })]);
 
-        logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resDeg });
+        logger.info({ msg: 'Fetching intersection from polygon parts manager', polygonPartsEntityName, zoom, resolutionDegree });
         const response = await this.polygonPartsMangerClient.getIntersection(polygonPartsEntityName, payload);
 
         if (response.features.length === 0) {
           logger.info({ msg: 'No intersection found at zoom level, stopping sweep', zoom });
           break;
         }
+        logger.debug({ msg: 'Intersection received from polygon parts manager', polygonPartsEntityName, zoom, intersectionFeatures: response.features });
 
         logger.info({ msg: 'Intersection received, creating deletion tasks', featureCount: response.features.length, zoom });
         for (const intersectionFeature of response.features) {

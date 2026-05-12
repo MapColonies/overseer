@@ -209,8 +209,8 @@ export interface TilesSource {
   tilesPath: string;
 }
 
-export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> {}
-export interface FeatureTask extends ProductFeature {}
+export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> { }
+export interface FeatureTask extends ProductFeature { }
 
 export interface MergeParameters {
   product: ProductFeature;
@@ -258,6 +258,13 @@ export interface MergeTilesMetadata {
   tileOutputFormat: TileOutputFormat;
   isNewTarget: boolean;
   grid: Grid;
+}
+
+export interface DeletionTilesTaskParams {
+  polygonPartsEntityName: string;
+  layerRelativePath: string;
+  ingestionResolution: number;
+  tileOutputFormat: TileOutputFormat;
 }
 
 //#endregion task
@@ -388,9 +395,9 @@ export interface TraceParentContext {
 
 export type TaskProcessingTracker =
   | {
-      success: () => void;
-      failure: (errorType: string) => void;
-    }
+    success: () => void;
+    failure: (errorType: string) => void;
+  }
   | undefined;
 
 export interface JobAndTaskTelemetry {

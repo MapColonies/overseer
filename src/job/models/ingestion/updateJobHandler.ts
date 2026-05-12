@@ -13,7 +13,7 @@ import {
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { ReadProductGeometry } from '../../../utils/storage/productReader';
-import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
+import type { IConfig, IJobHandler, MergeTilesTaskParams, DeletionTilesTaskParams } from '../../../common/interfaces';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { Grid } from '../../../common/interfaces';
 import { SERVICES } from '../../../common/constants';
@@ -27,8 +27,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
-{
+  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask> {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
@@ -80,13 +79,13 @@ export class UpdateJobHandler
         const { polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
         const layerRelativePath = taskBuildParams.taskMetadata.layerRelativePath;
 
-        const deletionTasks = this.tileDeletionTaskManager.buildTasks(
-          task,
+        const deletionTaskBuildParams: DeletionTilesTaskParams = {
           polygonPartsEntityName,
           layerRelativePath,
-          job.parameters.ingestionResolution,
-          additionalParams.tileOutputFormat
-        );
+          ingestionResolution: job.parameters.ingestionResolution,
+          tileOutputFormat: additionalParams.tileOutputFormat,
+        };
+        const deletionTasks = this.tileDeletionTaskManager.buildTasks(task, deletionTaskBuildParams);
         await this.tileDeletionTaskManager.pushTasks(job.id, job.type, deletionTasks);
 
         const mergeTasks = this.mergeTaskManager.buildTasks(taskBuildParams, task);
