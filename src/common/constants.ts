@@ -3,14 +3,7 @@ import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
 export { SourceType } from '@map-colonies/raster-shared';
 
-/* eslint-disable @typescript-eslint/naming-convention */
-export const StorageProvider = {
-  FS: SourceType.FS,
-  S3: SourceType.S3,
-} as const;
-/* eslint-enable @typescript-eslint/naming-convention */
-
-export type StorageProvider = (typeof StorageProvider)[keyof typeof StorageProvider];
+export type StorageProvider = Omit<typeof SourceType, 'GPKG'>;
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const SERVICE_VERSION = readPackageJsonSync().version ?? 'unknown_version';

@@ -54,7 +54,6 @@ async function processZip(tempZipPath: string, tempDir: string, shapefileReader:
 }
 
 export async function readConflictFeatures(reportUrl: string, shapefileReader: ShapefileChunkReader, logger: Logger): Promise<Feature[]> {
-
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'conflict-report-')); //mkdtemp concats suffix of 6 random characters to ensure uniqueness
 
   try {
