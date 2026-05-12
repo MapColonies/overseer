@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as fs from 'fs';
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
 import { inject, injectable } from 'tsyringe';
 import { Upload } from '@aws-sdk/lib-storage';
-import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import { Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer, SpanStatusCode } from '@opentelemetry/api';
 import { SERVICES } from '../../common/constants';

@@ -10,19 +10,13 @@ import {
   ExportFinalizeFullProcessingParams,
   ExportFinalizeType,
   RasterLayerMetadata,
+  SourceType,
 } from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import {
-  EXPORT_FAILURE_MESSAGE,
-  EXPORT_SUCCESS_MESSAGE,
-  GPKG_CONTENT_TYPE,
-  JSON_CONTENT_TYPE,
-  SERVICES,
-  StorageProvider,
-} from '../../../common/constants';
+import { EXPORT_FAILURE_MESSAGE, EXPORT_SUCCESS_MESSAGE, GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE, SERVICES } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import {
@@ -74,8 +68,8 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
     this.gpkgsRootDir = config.get<string>('jobManagement.export.pollingJobs.export.gpkgsRootDir');
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
-    this.isS3GpkgProvider = gpkgProvider === StorageProvider.S3;
+    const gpkgProvider = config.get<SourceType>('gpkgStorageProvider');
+    this.isS3GpkgProvider = gpkgProvider === SourceType.S3;
     this.cleanupExpirationDays = config.get<number>('jobManagement.export.pollingJobs.export.cleanupExpirationDays');
     this.downloadServerUrl = config.get<string>('servicesUrl.downloadServerPublicDNS');
   }
