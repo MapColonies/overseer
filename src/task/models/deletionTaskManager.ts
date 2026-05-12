@@ -15,7 +15,7 @@ import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
-import { readConflictFeatures } from '../../utils/reportUtil';
+import { readConflictFeatures } from '../../utils/report';
 
 @injectable()
 export class TileDeletionTaskManager {
