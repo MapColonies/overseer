@@ -206,11 +206,7 @@ export class FSService {
 
         const hash = crypto.createHash('sha256');
         const fileStream = createReadStream(filePath);
-
-        fileStream.on('data', (data: string | Uint8Array<ArrayBuffer>) => {
-          hash.update(data);
-        });
-
+        fileStream.pipe(hash);
         await finished(fileStream);
 
         const sha256 = hash.digest('hex');

@@ -154,7 +154,7 @@ export class TileDeletionTaskManager {
         }
         logger.debug({ msg: 'Intersection received from polygon parts manager', polygonPartsEntityName, zoom, intersectionFeatures: response.features });
 
-        logger.info({ msg: 'Intersection received, creating deletion tasks', featureCount: response.features.length, zoom });
+        logger.info({ msg: 'Intersection received, creating deletion tasks', zoom });
         for (const intersectionFeature of response.features) {
           yield* this.createTasksForPart(intersectionFeature.geometry, zoom, layerRelativePath, tileOutputFormat, span);
         }
@@ -163,6 +163,7 @@ export class TileDeletionTaskManager {
       const error = err instanceof Error ? err : new Error(String(err));
       span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
       span.recordException(error);
+      logger.error({ msg: 'Failed to build deletion tasks', error });
       throw error;
     } finally {
       span.end();
@@ -176,11 +177,11 @@ export class TileDeletionTaskManager {
     tileOutputFormat: string,
     parentSpan: Span | undefined
   ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
-    const span = createChildSpan(`${TileDeletionTaskManager.name}.createTasksForPart.zoom.${zoom}`, parentSpan);
+    const span = createChildSpan(`${TileDeletionTaskManager.name}.${this.createTasksForPart.name}.zoom.${zoom}`, parentSpan);
 
     try {
-      const part = turfFeature(geometry);
-      const rangeGenerator = this.tileRanger.encodeFootprint(part, zoom);
+      const feature = turfFeature(geometry);
+      const rangeGenerator = this.tileRanger.encodeFootprint(feature, zoom);
       const batches = tileBatchGenerator(this.tileBatchSize, rangeGenerator);
 
       for await (const batch of batches) {

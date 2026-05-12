@@ -82,8 +82,7 @@ const registerInstanceDependencies = (instanceType: InstanceType): InjectionObje
   switch (instanceType) {
     case 'ingestion':
       return [
-        { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } },
-        { token: SERVICES.S3CONFIG, provider: { useValue: s3Config } },
+        { token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } }
       ];
     case 'export':
       return [{ token: SERVICES.S3CONFIG, provider: { useValue: s3Config } }];
