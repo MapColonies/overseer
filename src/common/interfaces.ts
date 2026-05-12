@@ -265,6 +265,7 @@ export interface DeletionTilesTaskParams {
   layerRelativePath: string;
   ingestionResolution: number;
   tileOutputFormat: TileOutputFormat;
+  reportUrl: string;
 }
 
 //#endregion task

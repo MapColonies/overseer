@@ -5,7 +5,7 @@ import { feature as turfFeature, featureCollection as turfFeatureCollection, uni
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
-import type { IngestionValidationTaskParams, IntersectionFeatureCollection, TilesDeletionParams } from '@map-colonies/raster-shared';
+import type { IntersectionFeatureCollection, TilesDeletionParams } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
@@ -23,7 +23,6 @@ export class TileDeletionTaskManager {
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
-  private readonly validationTaskType: string;
   private readonly sourceProvider: StorageProvider;
   private readonly shapefileReader: ShapefileChunkReader;
 
@@ -39,7 +38,6 @@ export class TileDeletionTaskManager {
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
-    this.validationTaskType = this.config.get<string>('jobManagement.ingestion.tasks.validation.type');
     this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     this.shapefileReader = new ShapefileChunkReader({
       maxVerticesPerChunk: this.config.get<number>('shapefileReader.maxVerticesPerChunk'),
@@ -107,40 +105,12 @@ export class TileDeletionTaskManager {
     taskBuildParams: DeletionTilesTaskParams,
     parentSpan: Span | undefined
   ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
-    const { polygonPartsEntityName, layerRelativePath, ingestionResolution, tileOutputFormat } = taskBuildParams;
+    const { polygonPartsEntityName, layerRelativePath, ingestionResolution, tileOutputFormat, reportUrl } = taskBuildParams;
     const span = createChildSpan(`${TileDeletionTaskManager.name}.buildDeletionTasksGenerator`, parentSpan);
     const logger = this.logger.child({ jobId: initTask.jobId, polygonPartsEntityName });
 
     try {
-      // 1. Fetch the validation task
-      const validationTasks = await this.queueClient.jobManagerClient.findTasks<IngestionValidationTaskParams>({
-        jobId: initTask.jobId,
-        type: this.validationTaskType,
-      });
-
-      if (!validationTasks || validationTasks.length === 0) {
-        throw new Error(`Validation task for job ${initTask.jobId} not found. Cannot build deletion tasks.`);
-      }
-
-      const validationTask = validationTasks[0];
-
-      // 2. Check for resolution conflicts
-      const resolutionErrorCount = validationTask.parameters.errorsSummary?.errorsCount.resolution ?? 0;
-      if (resolutionErrorCount === 0) {
-        logger.info({ msg: 'No resolution conflicts found, skipping deletion task creation' });
-        return;
-      }
-
-      logger.info({ msg: 'Resolution conflicts detected, building deletion tasks', resolutionErrorCount });
-      span.addEvent('resolution conflicts found', { resolutionErrorCount });
-
-      // 3. Get report download URL
-      const reportUrl = validationTask.parameters.report?.url;
-      if (reportUrl === undefined) {
-        throw new Error(`Validation task report URL not found for job ${initTask.jobId}`);
-      }
-
-      // 4. Read conflict features from the shapefile inside the ZIP report
+      // 1. Read conflict features from the shapefile inside the ZIP report
       const conflictFeatures = await readConflictFeatures(reportUrl, this.shapefileReader, this.logger);
 
       if (conflictFeatures.length === 0) {
@@ -150,7 +120,7 @@ export class TileDeletionTaskManager {
 
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
 
-      // 5. Union all conflict geometries into one entity
+      // 2. Union all conflict geometries into one entity
       const conflictGeometries = conflictFeatures.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon));
       const unionedConflict = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
 
@@ -163,7 +133,7 @@ export class TileDeletionTaskManager {
 
       logger.info({ msg: 'Unioned conflict features into single geometry' });
 
-      // 6. Sweep upward through zoom levels on the unioned geometry until an empty response
+      // 3. Sweep upward through zoom levels on the unioned geometry until an empty response
       const startZoom = degreesPerPixelToZoomLevel(ingestionResolution) + 1;
       logger.info({ msg: 'Sweeping zoom levels for unioned conflict geometry', ingestionResolution, startZoom });
 
