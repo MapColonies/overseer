@@ -5,17 +5,17 @@ import { feature as turfFeature, featureCollection as turfFeatureCollection, uni
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
-import type { IntersectionFeatureCollection, TilesDeletionParams } from '@map-colonies/raster-shared';
-import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
+import type { IntersectionFeatureCollection, IngestionValidationTaskParams, TilesDeletionParams } from '@map-colonies/raster-shared';
+import type { ICreateTaskBody, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { IConfig } from 'config';
 import type { MultiPolygon, Polygon } from 'geojson';
-import { UnprocessableEntityError } from '@map-colonies/error-types';
+import { NotFoundError, UnprocessableEntityError } from '@map-colonies/error-types';
 import { SERVICES, StorageProvider } from '../../common/constants';
 import type { DeletionTilesTaskParams } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
-import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
+import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../httpClients/polygonPartsMangerClient';
 import { readConflictFeatures } from '../../utils/report';
 
@@ -99,6 +99,38 @@ export class TileDeletionTaskManager {
         activeSpan?.end();
       }
     });
+  }
+
+  public async buildAndPushTasks(
+    job: IngestionUpdateCreateTasksJob,
+    task: IngestionCreateTasksTask,
+    polygonPartsEntityName: string,
+    layerRelativePath: string
+  ): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id, jobType: job.type });
+    const { additionalParams } = job.parameters;
+
+    const validationTask = await this.fetchValidationTask(job.id);
+    try {
+      const reportUrl = this.getResolutionConflictReportUrl(validationTask, job.id);
+      const deletionTaskBuildParams: DeletionTilesTaskParams = {
+        polygonPartsEntityName,
+        layerRelativePath,
+        ingestionResolution: job.parameters.ingestionResolution,
+        tileOutputFormat: additionalParams.tileOutputFormat,
+        reportUrl,
+      };
+      const deletionTasks = this.buildTasks(task, deletionTaskBuildParams);
+      await this.pushTasks(job.id, job.type, deletionTasks);
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        logger.info({ msg: 'No resolution conflicts found, skipping deletion tasks generation' });
+        return;
+      } else {
+        logger.error({ msg: 'Error occurred while building deletion tasks', error: err });
+        throw err;
+      }
+    }
   }
 
   private async *buildDeletionTasksGenerator(
@@ -207,5 +239,34 @@ export class TileDeletionTaskManager {
     } finally {
       span.end();
     }
+  }
+
+  private async fetchValidationTask(jobId: string): Promise<ITaskResponse<IngestionValidationTaskParams>> {
+    const validationTaskType = this.config.get<string>('jobManagement.ingestion.tasks.validation.type');
+    const validationTasks = await this.queueClient.jobManagerClient.findTasks<IngestionValidationTaskParams>({
+      jobId,
+      type: validationTaskType,
+    });
+
+    if (!validationTasks || validationTasks.length === 0) {
+      throw new NotFoundError(`No validation tasks found for job ${jobId} with type ${validationTaskType}`);
+    }
+
+    return validationTasks[0];
+  }
+
+  private getResolutionConflictReportUrl(validationTask: ITaskResponse<IngestionValidationTaskParams>, jobId: string): string {
+    const resolutionErrorCount = validationTask.parameters.errorsSummary?.errorsCount.resolution ?? 0;
+
+    if (resolutionErrorCount === 0) {
+      throw new NotFoundError(`No resolution conflicts found in validation task for job ${jobId}`);
+    }
+
+    const reportUrl = validationTask.parameters.report?.url;
+    if (reportUrl === undefined) {
+      throw new NotFoundError(`Validation task report URL not found for job ${jobId}`);
+    }
+
+    return reportUrl;
   }
 }

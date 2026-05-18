@@ -31,13 +31,11 @@ export interface UpdateJobHandlerTestContext {
 
 export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
   const taskBuilderMock = {
-    buildTasks: jest.fn(),
-    pushTasks: jest.fn(),
+    buildAndPushTasks: jest.fn(),
   } as unknown as jest.Mocked<TileMergeTaskManager>;
 
   const tileDeletionTaskManagerMock = {
-    buildTasks: jest.fn(),
-    pushTasks: jest.fn(),
+    buildAndPushTasks: jest.fn(),
   } as unknown as jest.Mocked<TileDeletionTaskManager>;
 
   const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;

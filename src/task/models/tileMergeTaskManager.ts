@@ -24,7 +24,7 @@ import type {
   ZoomDefinitions,
   FeatureTask,
 } from '../../common/interfaces';
-import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
+import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
 @injectable()
@@ -152,6 +152,30 @@ export class TileMergeTaskManager {
         activeSpan?.end();
       }
     });
+  }
+
+  public async buildAndPushTasks(
+    job: IngestionUpdateCreateTasksJob,
+    task: IngestionCreateTasksTask,
+    productGeometry: MergeTilesTaskParams['productGeometry'],
+    layerRelativePath: string
+  ): Promise<void> {
+    const { inputFiles, additionalParams } = job.parameters;
+
+    const taskBuildParams: MergeTilesTaskParams = {
+      inputFiles,
+      taskMetadata: {
+        layerRelativePath,
+        tileOutputFormat: additionalParams.tileOutputFormat,
+        isNewTarget: false,
+        grid: Grid.TWO_ON_ONE,
+      },
+      ingestionResolution: job.parameters.ingestionResolution,
+      productGeometry,
+    };
+
+    const mergeTasks = this.buildTasks(taskBuildParams, task);
+    await this.pushTasks(task, job.id, job.type, mergeTasks);
   }
 
   private async enqueueTasks(
