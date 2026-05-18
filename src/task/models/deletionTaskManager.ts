@@ -12,7 +12,7 @@ import type { IConfig } from 'config';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { NotFoundError, UnprocessableEntityError } from '@map-colonies/error-types';
 import { SERVICES, StorageProvider } from '../../common/constants';
-import type { DeletionTilesTaskParams } from '../../common/interfaces';
+import type { BuildDeletionTaskParams } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
@@ -47,7 +47,7 @@ export class TileDeletionTaskManager {
 
   public buildTasks(
     initTask: IngestionCreateTasksTask,
-    taskBuildParams: DeletionTilesTaskParams
+    taskBuildParams: BuildDeletionTaskParams
   ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${TileDeletionTaskManager.name}.${this.buildTasks.name}`)), () => {
       const activeSpan = trace.getActiveSpan();
@@ -113,7 +113,7 @@ export class TileDeletionTaskManager {
     const validationTask = await this.fetchValidationTask(job.id);
     try {
       const reportUrl = this.getResolutionConflictReportUrl(validationTask, job.id);
-      const deletionTaskBuildParams: DeletionTilesTaskParams = {
+      const deletionTaskBuildParams: BuildDeletionTaskParams = {
         polygonPartsEntityName,
         layerRelativePath,
         ingestionResolution: job.parameters.ingestionResolution,
@@ -135,7 +135,7 @@ export class TileDeletionTaskManager {
 
   private async *buildDeletionTasksGenerator(
     initTask: IngestionCreateTasksTask,
-    taskBuildParams: DeletionTilesTaskParams,
+    taskBuildParams: BuildDeletionTaskParams,
     parentSpan: Span | undefined
   ): AsyncGenerator<ICreateTaskBody<TilesDeletionParams>, void, void> {
     const { polygonPartsEntityName, layerRelativePath, ingestionResolution, tileOutputFormat, reportUrl } = taskBuildParams;

@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -60,7 +61,12 @@ export class UpdateJobHandler
         activeSpan?.addEvent('validateAdditionalParams.success');
 
         const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
-        const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`;
+
+        if (job.internalId === undefined) {
+          throw new Error(`Job ${job.id} is missing internalId, cannot build layer relative path`);
+        }
+
+        const layerRelativePath = join(job.internalId, additionalParams.displayPath);
 
         logger.info({ msg: 'building tasks' });
 
