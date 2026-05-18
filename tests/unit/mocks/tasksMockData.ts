@@ -83,6 +83,60 @@ export const validationTaskForIngestionUpdate = createFakeTask<IngestionValidati
   { checksums: [] }
 );
 
+export const validationTaskWithResolutionErrorsAndReport = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  {
+    checksums: [],
+    isValid: false,
+    report: {
+      fileName: 'report.json',
+      fileSize: 1024,
+      url: 'http://report-server/report.json',
+      path: '/reports/report.json',
+    },
+    errorsSummary: {
+      errorsCount: {
+        geometryValidity: 0,
+        vertices: 0,
+        metadata: 0,
+        resolution: 5,
+        smallHoles: 0,
+        smallGeometries: 0,
+        unknown: 0,
+      },
+      thresholds: {
+        resolution: { exceeded: true },
+        smallHoles: { exceeded: false, count: 0 },
+        smallGeometries: { exceeded: false },
+      },
+    },
+  }
+);
+
+export const validationTaskWithResolutionErrorsNoReportUrl = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  {
+    checksums: [],
+    isValid: false,
+    errorsSummary: {
+      errorsCount: {
+        geometryValidity: 0,
+        vertices: 0,
+        metadata: 0,
+        resolution: 5,
+        smallHoles: 0,
+        smallGeometries: 0,
+        unknown: 0,
+      },
+      thresholds: {
+        resolution: { exceeded: true },
+        smallHoles: { exceeded: false, count: 0 },
+        smallGeometries: { exceeded: false },
+      },
+    },
+  }
+);
+
 export const finalizeTaskForIngestionUpdate = createFakeTask<IngestionUpdateFinalizeTaskParams>(
   { jobId: ingestionUpdateJob.id, type: 'finalize', status: OperationStatus.IN_PROGRESS },
   {

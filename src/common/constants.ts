@@ -1,8 +1,6 @@
 import { SourceType } from '@map-colonies/raster-shared';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
 
-export { SourceType } from '@map-colonies/raster-shared';
-
 export type StorageProvider = Exclude<SourceType, 'GPKG'>;
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';

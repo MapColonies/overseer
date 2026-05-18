@@ -29,8 +29,7 @@ import { SeedingJobCreator } from './seedingJobCreator';
 /* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
-  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
-{
+  implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask> {
   /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
@@ -66,27 +65,13 @@ export class UpdateJobHandler
         const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
         const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`;
 
-        const taskBuildParams: MergeTilesTaskParams = {
-          inputFiles,
-          taskMetadata: {
-            layerRelativePath,
-            tileOutputFormat: additionalParams.tileOutputFormat,
-            isNewTarget: false,
-            grid: Grid.TWO_ON_ONE,
-          },
-          ingestionResolution: job.parameters.ingestionResolution,
-          productGeometry,
-        };
-
         logger.info({ msg: 'building tasks' });
 
         const { polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
 
         await this.buildAndPushDeletionTasks(job, task, polygonPartsEntityName, layerRelativePath);
 
-        const mergeTasks = this.mergeTaskManager.buildTasks(taskBuildParams, task);
-
-        await this.mergeTaskManager.pushTasks(task, job.id, job.type, mergeTasks);
+        await this.buildAndPushMergeTasks(job, task, productGeometry, layerRelativePath);
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {
@@ -146,6 +131,30 @@ export class UpdateJobHandler
         }
       }
     );
+  }
+
+  private async buildAndPushMergeTasks(
+    job: IngestionUpdateCreateTasksJob,
+    task: IngestionCreateTasksTask,
+    productGeometry: Awaited<ReturnType<ReadProductGeometry>>,
+    layerRelativePath: string
+  ): Promise<void> {
+    const { inputFiles, additionalParams } = job.parameters;
+
+    const taskBuildParams: MergeTilesTaskParams = {
+      inputFiles,
+      taskMetadata: {
+        layerRelativePath,
+        tileOutputFormat: additionalParams.tileOutputFormat,
+        isNewTarget: false,
+        grid: Grid.TWO_ON_ONE,
+      },
+      ingestionResolution: job.parameters.ingestionResolution,
+      productGeometry,
+    };
+
+    const mergeTasks = this.mergeTaskManager.buildTasks(taskBuildParams, task);
+    await this.mergeTaskManager.pushTasks(task, job.id, job.type, mergeTasks);
   }
 
   private async buildAndPushDeletionTasks(

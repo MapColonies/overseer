@@ -115,12 +115,10 @@ export class TileDeletionTaskManager {
       const conflictFeatures = await readConflictFeatures(reportUrl, this.shapefileReader, this.logger);
 
       if (conflictFeatures.length === 0) {
-        this.logger.error({
-          msg: 'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report',
-        });
-        throw new UnprocessableEntityError(
-          'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report'
-        );
+        const msg =
+          'No conflict features found in report, cannot build deletion tasks, job is incorrectly configured - as resolution errors were detected but not shown in the report';
+        this.logger.error({ msg });
+        throw new UnprocessableEntityError(msg);
       }
 
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
@@ -131,7 +129,7 @@ export class TileDeletionTaskManager {
       const unionedConflictGeometry = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
 
       if (unionedConflictGeometry === null) {
-        logger.error({ msg: 'Union conflicted features returned null' });
+        logger.error({ msg: 'Union conflicted features returned null', conflictGeometries });
         throw new UnprocessableEntityError('Union of conflict features resulted in null');
       }
 

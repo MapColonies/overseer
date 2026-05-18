@@ -16,7 +16,7 @@ import {
 } from '@map-colonies/raster-shared';
 import { BBox2d, bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
-import { SERVICES } from '../../common/constants';
+import { SERVICES, StorageProvider } from '../../common/constants';
 import { IConfig, type TaskSources, type ZoomBoundsParameters } from '../../common/interfaces';
 import type { ExportJob } from '../../utils/zod/schemas/job.schema';
 import { createChildSpan } from '../../common/tracing';
@@ -30,7 +30,7 @@ export class ExportTaskManager {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer
   ) {
-    this.tilesProvider = this.config.get<SourceType>('tilesStorageProvider');
+    this.tilesProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     // eslint-disable-next-line @typescript-eslint/no-magic-numbers
     this.allWorldBounds = [-180, -90, 180, 90];
   }
