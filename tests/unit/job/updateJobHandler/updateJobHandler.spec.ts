@@ -14,7 +14,8 @@ describe('updateJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { updateJobHandler, queueClientMock, taskBuilderMock, tileDeletionTaskManagerMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, queueClientMock, taskBuilderMock, tileDeletionTaskManagerMock, readProductGeometryMock } =
+        setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const productGeometry = createFakePolygonalGeometry();
@@ -36,7 +37,8 @@ describe('updateJobHandler', () => {
     });
 
     it('should reject task when mergeTaskManager.buildAndPushTasks throws', async () => {
-      const { updateJobHandler, taskBuilderMock, tileDeletionTaskManagerMock, queueClientMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, taskBuilderMock, tileDeletionTaskManagerMock, queueClientMock, readProductGeometryMock } =
+        setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const error = new Error('Test error');

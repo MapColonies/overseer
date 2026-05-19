@@ -46,9 +46,9 @@ describe('TileDeletionTaskManager', () => {
 
       jobManagerClientMock.findTasks.mockResolvedValue([]);
 
-      await expect(
-        tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)
-      ).rejects.toThrow('No validation tasks found');
+      await expect(tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)).rejects.toThrow(
+        'No validation tasks found'
+      );
 
       expect(jobManagerClientMock.createTaskForJob).not.toHaveBeenCalled();
     });
@@ -70,9 +70,9 @@ describe('TileDeletionTaskManager', () => {
 
       jobManagerClientMock.findTasks.mockRejectedValue(new Error('queue is down'));
 
-      await expect(
-        tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)
-      ).rejects.toThrow('queue is down');
+      await expect(tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)).rejects.toThrow(
+        'queue is down'
+      );
     });
 
     it('should call buildTasks and pushTasks when resolution errors exist and report URL is present', async () => {
@@ -105,9 +105,9 @@ describe('TileDeletionTaskManager', () => {
       jest.spyOn(tileDeletionTaskManager, 'buildTasks');
       jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new Error('unexpected push failure'));
 
-      await expect(
-        tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)
-      ).rejects.toThrow('unexpected push failure');
+      await expect(tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)).rejects.toThrow(
+        'unexpected push failure'
+      );
     });
 
     it('should NOT swallow a NotFoundError thrown by pushTasks - only pre-try NotFoundErrors are swallowed', async () => {
@@ -116,9 +116,7 @@ describe('TileDeletionTaskManager', () => {
       jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrorsAndReport]);
       jest.spyOn(tileDeletionTaskManager, 'buildTasks');
       // pushTasks is inside the try block, so a NotFoundError it throws IS caught and swallowed
-      jest
-        .spyOn(tileDeletionTaskManager, 'pushTasks')
-        .mockRejectedValue(new NotFoundError('from pushTasks'));
+      jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new NotFoundError('from pushTasks'));
 
       // NotFoundError from inside the try block is swallowed
       await expect(

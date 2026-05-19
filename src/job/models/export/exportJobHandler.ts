@@ -16,7 +16,14 @@ import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { EXPORT_FAILURE_MESSAGE, EXPORT_SUCCESS_MESSAGE, GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE, SERVICES, StorageProvider } from '../../../common/constants';
+import {
+  EXPORT_FAILURE_MESSAGE,
+  EXPORT_SUCCESS_MESSAGE,
+  GPKG_CONTENT_TYPE,
+  JSON_CONTENT_TYPE,
+  SERVICES,
+  StorageProvider,
+} from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import {

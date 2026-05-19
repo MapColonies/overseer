@@ -6,7 +6,7 @@ import { JobManagerConfig } from '../../../../src/common/interfaces';
 import { TileDeletionTaskManager } from '../../../../src/task/models/deletionTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
-import { jobManagerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
+import { queueClientMock } from '../../mocks/jobManagerMocks';
 import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export const polygonPartsMangerClientMock = {
