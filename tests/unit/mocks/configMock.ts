@@ -99,6 +99,12 @@ const registerDefaultConfig = (): void => {
     ingestionSourcesDirPath: '/layerSources',
     tilesStorageProvider: 'FS',
     gpkgStorageProvider: 'FS',
+    storage: {
+      internalPvc: {
+        mountPath: '/outputs',
+        gpkgSubPath: 'raster/artifacts/gpkgs',
+      },
+    },
     disableHttpClientLogs: true,
     linkTemplatesPath: 'config/linkTemplates.template',
     servicesUrl: {
@@ -170,7 +176,6 @@ const registerDefaultConfig = (): void => {
         pollingJobs: {
           export: {
             type: 'Export',
-            gpkgsRootDir: 'gpkgs',
           },
         },
         tasks: {
