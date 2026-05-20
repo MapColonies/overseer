@@ -68,6 +68,12 @@
   },
   "tilesStorageProvider": "TILES_STORAGE_PROVIDER",
   "gpkgStorageProvider": "GPKG_STORAGE_PROVIDER",
+  "storage": {
+    "internalPvc": {
+      "mountPath": "INTERNAL_PVC_MOUNT_PATH",
+      "gpkgSubPath": "GPKG_SUBPATH"
+    }
+  },
   "ingestionSourcesDirPath": "INGESTION_SOURCES_DIR_PATH",
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",
@@ -196,8 +202,7 @@
           "cleanupExpirationDays": {
             "__name": "EXPORT_CLEANUP_EXPIRATION_DAYS",
             "__format": "number"
-          },
-          "gpkgsRootDir": "EXPORT_GPKGS_ROOT_DIR"
+          }
         }
       },
       "tasks": {

@@ -141,7 +141,7 @@ jobDefinitions:
     export:
       type: ""
       cleanupExpirationDays: 14
-      gpkgsRootDir: "gpkgs"
+      
   tasks:
     createTasks:
       type: ""
