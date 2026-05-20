@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.6.2](https://github.com/MapColonies/overseer/compare/v2.6.1...v2.6.2) (2026-05-20)
+
+
+### Bug Fixes
+
+* downloads path broken link in export(MAPCO-10645) ([#96](https://github.com/MapColonies/overseer/issues/96)) ([083f172](https://github.com/MapColonies/overseer/commit/083f1720eb52971edd0e34a8d5ab6fc94c79af46))
+* downloads path building ([083f172](https://github.com/MapColonies/overseer/commit/083f1720eb52971edd0e34a8d5ab6fc94c79af46))
+
 ## [2.6.1](https://github.com/MapColonies/overseer/compare/v2.6.0...v2.6.1) (2026-04-26)
 
 
