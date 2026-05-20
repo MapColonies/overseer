@@ -134,6 +134,17 @@
         }
       },
       "tasks": {
+        "tilesDeletion": {
+          "type": "TILES_DELETION_TASK_TYPE",
+          "tileBatchSize": {
+            "__name": "TILES_DELETION_TILE_BATCH_SIZE",
+            "__format": "number"
+          },
+          "taskBatchSize": {
+            "__name": "TILES_DELETION_TASK_BATCH_SIZE",
+            "__format": "number"
+          }
+        },
         "tilesMerging": {
           "type": "TILES_MERGING_TASK_TYPE",
           "tileBatchSize": {

@@ -24,7 +24,7 @@ import type {
   ZoomDefinitions,
   FeatureTask,
 } from '../../common/interfaces';
-import { IngestionCreateTasksTask } from '../../utils/zod/schemas/job.schema';
+import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
 @injectable()
@@ -69,7 +69,7 @@ export class TileMergeTaskManager {
 
       const logger = this.logger.child({ taskType: this.taskType });
 
-      logger.debug({ msg: `Building tasks for ${this.taskType} task` });
+      logger.debug({ msg: `Building merging tasks for ${this.taskType} task` });
 
       try {
         const mergeParams = this.prepareMergeParameters(taskBuildParams);
@@ -127,7 +127,7 @@ export class TileMergeTaskManager {
           this.taskMetrics.trackTasksEnqueue(jobType, this.taskType, task.mergeTasksGenerator.batches.length);
 
           if (taskBatch.length === this.taskBatchSize) {
-            logger.info({ msg: 'Pushing task batch to queue', batchLength: taskBatch.length });
+            logger.info({ msg: 'Pushing Merge task batch to queue', batchLength: taskBatch.length });
             activeSpan?.addEvent('enqueueTasks', { currentTaskBatchSize: taskBatch.length });
             await this.enqueueTasks(jobId, taskBatch, initTask, latestTaskIndex);
             taskBatch = [];
@@ -135,12 +135,12 @@ export class TileMergeTaskManager {
         }
 
         if (taskBatch.length > 0) {
-          logger.info({ msg: 'Pushing leftovers task batch to queue', batchLength: taskBatch.length });
+          logger.info({ msg: 'Pushing leftovers Merge task batch to queue', batchLength: taskBatch.length });
           activeSpan?.addEvent('enqueueTasks.leftovers', { currentTaskBatchSize: taskBatch.length });
           await this.enqueueTasks(jobId, taskBatch, initTask, latestTaskIndex!);
           taskBatch = [];
         }
-        logger.info({ msg: `Successfully pushed all tasks to queue` });
+        logger.info({ msg: `Successfully pushed all Merge tasks to queue` });
       } catch (error) {
         if (error instanceof Error) {
           activeSpan?.recordException(error);
@@ -154,6 +154,30 @@ export class TileMergeTaskManager {
     });
   }
 
+  public async buildAndPushTasks(
+    job: IngestionUpdateCreateTasksJob,
+    task: IngestionCreateTasksTask,
+    productGeometry: MergeTilesTaskParams['productGeometry'],
+    layerRelativePath: string
+  ): Promise<void> {
+    const { inputFiles, additionalParams } = job.parameters;
+
+    const taskBuildParams: MergeTilesTaskParams = {
+      inputFiles,
+      taskMetadata: {
+        layerRelativePath,
+        tileOutputFormat: additionalParams.tileOutputFormat,
+        isNewTarget: false,
+        grid: Grid.TWO_ON_ONE,
+      },
+      ingestionResolution: job.parameters.ingestionResolution,
+      productGeometry,
+    };
+
+    const mergeTasks = this.buildTasks(taskBuildParams, task);
+    await this.pushTasks(task, job.id, job.type, mergeTasks);
+  }
+
   private async enqueueTasks(
     jobId: string,
     tasks: ICreateTaskBody<MergeTaskParameters>[],
@@ -161,7 +185,7 @@ export class TileMergeTaskManager {
     latestTaskIndex: JobResumeState
   ): Promise<void> {
     const logger = this.logger.child({ jobId });
-    logger.debug({ msg: `Attempting to enqueue task batch` });
+    logger.debug({ msg: `Attempting to enqueue Merge task batch` });
 
     try {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
@@ -172,7 +196,7 @@ export class TileMergeTaskManager {
           latestTaskState: latestTaskIndex,
         },
       });
-      logger.info({ msg: `Successfully enqueued task batch`, batchLength: tasks.length });
+      logger.info({ msg: `Successfully enqueued Merge task batch`, batchLength: tasks.length });
     } catch (error) {
       const errorMsg = (error as Error).message;
       const message = `Failed to enqueue tasks: ${errorMsg}`;
@@ -186,7 +210,7 @@ export class TileMergeTaskManager {
     const logger = this.logger.child({ taskType: this.taskType });
     const { taskMetadata, inputFiles, ingestionResolution, productGeometry } = taskBuildParams;
 
-    logger.info({ msg: 'creating task parameters' });
+    logger.info({ msg: 'creating Merge task parameters' });
 
     const tilesSource = this.extractTilesSource(inputFiles);
     const zoomDefinitions: ZoomDefinitions = {
@@ -247,14 +271,14 @@ export class TileMergeTaskManager {
     let zoom: number = resumedFromZoom;
 
     logger.info({
-      msg: 'starting task creation on zoom levels',
+      msg: 'starting Merge task creation on zoom levels',
       runningCurrentZoom: zoom,
       resumedFromZoom,
       resumeFromTaskIndex,
     });
 
     for (zoom; zoom >= 0; zoom--) {
-      logger.info({ msg: 'Processing zoom level', zoom });
+      logger.info({ msg: 'Processing Merge zoom level', zoom });
 
       if (isMultiResolution) {
         //TODO:send request to pp-manager and get the footprint of all the parts with the same zoom level.
@@ -265,7 +289,7 @@ export class TileMergeTaskManager {
       const targetTaskIndex = shouldSkipTasks ? resumeFromTaskIndex : 0;
 
       logger.debug({
-        msg: 'Zoom level task generation',
+        msg: 'Zoom Merge level task generation',
         zoom,
         latestZoom: resumedFromZoom,
         shouldSkipTasks,
@@ -320,12 +344,12 @@ export class TileMergeTaskManager {
       if (taskIndexCounter < targetTaskIndex) {
         taskIndexCounter++;
         logger.debug({
-          msg: 'Skipping batch task due to resume',
+          msg: 'Skipping Merge batch task due to resume',
           localTaskIndex: taskIndexCounter - 1,
           skipTasksUntilIndex: targetTaskIndex,
           zoomLevel: zoom,
         });
-        span.addEvent('Skipping batch task due to resume', {
+        span.addEvent('Skipping Merge batch task due to resume', {
           skippedTaskIndex: taskIndexCounter - 1,
           skipTasksUntilIndex: targetTaskIndex,
           batchSize: batch.length,
@@ -335,12 +359,12 @@ export class TileMergeTaskManager {
       }
 
       logger.debug({
-        msg: 'Yielding batch task',
+        msg: 'Yielding Merge batch task',
         batchSize: batch.length,
         localTaskIndex: taskIndexCounter,
         zoomLevel: zoom,
       });
-      span.addEvent('Yielding batch task', {
+      span.addEvent('Yielding Merge batch task', {
         batchSize: batch.length,
         localTaskIndex: taskIndexCounter,
         taskIndex: taskIndexCounter,

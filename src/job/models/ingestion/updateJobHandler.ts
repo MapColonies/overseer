@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -13,12 +14,12 @@ import {
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { ReadProductGeometry } from '../../../utils/storage/productReader';
-import type { IConfig, IJobHandler, MergeTilesTaskParams } from '../../../common/interfaces';
+import type { IConfig, IJobHandler } from '../../../common/interfaces';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
-import { Grid } from '../../../common/interfaces';
 import { SERVICES } from '../../../common/constants';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
+import { TileDeletionTaskManager } from '../../../task/models/deletionTaskManager';
 import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
@@ -33,7 +34,8 @@ export class UpdateJobHandler
     @inject(SERVICES.LOGGER) logger: Logger,
     @inject(SERVICES.CONFIG) protected readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
-    @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
+    @inject(TileMergeTaskManager) private readonly mergeTaskManager: TileMergeTaskManager,
+    @inject(TileDeletionTaskManager) private readonly tileDeletionTaskManager: TileDeletionTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
@@ -61,22 +63,19 @@ export class UpdateJobHandler
 
         const productGeometry = await this.readProductGeometry(inputFiles.productShapefilePath);
 
-        const taskBuildParams: MergeTilesTaskParams = {
-          inputFiles,
-          taskMetadata: {
-            layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
-            tileOutputFormat: additionalParams.tileOutputFormat,
-            isNewTarget: false,
-            grid: Grid.TWO_ON_ONE,
-          },
-          ingestionResolution: job.parameters.ingestionResolution,
-          productGeometry,
-        };
+        if (job.internalId === undefined) {
+          throw new Error(`Job ${job.id} is missing internalId, cannot build layer relative path`);
+        }
+
+        const layerRelativePath = join(job.internalId, additionalParams.displayPath);
 
         logger.info({ msg: 'building tasks' });
-        const mergeTasks = this.taskBuilder.buildTasks(taskBuildParams, task);
 
-        await this.taskBuilder.pushTasks(task, job.id, job.type, mergeTasks);
+        const { polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
+
+        await this.tileDeletionTaskManager.buildAndPushTasks(job, task, polygonPartsEntityName, layerRelativePath);
+
+        await this.mergeTaskManager.buildAndPushTasks(job, task, productGeometry, layerRelativePath);
 
         await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
       } catch (err) {

@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
-import { Grid, MergeTask, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
@@ -8,7 +7,6 @@ import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobs
 import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
-  const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
   beforeEach(() => {
     jest.resetAllMocks();
     registerDefaultConfig();
@@ -16,47 +14,53 @@ describe('updateJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { updateJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
+      const { updateJobHandler, queueClientMock, taskBuilderMock, tileDeletionTaskManagerMock, readProductGeometryMock } =
+        setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const productGeometry = createFakePolygonalGeometry();
-
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
-
-      const taskBuildParams: MergeTilesTaskParams = {
-        inputFiles: job.parameters.inputFiles,
-        taskMetadata: {
-          layerRelativePath: `${job.internalId}/${additionalParams.displayPath}`,
-          tileOutputFormat: additionalParams.tileOutputFormat,
-          isNewTarget: false,
-          grid: Grid.TWO_ON_ONE,
-        },
-        ingestionResolution: job.parameters.ingestionResolution,
-        productGeometry,
-      };
+      const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`;
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const polygonPartsEntityName = `${job.resourceId}_${String(job.productType).toLowerCase()}`;
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
-      taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
-      taskBuilderMock.pushTasks.mockResolvedValue(undefined);
+      tileDeletionTaskManagerMock.buildAndPushTasks.mockResolvedValue(undefined);
+      taskBuilderMock.buildAndPushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
       await updateJobHandler.handleJobInit(job, task);
 
-      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams, task);
-      expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(task, job.id, job.type, mergeTasks);
+      expect(tileDeletionTaskManagerMock.buildAndPushTasks).toHaveBeenCalledWith(job, task, polygonPartsEntityName, layerRelativePath);
+      expect(taskBuilderMock.buildAndPushTasks).toHaveBeenCalledWith(job, task, productGeometry, layerRelativePath);
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
-    it('should handle job init failure and reject the task', async () => {
-      const { updateJobHandler, taskBuilderMock, queueClientMock } = setupUpdateJobHandlerTest();
-
+    it('should reject task when mergeTaskManager.buildAndPushTasks throws', async () => {
+      const { updateJobHandler, taskBuilderMock, tileDeletionTaskManagerMock, queueClientMock, readProductGeometryMock } =
+        setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
-
       const error = new Error('Test error');
 
-      taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
-      taskBuilderMock.pushTasks.mockRejectedValue(error);
+      readProductGeometryMock.mockResolvedValue(createFakePolygonalGeometry());
+      tileDeletionTaskManagerMock.buildAndPushTasks.mockResolvedValue(undefined);
+      taskBuilderMock.buildAndPushTasks.mockRejectedValue(error);
+      queueClientMock.reject.mockResolvedValue(undefined);
+
+      await updateJobHandler.handleJobInit(job, task);
+
+      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
+    });
+
+    it('should reject task when tileDeletionTaskManager.buildAndPushTasks throws', async () => {
+      const { updateJobHandler, tileDeletionTaskManagerMock, queueClientMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
+      const job = structuredClone(ingestionUpdateJob);
+      const task = createTasksTaskForIngestionUpdate;
+      const error = new Error('Deletion task error');
+
+      readProductGeometryMock.mockResolvedValue(createFakePolygonalGeometry());
+      tileDeletionTaskManagerMock.buildAndPushTasks.mockRejectedValue(error);
       queueClientMock.reject.mockResolvedValue(undefined);
 
       await updateJobHandler.handleJobInit(job, task);

@@ -24,7 +24,7 @@ import { createChildSpan } from '../../common/tracing';
 @injectable()
 export class ExportTaskManager {
   private readonly allWorldBounds: BBox;
-  private readonly tilesProvider: StorageProvider;
+  private readonly tilesProvider: SourceType;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
@@ -137,7 +137,7 @@ export class ExportTaskManager {
   }
 
   private getSeparator(): string {
-    return this.tilesProvider === StorageProvider.S3 ? '/' : sep;
+    return this.tilesProvider === SourceType.S3 ? '/' : sep;
   }
 
   private calculateZoomLevelsAndBbox(roiFeature: RoiFeature, targetFeature: Feature<Polygon | MultiPolygon>): ZoomBoundsParameters {

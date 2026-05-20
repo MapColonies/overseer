@@ -10,6 +10,7 @@ import {
   ExportFinalizeFullProcessingParams,
   ExportFinalizeType,
   RasterLayerMetadata,
+  SourceType,
 } from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
 import { context, trace, Tracer } from '@opentelemetry/api';
@@ -73,7 +74,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
     this.exportTaskType = config.get<string>('jobManagement.export.tasks.tilesExporting.type');
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const gpkgProvider = config.get<StorageProvider>('gpkgStorageProvider');
-    this.isS3GpkgProvider = gpkgProvider === StorageProvider.S3;
+    this.isS3GpkgProvider = gpkgProvider === SourceType.S3;
     this.cleanupExpirationDays = config.get<number>('jobManagement.export.pollingJobs.export.cleanupExpirationDays');
   }
   public async handleJobInit(job: ExportJob, task: ExportInitTask): Promise<void> {

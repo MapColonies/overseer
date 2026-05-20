@@ -134,3 +134,12 @@ export class ProductReadError extends Error {
     this.stack = err instanceof Error ? err.stack : undefined;
   }
 }
+
+export class IntersectionError extends PolygonPartsError {
+  public constructor(err: unknown, polygonPartsEntityName: string) {
+    const message = `Failed to get intersection for entity ${polygonPartsEntityName}: ${err instanceof Error ? err.message : 'unknown'}`;
+    super(message);
+    this.name = IntersectionError.name;
+    this.stack = err instanceof Error ? err.stack : undefined;
+  }
+}

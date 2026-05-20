@@ -7,7 +7,6 @@ import {} from '@turf/turf';
 import { configMock, init, registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { mockRoi, nonIntersectingRoiCase } from '../../mocks/exportTaskMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
-import { StorageProvider } from '../../../../src/common/constants';
 import { exportJob } from '../../mocks/jobsMockData';
 import { ExportTaskManager } from '../../../../src/task/models/exportTaskManager';
 import { tracerMock } from '../../mocks/tracerMock';
@@ -61,7 +60,7 @@ describe('exportTaskManager', () => {
       const { exportTaskManager } = setupExportTaskBuilderTest();
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const tilesStorageProvider = configMock.get<string>('tilesStorageProvider');
-      const separator = tilesStorageProvider === StorageProvider.S3 ? '/' : sep;
+      const separator = tilesStorageProvider === SourceType.S3 ? '/' : sep;
       const expectedPath = `${layerRecord.metadata.id}${separator}${layerRecord.metadata.displayPath}`;
       const job = exportJob;
       const { metadata } = layerRecord;

@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import nock from 'nock';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
-import { ingestionNewJob } from '../../mocks/jobsMockData';
+import { ingestionNewJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import type { MergeTaskParameters, JobResumeState, MergeTilesTaskParams } from '../../../../src/common/interfaces';
 import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { createFakeTask } from '../../mocks/tasksMockData';
@@ -476,6 +476,38 @@ describe('tileMergeTaskManager', () => {
 
       // Should reject when HTTP requests fail
       await expect(tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks)).rejects.toThrow();
+    });
+  });
+
+  describe('buildAndPushTasks', () => {
+    it('should build and push merge tasks successfully', async () => {
+      const { tileMergeTaskManager } = testContext;
+
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${ingestionUpdateJob.id}/tasks`;
+      const updateTaskPath = `/jobs/${ingestionUpdateJob.id}/tasks/${mockInitTask.id}`;
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(200).persist();
+      nock(jobManagerBaseUrl).put(updateTaskPath).reply(200).persist();
+
+      const layerRelativePath = `${ingestionUpdateJob.internalId}/${ingestionUpdateJob.parameters.additionalParams.displayPath}`;
+
+      await expect(
+        tileMergeTaskManager.buildAndPushTasks(ingestionUpdateJob, mockInitTask, buildTasksParams.productGeometry, layerRelativePath)
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw when pushTasks fails', async () => {
+      const { tileMergeTaskManager } = testContext;
+
+      const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
+      const createTasksPath = `/jobs/${ingestionUpdateJob.id}/tasks`;
+      nock(jobManagerBaseUrl).post(createTasksPath).reply(500).persist();
+
+      const layerRelativePath = `${ingestionUpdateJob.internalId}/${ingestionUpdateJob.parameters.additionalParams.displayPath}`;
+
+      await expect(
+        tileMergeTaskManager.buildAndPushTasks(ingestionUpdateJob, mockInitTask, buildTasksParams.productGeometry, layerRelativePath)
+      ).rejects.toThrow();
     });
   });
 });

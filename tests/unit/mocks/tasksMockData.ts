@@ -5,6 +5,7 @@ import {
   IngestionNewFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
+  IngestionValidationTaskParams,
   TaskBlockDuplicationParam,
 } from '@map-colonies/raster-shared';
 import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
@@ -74,6 +75,65 @@ export const finalizeTaskForIngestionNew = createFakeTask<IngestionNewFinalizeTa
     insertedToGeoServer: false,
     insertedToMapproxy: false,
     processedParts: false,
+  }
+);
+
+export const validationTaskForIngestionUpdate = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  { checksums: [] }
+);
+
+export const validationTaskWithResolutionErrorsAndReport = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  {
+    checksums: [],
+    isValid: false,
+    report: {
+      fileName: 'report.json',
+      fileSize: 1024,
+      url: 'http://report-server/report.json',
+      path: '/reports/report.json',
+    },
+    errorsSummary: {
+      errorsCount: {
+        geometryValidity: 0,
+        vertices: 0,
+        metadata: 0,
+        resolution: 5,
+        smallHoles: 0,
+        smallGeometries: 0,
+        unknown: 0,
+      },
+      thresholds: {
+        resolution: { exceeded: true },
+        smallHoles: { exceeded: false, count: 0 },
+        smallGeometries: { exceeded: false },
+      },
+    },
+  }
+);
+
+export const validationTaskWithResolutionErrorsNoReportUrl = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  {
+    checksums: [],
+    isValid: false,
+    errorsSummary: {
+      errorsCount: {
+        geometryValidity: 0,
+        vertices: 0,
+        metadata: 0,
+        resolution: 5,
+        smallHoles: 0,
+        smallGeometries: 0,
+        unknown: 0,
+      },
+      thresholds: {
+        resolution: { exceeded: true },
+        smallHoles: { exceeded: false, count: 0 },
+        smallGeometries: { exceeded: false },
+      },
+    },
   }
 );
 

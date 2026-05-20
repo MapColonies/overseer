@@ -77,6 +77,7 @@ export interface ExportPollingJobsConfig {
 export interface IngestionTasksConfig {
   tilesMerging: TilesMergingTaskConfig;
   tilesSeeding: TilesSeedingTaskConfig;
+  tilesDeletion: TilesDeletionTaskConfig;
 }
 
 export interface ExportTasksConfig {
@@ -104,6 +105,12 @@ export interface TilesMergingTaskConfig {
   radiusBufferUnits: Units;
   truncatePrecision: number;
   truncateCoordinates: number;
+}
+
+export interface TilesDeletionTaskConfig {
+  type: string;
+  tileBatchSize: number;
+  taskBatchSize: number;
 }
 
 export interface TilesSeedingTaskConfig {
@@ -251,6 +258,14 @@ export interface MergeTilesMetadata {
   tileOutputFormat: TileOutputFormat;
   isNewTarget: boolean;
   grid: Grid;
+}
+
+export interface BuildDeletionTaskParams {
+  polygonPartsEntityName: string;
+  layerRelativePath: string;
+  ingestionResolution: number;
+  tileOutputFormat: TileOutputFormat;
+  reportUrl: string;
 }
 
 //#endregion task
