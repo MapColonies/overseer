@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.7.0](https://github.com/MapColonies/overseer/compare/v2.6.2...v2.7.0) (2026-05-20)
+
+
+### Features
+
+* tiles deletion creation (MAPCO-5735) ([#95](https://github.com/MapColonies/overseer/issues/95)) ([4474784](https://github.com/MapColonies/overseer/commit/44747847d1b49fe47d8e63a414f797bd89bda75d))
+
 ## [2.6.2](https://github.com/MapColonies/overseer/compare/v2.6.1...v2.6.2) (2026-05-20)
 
 
