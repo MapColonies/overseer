@@ -12,8 +12,6 @@
 {{- $samePvc := and $storage.fs.ingestionSourcePvc.enabled $storage.fs.internalPvc.enabled (eq $storage.fs.internalPvc.name $storage.fs.ingestionSourcePvc.name) }}
 {{- $internalVolumeName := ternary "ingestion-storage" "internal-storage" $samePvc }}
 
-{{ $gpkgPath := (printf "%s/%s" $storage.fs.internalPvc.mountPath $storage.fs.internalPvc.gpkgSubPath) }}
-
 {{- if .Values.enabled -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -89,8 +87,6 @@ spec:
           env:
             - name: SERVER_PORT
               value: {{ .Values.env.targetPort | quote }}
-            - name: GPKGS_LOCATION
-              value: {{ $gpkgPath }}
             {{- if .Values.global.ca.secretName }}
             - name: REQUESTS_CA_BUNDLE
               value: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}

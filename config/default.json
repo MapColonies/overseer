@@ -45,6 +45,12 @@
   "disableHttpClientLogs": true,
   "tilesStorageProvider": "FS",
   "gpkgStorageProvider": "FS",
+  "storage": {
+    "internalPvc": {
+      "mountPath": "",
+      "gpkgSubPath": ""
+    }
+  },
   "ingestionSourcesDirPath": "",
   "linkTemplatesPath": "config/linkTemplates.template",
   "servicesUrl": {
@@ -121,8 +127,7 @@
       "pollingJobs": {
         "export": {
           "type": "Export",
-          "cleanupExpirationDays": 14,
-          "gpkgsRootDir": "gpkgs"
+          "cleanupExpirationDays": 14
         }
       },
       "tasks": {
