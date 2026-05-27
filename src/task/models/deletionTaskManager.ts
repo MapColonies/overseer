@@ -159,7 +159,8 @@ export class TileDeletionTaskManager {
       const conflictGeometries = conflictFeatures
         .filter((feature) => feature.properties?.e_res != null)
         .map((feature) => turfFeature(feature.geometry as Polygon | MultiPolygon));
-      logger.info({ msg: 'Union conflict features into single geometry' });
+
+      logger.info({ msg: 'Unioning conflict features into single geometry', conflictFeatureCount: conflictGeometries.length });
       const unionedConflictGeometry = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
 
       if (unionedConflictGeometry === null) {
