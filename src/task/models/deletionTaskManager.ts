@@ -156,7 +156,9 @@ export class TileDeletionTaskManager {
       logger.info({ msg: 'Conflict features read from report', featureCount: conflictFeatures.length });
 
       // 2. Union all conflict geometries into one entity
-      const conflictGeometries = conflictFeatures.map((f) => turfFeature(f.geometry as Polygon | MultiPolygon));
+      const conflictGeometries = conflictFeatures
+        .filter((feature) => feature.properties?.e_res != null)
+        .map((feature) => turfFeature(feature.geometry as Polygon | MultiPolygon));
       logger.info({ msg: 'Union conflict features into single geometry' });
       const unionedConflictGeometry = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
 
