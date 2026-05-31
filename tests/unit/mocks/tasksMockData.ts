@@ -83,7 +83,7 @@ export const validationTaskForIngestionUpdate = createFakeTask<IngestionValidati
   { checksums: [] }
 );
 
-export const validationTaskWithResolutionErrorsAndReport = createFakeTask<IngestionValidationTaskParams>(
+export const validationTaskWithResolutionErrors = createFakeTask<IngestionValidationTaskParams>(
   { jobId: ingestionUpdateJob.id, type: 'validation' },
   {
     checksums: [],

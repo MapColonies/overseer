@@ -7,13 +7,14 @@ import {
   createFakeTask,
   validationTaskForIngestionUpdate,
   validationTaskWithResolutionAndSmallHolesErrorsAndReport,
-  validationTaskWithResolutionErrorsAndReport,
+  validationTaskWithResolutionErrors,
   validationTaskWithResolutionErrorsNoReportUrl,
 } from '../../mocks/tasksMockData';
 import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { jobManagerClientMock } from '../../mocks/jobManagerMocks';
 import * as reportUtils from '../../../../src/utils/report';
 import { polygonPartsMangerClientMock, setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
+import { Polygon } from 'geojson';
 
 describe('TileDeletionTaskManager', () => {
   let testContext: TileDeletionTaskManagerContext;
@@ -80,7 +81,7 @@ describe('TileDeletionTaskManager', () => {
     it('should call buildTasks and pushTasks when resolution errors exist and report URL is present', async () => {
       const { tileDeletionTaskManager } = testContext;
 
-      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrorsAndReport]);
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
 
       const buildTasksSpy = jest.spyOn(tileDeletionTaskManager, 'buildTasks');
       const pushTasksSpy = jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockResolvedValue(undefined);
@@ -94,7 +95,7 @@ describe('TileDeletionTaskManager', () => {
           layerRelativePath,
           ingestionResolution: ingestionUpdateJob.parameters.ingestionResolution,
           tileOutputFormat: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat,
-          reportUrl: validationTaskWithResolutionErrorsAndReport.parameters.report?.url,
+          reportUrl: validationTaskWithResolutionErrors.parameters.report?.url,
         })
       );
       expect(pushTasksSpy).toHaveBeenCalledWith(ingestionUpdateJob.id, ingestionUpdateJob.type, expect.anything());
@@ -103,7 +104,7 @@ describe('TileDeletionTaskManager', () => {
     it('should propagate non-NotFoundError thrown by pushTasks', async () => {
       const { tileDeletionTaskManager } = testContext;
 
-      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrorsAndReport]);
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
       jest.spyOn(tileDeletionTaskManager, 'buildTasks');
       jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new Error('unexpected push failure'));
 
@@ -116,8 +117,8 @@ describe('TileDeletionTaskManager', () => {
       const { tileDeletionTaskManager } = testContext;
 
       // polygon A – the resolution conflict geometry (e_res), should drive deletion task generation
-      const eResGeometry = {
-        type: 'Polygon' as const,
+      const eResGeometry: Polygon = {
+        type: 'Polygon',
         coordinates: [
           [
             [0, 0],
@@ -129,8 +130,8 @@ describe('TileDeletionTaskManager', () => {
         ],
       };
       // polygon B – a small-holes conflict geometry (e_sm_holes), must NOT be used
-      const eSmHolesGeometry = {
-        type: 'Polygon' as const,
+      const eSmHolesGeometry: Polygon = {
+        type: 'Polygon',
         coordinates: [
           [
             [10, 10],
@@ -180,7 +181,7 @@ describe('TileDeletionTaskManager', () => {
     it('should NOT swallow a NotFoundError thrown by pushTasks - only pre-try NotFoundErrors are swallowed', async () => {
       const { tileDeletionTaskManager } = testContext;
 
-      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrorsAndReport]);
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
       jest.spyOn(tileDeletionTaskManager, 'buildTasks');
       // pushTasks is inside the try block, so a NotFoundError it throws IS caught and swallowed
       jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new NotFoundError('from pushTasks'));
@@ -212,7 +213,7 @@ describe('TileDeletionTaskManager', () => {
       const { tileDeletionTaskManager } = testContext;
 
       // First task has no resolution errors, second has — only first should be used
-      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskForIngestionUpdate, validationTaskWithResolutionErrorsAndReport]);
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskForIngestionUpdate, validationTaskWithResolutionErrors]);
       jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockResolvedValue(undefined);
 
       await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
