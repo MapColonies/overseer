@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.7.1](https://github.com/MapColonies/overseer/compare/v2.7.0...v2.7.1) (2026-05-31)
+
+
+### Bug Fixes
+
+* filter conflicted geometry (MAPCO-10674) ([#99](https://github.com/MapColonies/overseer/issues/99)) ([7068632](https://github.com/MapColonies/overseer/commit/706863246e9bcc9e188e199dcc6503da45b93a93))
+
 ## [2.7.0](https://github.com/MapColonies/overseer/compare/v2.6.2...v2.7.0) (2026-05-20)
 
 
