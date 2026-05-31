@@ -12,8 +12,8 @@ import {
 } from '../../mocks/tasksMockData';
 import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { jobManagerClientMock } from '../../mocks/jobManagerMocks';
-import { polygonPartsMangerClientMock, setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
 import * as reportUtils from '../../../../src/utils/report';
+import { polygonPartsMangerClientMock, setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
 
 describe('TileDeletionTaskManager', () => {
   let testContext: TileDeletionTaskManagerContext;
@@ -118,16 +118,34 @@ describe('TileDeletionTaskManager', () => {
       // polygon A – the resolution conflict geometry (e_res), should drive deletion task generation
       const eResGeometry = {
         type: 'Polygon' as const,
-        coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0],
+          ],
+        ],
       };
       // polygon B – a small-holes conflict geometry (e_sm_holes), must NOT be used
       const eSmHolesGeometry = {
         type: 'Polygon' as const,
-        coordinates: [[[10, 10], [11, 10], [11, 11], [10, 11], [10, 10]]],
+        coordinates: [
+          [
+            [10, 10],
+            [11, 10],
+            [11, 11],
+            [10, 11],
+            [10, 10],
+          ],
+        ],
       };
 
       jest.spyOn(reportUtils, 'readConflictFeatures').mockResolvedValue([
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         { type: 'Feature', geometry: eResGeometry, properties: { e_res: 'Resolution Conflict' } },
+        // eslint-disable-next-line @typescript-eslint/naming-convention
         { type: 'Feature', geometry: eSmHolesGeometry, properties: { e_sm_holes: 'Contains small holes' } },
       ]);
 
@@ -141,6 +159,7 @@ describe('TileDeletionTaskManager', () => {
       expect(polygonPartsMangerClientMock.getIntersection).toHaveBeenCalledWith(
         polygonPartsEntityName,
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           features: expect.arrayContaining([expect.objectContaining({ geometry: eResGeometry })]),
         })
       );
@@ -149,6 +168,7 @@ describe('TileDeletionTaskManager', () => {
       expect(polygonPartsMangerClientMock.getIntersection).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           features: expect.arrayContaining([expect.objectContaining({ geometry: eSmHolesGeometry })]),
         })
       );
