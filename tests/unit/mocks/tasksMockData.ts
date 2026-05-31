@@ -83,7 +83,7 @@ export const validationTaskForIngestionUpdate = createFakeTask<IngestionValidati
   { checksums: [] }
 );
 
-export const validationTaskWithResolutionErrorsAndReport = createFakeTask<IngestionValidationTaskParams>(
+export const validationTaskWithResolutionErrors = createFakeTask<IngestionValidationTaskParams>(
   { jobId: ingestionUpdateJob.id, type: 'validation' },
   {
     checksums: [],
@@ -107,6 +107,36 @@ export const validationTaskWithResolutionErrorsAndReport = createFakeTask<Ingest
       thresholds: {
         resolution: { exceeded: true },
         smallHoles: { exceeded: false, count: 0 },
+        smallGeometries: { exceeded: false },
+      },
+    },
+  }
+);
+
+export const validationTaskWithResolutionAndSmallHolesErrorsAndReport = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  {
+    checksums: [],
+    isValid: false,
+    report: {
+      fileName: 'report.zip',
+      fileSize: 2048,
+      url: 'http://report-server/report.zip',
+      path: '/reports/report.zip',
+    },
+    errorsSummary: {
+      errorsCount: {
+        geometryValidity: 0,
+        vertices: 0,
+        metadata: 0,
+        resolution: 19,
+        smallHoles: 1,
+        smallGeometries: 0,
+        unknown: 0,
+      },
+      thresholds: {
+        resolution: { exceeded: false },
+        smallHoles: { exceeded: false, count: 3 },
         smallGeometries: { exceeded: false },
       },
     },
