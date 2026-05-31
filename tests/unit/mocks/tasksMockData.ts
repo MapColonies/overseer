@@ -113,6 +113,36 @@ export const validationTaskWithResolutionErrorsAndReport = createFakeTask<Ingest
   }
 );
 
+export const validationTaskWithResolutionAndSmallHolesErrorsAndReport = createFakeTask<IngestionValidationTaskParams>(
+  { jobId: ingestionUpdateJob.id, type: 'validation' },
+  {
+    checksums: [],
+    isValid: false,
+    report: {
+      fileName: 'report.zip',
+      fileSize: 2048,
+      url: 'http://report-server/report.zip',
+      path: '/reports/report.zip',
+    },
+    errorsSummary: {
+      errorsCount: {
+        geometryValidity: 0,
+        vertices: 0,
+        metadata: 0,
+        resolution: 19,
+        smallHoles: 1,
+        smallGeometries: 0,
+        unknown: 0,
+      },
+      thresholds: {
+        resolution: { exceeded: false },
+        smallHoles: { exceeded: false, count: 3 },
+        smallGeometries: { exceeded: false },
+      },
+    },
+  }
+);
+
 export const validationTaskWithResolutionErrorsNoReportUrl = createFakeTask<IngestionValidationTaskParams>(
   { jobId: ingestionUpdateJob.id, type: 'validation' },
   {

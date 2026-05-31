@@ -6,12 +6,14 @@ import { ingestionUpdateJob } from '../../mocks/jobsMockData';
 import {
   createFakeTask,
   validationTaskForIngestionUpdate,
+  validationTaskWithResolutionAndSmallHolesErrorsAndReport,
   validationTaskWithResolutionErrorsAndReport,
   validationTaskWithResolutionErrorsNoReportUrl,
 } from '../../mocks/tasksMockData';
 import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { jobManagerClientMock } from '../../mocks/jobManagerMocks';
-import { setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
+import { polygonPartsMangerClientMock, setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
+import * as reportUtils from '../../../../src/utils/report';
 
 describe('TileDeletionTaskManager', () => {
   let testContext: TileDeletionTaskManagerContext;
@@ -108,6 +110,51 @@ describe('TileDeletionTaskManager', () => {
       await expect(tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)).rejects.toThrow(
         'unexpected push failure'
       );
+    });
+
+    it('should not build deletion tasks for non-resolution conflict features (e.g. e_sm_holes) present in the report', async () => {
+      const { tileDeletionTaskManager } = testContext;
+
+      // polygon A – the resolution conflict geometry (e_res), should drive deletion task generation
+      const eResGeometry = {
+        type: 'Polygon' as const,
+        coordinates: [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]],
+      };
+      // polygon B – a small-holes conflict geometry (e_sm_holes), must NOT be used
+      const eSmHolesGeometry = {
+        type: 'Polygon' as const,
+        coordinates: [[[10, 10], [11, 10], [11, 11], [10, 11], [10, 10]]],
+      };
+
+      jest.spyOn(reportUtils, 'readConflictFeatures').mockResolvedValue([
+        { type: 'Feature', geometry: eResGeometry, properties: { e_res: 'Resolution Conflict' } },
+        { type: 'Feature', geometry: eSmHolesGeometry, properties: { e_sm_holes: 'Contains small holes' } },
+      ]);
+
+      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionAndSmallHolesErrorsAndReport]);
+      // return empty intersection so no actual tile batches are generated
+      polygonPartsMangerClientMock.getIntersection.mockResolvedValue({ type: 'FeatureCollection', features: [] });
+
+      await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
+
+      // getIntersection must have been called with a payload containing the e_res geometry
+      expect(polygonPartsMangerClientMock.getIntersection).toHaveBeenCalledWith(
+        polygonPartsEntityName,
+        expect.objectContaining({
+          features: expect.arrayContaining([expect.objectContaining({ geometry: eResGeometry })]),
+        })
+      );
+
+      // getIntersection must NOT have been called with a payload containing the e_sm_holes geometry
+      expect(polygonPartsMangerClientMock.getIntersection).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          features: expect.arrayContaining([expect.objectContaining({ geometry: eSmHolesGeometry })]),
+        })
+      );
+
+      // intersection was empty → no deletion task batches should have been enqueued
+      expect(jobManagerClientMock.createTaskForJob).not.toHaveBeenCalled();
     });
 
     it('should NOT swallow a NotFoundError thrown by pushTasks - only pre-try NotFoundErrors are swallowed', async () => {
