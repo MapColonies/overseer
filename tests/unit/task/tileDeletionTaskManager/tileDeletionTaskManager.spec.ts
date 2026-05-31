@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { NotFoundError } from '@map-colonies/error-types';
 import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
+import { Polygon } from 'geojson';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateJob } from '../../mocks/jobsMockData';
 import {
@@ -14,7 +15,6 @@ import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.
 import { jobManagerClientMock } from '../../mocks/jobManagerMocks';
 import * as reportUtils from '../../../../src/utils/report';
 import { polygonPartsMangerClientMock, setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
-import { Polygon } from 'geojson';
 
 describe('TileDeletionTaskManager', () => {
   let testContext: TileDeletionTaskManagerContext;
