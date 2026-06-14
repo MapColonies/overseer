@@ -1,9 +1,10 @@
-/* eslint-disable @typescript-eslint/unbound-method */
-import { join } from 'path';
-import jsLogger from '@map-colonies/js-logger';
-import { ShapefileChunkReader, ShapefileChunk } from '@map-colonies/shapefile-reader';
-import { Feature, Polygon, MultiPolygon } from 'geojson';
-import { DependencyContainer } from 'tsyringe';
+import { join } from 'node:path';
+import type { MockInstance } from 'vitest';
+import type { ShapefileChunk } from '@map-colonies/shapefile-reader';
+import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
+import type { Feature, Polygon, MultiPolygon } from 'geojson';
+import type { DependencyContainer } from 'tsyringe';
+import { getTestLogger } from '../../configurations/testLogger';
 import { SERVICES } from '../../../src/common/constants';
 import { ProductReadError } from '../../../src/common/errors';
 import { productReaderFactory, validateProduct } from '../../../src/utils/storage/productReader';
@@ -11,23 +12,23 @@ import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { createFakePolygon, createFakeMultiPolygon } from '../mocks/geometryMockData';
 import { mockShapefileReader } from '../mocks/productReaderMock';
 
-jest.mock('@map-colonies/shapefile-reader');
+vi.mock('@map-colonies/shapefile-reader');
 
 describe('productReader', () => {
   registerDefaultConfig();
   let mockContainer: DependencyContainer;
-  const mockLogger = jsLogger({ enabled: false });
+  const mockLogger = getTestLogger();
   const testProductPath = 'test/Product.shp';
   const testIngestionSourcesDir = configMock.get<string>('ingestionSourcesDirPath');
   const fullProductPath = join(testIngestionSourcesDir, testProductPath);
   const maxVerticesPerChunk = configMock.get<number>('shapefileReader.maxVerticesPerChunk');
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     registerDefaultConfig();
 
     mockContainer = {
-      resolve: jest.fn((token: symbol) => {
+      resolve: vi.fn((token: symbol) => {
         if (token === SERVICES.CONFIG) {
           return configMock;
         }
@@ -107,9 +108,9 @@ describe('productReader', () => {
 
     it('should throw ProductReadError when shapefile reader fails', async () => {
       const readError = new Error('Failed to read shapefile');
-      const mockReadAndProcess = jest.fn().mockRejectedValue(readError);
+      const mockReadAndProcess = vi.fn().mockRejectedValue(readError);
 
-      (ShapefileChunkReader as jest.Mock).mockImplementation(() => ({
+      (ShapefileChunkReader as unknown as MockInstance).mockImplementation(() => ({
         readAndProcess: mockReadAndProcess,
       }));
 

@@ -1,4 +1,4 @@
-import jsLogger from '@map-colonies/js-logger';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { ExportTaskManager } from '../../../../src/task/models/exportTaskManager';
 import { configMock } from '../../mocks/configMock';
 import { tracerMock } from '../../mocks/tracerMock';
@@ -8,7 +8,7 @@ export interface ExportTaskBuilderContext {
 }
 
 export function setupExportTaskBuilderTest(): ExportTaskBuilderContext {
-  const mockLogger = jsLogger({ enabled: false });
+  const mockLogger = getTestLogger();
 
   const exportTaskManager = new ExportTaskManager(mockLogger, configMock, tracerMock);
 

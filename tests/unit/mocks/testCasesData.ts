@@ -1,4 +1,4 @@
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import {
   exportJob,
   ingestionNewJob,

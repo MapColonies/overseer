@@ -2,18 +2,20 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { finalizeTaskForIngestionNew, createTasksTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
-import { MergeTask } from '../../../../src/common/interfaces';
-import { IngestionNewFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
+import type { MergeTask } from '../../../../src/common/interfaces';
+import type { IngestionNewFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { PublishLayerError } from '../../../../src/common/errors';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
 
 describe('NewJobHandler', () => {
   const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     registerDefaultConfig();
   });
+
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
       const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();

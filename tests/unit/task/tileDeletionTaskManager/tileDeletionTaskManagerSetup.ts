@@ -1,24 +1,25 @@
-import jsLogger from '@map-colonies/js-logger';
+import type { Mocked } from 'vitest';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger } from '@map-colonies/mc-utils';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { configMock } from '../../mocks/configMock';
-import { JobManagerConfig } from '../../../../src/common/interfaces';
+import type { JobManagerConfig } from '../../../../src/common/interfaces';
 import { TileDeletionTaskManager } from '../../../../src/task/models/deletionTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
 import { queueClientMock } from '../../mocks/jobManagerMocks';
-import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export const polygonPartsMangerClientMock = {
-  getIntersection: jest.fn(),
-} as unknown as jest.Mocked<PolygonPartsMangerClient>;
+  getIntersection: vi.fn(),
+} as unknown as Mocked<PolygonPartsMangerClient>;
 
 export interface TileDeletionTaskManagerContext {
   tileDeletionTaskManager: TileDeletionTaskManager;
 }
 
 export function setupTileDeletionTaskManagerTest(useMockQueueClient = true): TileDeletionTaskManagerContext {
-  const mockLogger = jsLogger({ enabled: false });
+  const mockLogger = getTestLogger();
 
   const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 

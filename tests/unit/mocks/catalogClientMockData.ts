@@ -1,5 +1,5 @@
 import { ProductType, RecordType } from '@map-colonies/types';
-import { FindLayerResponse } from '../../../src/common/interfaces';
+import type { FindLayerResponse } from '../../../src/common/interfaces';
 
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 export const layerRecord: FindLayerResponse = {

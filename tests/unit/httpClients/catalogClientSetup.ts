@@ -1,43 +1,38 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import { Link } from '@map-colonies/mc-model-types';
-import jsLogger from '@map-colonies/js-logger';
-import { z } from 'zod';
-import {
-  AggregationFeature,
-  aggregationFeaturePropertiesSchema,
-  CORE_VALIDATIONS,
-  INGESTION_VALIDATIONS,
-  LayerNameFormats,
-} from '@map-colonies/raster-shared';
+import type { Mocked, MockedFunction } from 'vitest';
+import type { Link } from '@map-colonies/mc-model-types';
+import type { z } from 'zod';
+import type { AggregationFeature, aggregationFeaturePropertiesSchema, LayerNameFormats } from '@map-colonies/raster-shared';
+import { CORE_VALIDATIONS, INGESTION_VALIDATIONS } from '@map-colonies/raster-shared';
 import { faker } from '@faker-js/faker';
-import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
+import { getTestLogger } from '../../configurations/testLogger';
+import type { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { CatalogClient } from '../../../src/httpClients/catalogClient';
-import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
+import type { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { createFakeBBox, createFakePolygonalGeometry } from '../mocks/geometryMockData';
 import { tracerMock } from '../mocks/tracerMock';
-import { AggregationLayerMetadata } from '../../../src/common/interfaces';
+import type { AggregationLayerMetadata } from '../../../src/common/interfaces';
 
-export type MockCreateLinks = jest.MockedFunction<(data: ILinkBuilderData) => Link[]>;
+export type MockCreateLinks = MockedFunction<(data: ILinkBuilderData) => Link[]>;
 
 export interface CatalogClientTestContext {
   createLinksMock: MockCreateLinks;
   catalogClient: CatalogClient;
-  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
+  polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
 }
 
 export function setupCatalogClientTest(): CatalogClientTestContext {
   registerDefaultConfig();
-  const createLinksMock = jest.fn() as MockCreateLinks;
+  const createLinksMock = vi.fn() as MockCreateLinks;
   const linkBuilder = {
     createLinks: createLinksMock,
   } as unknown as LinkBuilder;
 
   const polygonPartsManagerClientMock = {
-    getAggregatedLayerMetadata: jest.fn(),
-  } as unknown as jest.Mocked<PolygonPartsMangerClient>;
+    getAggregatedLayerMetadata: vi.fn(),
+  } as unknown as Mocked<PolygonPartsMangerClient>;
 
-  const catalogClient = new CatalogClient(configMock, jsLogger({ enabled: false }), tracerMock, linkBuilder, polygonPartsManagerClientMock);
+  const catalogClient = new CatalogClient(configMock, getTestLogger(), tracerMock, linkBuilder, polygonPartsManagerClientMock);
 
   return {
     createLinksMock,

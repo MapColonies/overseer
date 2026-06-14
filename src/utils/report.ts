@@ -1,11 +1,11 @@
-import { execFile } from 'child_process';
-import fs from 'fs/promises';
-import { createWriteStream } from 'fs';
-import { Writable } from 'stream';
-import os from 'os';
-import path from 'path';
+import { execFile } from 'node:child_process';
+import fs from 'node:fs/promises';
+import { createWriteStream } from 'node:fs';
+import { Writable } from 'node:stream';
+import os from 'node:os';
+import path from 'node:path';
 import type { Logger } from '@map-colonies/js-logger';
-import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
+import type { ShapefileChunkReader, ChunkProcessor, ShapefileChunk } from '@map-colonies/shapefile-reader';
 import type { Feature } from 'geojson';
 
 async function downloadZip(reportUrl: string, destPath: string, logger: Logger): Promise<void> {
@@ -21,9 +21,9 @@ async function processZip(tempZipPath: string, tempDir: string, shapefileReader:
   const conflictFeatures: Feature[] = [];
 
   await new Promise<void>((resolve, reject) => {
-    execFile('unzip', ['-o', tempZipPath, '-d', tempDir], (error) => {
-      if (error !== null) {
-        reject(error);
+    execFile('unzip', ['-o', tempZipPath, '-d', tempDir], (err) => {
+      if (err !== null) {
+        reject(err instanceof Error ? err : new Error(String(err.message)));
       } else {
         resolve();
       }

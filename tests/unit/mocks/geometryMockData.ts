@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { faker } from '@faker-js/faker';
-import { BBox, MultiPolygon, Polygon } from 'geojson';
+import type { BBox, MultiPolygon, Polygon } from 'geojson';
 
 type GeometryType = 'Polygon' | 'MultiPolygon' | 'random';
 
@@ -34,7 +34,7 @@ export function createFakePolygon(options?: { radiusInMeters?: number }): Polygo
   }
 
   // Close the polygon by repeating the first point
-  coordinates.push(coordinates[0]);
+  coordinates.push(coordinates[0]!);
 
   return {
     type: 'Polygon',

@@ -1,8 +1,8 @@
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { Link } from '@map-colonies/mc-model-types';
 import { inject, injectable } from 'tsyringe';
-import type { IConfig } from 'config';
 import { compile } from 'handlebars';
+import type { IConfig } from '../common/interfaces';
 import { SERVICES } from '../common/constants';
 
 export interface ILinkBuilderData {

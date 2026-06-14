@@ -1,6 +1,6 @@
-import nock from 'nock';
-import jsLogger from '@map-colonies/js-logger';
+import nock, { cleanAll, isDone } from 'nock';
 import type { LayerNameFormats } from '@map-colonies/raster-shared';
+import { getTestLogger } from '../../configurations/testLogger';
 import { GeoserverClient } from '../../../src/httpClients/geoserverClient';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { PublishLayerError } from '../../../src/common/errors';
@@ -8,15 +8,17 @@ import { tracerMock } from '../mocks/tracerMock';
 
 describe('GeoserverClient', () => {
   let geoServerClient: GeoserverClient;
+
   beforeEach(() => {
     registerDefaultConfig();
-    geoServerClient = new GeoserverClient(configMock, jsLogger({ enabled: false }), tracerMock);
+    geoServerClient = new GeoserverClient(configMock, getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
-    nock.cleanAll();
-    jest.resetAllMocks();
+    cleanAll();
+    vi.resetAllMocks();
   });
+
   describe('publish', () => {
     it('should publish a layer to geoserver', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.geoserverApi');
@@ -32,7 +34,7 @@ describe('GeoserverClient', () => {
       const action = geoServerClient.publish(layersName);
 
       await expect(action).resolves.not.toThrow();
-      expect(nock.isDone()).toBe(true);
+      expect(isDone()).toBe(true);
     });
   });
 

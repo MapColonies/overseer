@@ -1,7 +1,8 @@
-import { sep } from 'path';
+import { sep } from 'node:path';
 import { ZodError } from 'zod';
-import jsLogger from '@map-colonies/js-logger';
-import { RasterLayerMetadata, SourceType } from '@map-colonies/raster-shared';
+import type { RasterLayerMetadata } from '@map-colonies/raster-shared';
+import { SourceType } from '@map-colonies/raster-shared';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { extentSchema, tileRangeArraySchema } from '../../utils/schemas/export.schema';
 import {} from '@turf/turf';
 import { configMock, init, registerDefaultConfig, setValue } from '../../mocks/configMock';
@@ -18,7 +19,7 @@ describe('exportTaskManager', () => {
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('generateTileRangeBatches', () => {
@@ -42,7 +43,7 @@ describe('exportTaskManager', () => {
 
       const action = () => exportTaskManager.generateTileRangeBatches(mockRoi, invalidLayerMetadata as RasterLayerMetadata);
 
-      expect(action).toThrow(ZodError);
+      expect(action).toThrowError(/ZodError/);
     });
 
     it('should handle roi that not intersecting with layer footprint and throw error', () => {
@@ -67,7 +68,7 @@ describe('exportTaskManager', () => {
 
       const sources = exportTaskManager.generateSources(job, metadata);
 
-      const [source1, source2] = sources;
+      const [source1, source2] = sources as [(typeof sources)[0], (typeof sources)[0]];
       const isExtentExistInSource1 = extentSchema.safeParse(source1.extent).success;
 
       expect(sources).toHaveLength(2);
@@ -82,7 +83,7 @@ describe('exportTaskManager', () => {
       const { exportTaskManager } = setupExportTaskBuilderTest();
       const job = exportJob;
 
-      job.parameters.exportInputParams.roi.features[0].geometry.type = 'invalidType' as 'Polygon';
+      job.parameters.exportInputParams.roi.features[0]!.geometry.type = 'invalidType' as 'Polygon';
       const { metadata } = layerRecord;
 
       const action = () => exportTaskManager.generateSources(job, metadata);
@@ -93,13 +94,14 @@ describe('exportTaskManager', () => {
 
   describe('private methods', () => {
     describe('getSeparator', () => {
-      const mockLogger = jsLogger({ enabled: false });
+      const mockLogger = getTestLogger();
 
       it('should return / for S3 storage provider', () => {
         setValue('tilesStorageProvider', 'S3');
         init();
         const exportTaskManager = new ExportTaskManager(mockLogger, configMock, tracerMock);
         const result = exportTaskManager['getSeparator']();
+
         expect(result).toBe('/');
       });
 
@@ -108,6 +110,7 @@ describe('exportTaskManager', () => {
         init();
         const exportTaskManager = new ExportTaskManager(mockLogger, configMock, tracerMock);
         const result = exportTaskManager['getSeparator']();
+
         expect(result).toBe(sep);
       });
     });

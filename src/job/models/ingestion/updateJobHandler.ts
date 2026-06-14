@@ -1,4 +1,4 @@
-import { join } from 'path';
+import { join } from 'node:path';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -13,7 +13,7 @@ import {
 } from '../../../utils/zod/schemas/job.schema';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
-import { ReadProductGeometry } from '../../../utils/storage/productReader';
+import type { ReadProductGeometry } from '../../../utils/storage/productReader';
 import type { IConfig, IJobHandler } from '../../../common/interfaces';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { SERVICES } from '../../../common/constants';
@@ -24,19 +24,17 @@ import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()
-/* eslint-disable @typescript-eslint/brace-style */
 export class UpdateJobHandler
   extends JobHandler
   implements IJobHandler<IngestionUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionUpdateFinalizeJob, IngestionUpdateFinalizeTask>
 {
-  /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
-    @inject(SERVICES.CONFIG) protected readonly config: IConfig,
+    @inject(SERVICES.CONFIG) protected override readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(TileMergeTaskManager) private readonly mergeTaskManager: TileMergeTaskManager,
     @inject(TileDeletionTaskManager) private readonly tileDeletionTaskManager: TileDeletionTaskManager,
-    @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
+    @inject(SERVICES.QUEUE_CLIENT) protected override queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
     @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,

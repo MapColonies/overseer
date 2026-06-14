@@ -8,7 +8,7 @@ import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     registerDefaultConfig();
   });
 
@@ -21,7 +21,7 @@ describe('updateJobHandler', () => {
       const productGeometry = createFakePolygonalGeometry();
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
       const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`;
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
       const polygonPartsEntityName = `${job.resourceId}_${String(job.productType).toLowerCase()}`;
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
@@ -68,6 +68,7 @@ describe('updateJobHandler', () => {
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
   });
+
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
       const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock, jobTrackerClientMock } = setupUpdateJobHandlerTest();

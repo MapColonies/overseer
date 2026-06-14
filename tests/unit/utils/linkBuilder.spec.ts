@@ -1,5 +1,6 @@
-import FS from 'fs';
-import { ILinkBuilderData, LinkBuilder } from '../../../src/utils/linkBuilder';
+import fs from 'node:fs';
+import type { ILinkBuilderData } from '../../../src/utils/linkBuilder';
+import { LinkBuilder } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { getExpectedLinks, linksTemplate } from '../mocks/linksBuilderUtils';
 
@@ -7,9 +8,10 @@ let linkBuilder: LinkBuilder;
 
 describe('LinkBuilder', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     registerDefaultConfig();
   });
+
   describe('createLinks', () => {
     it('should return links for a given layer', () => {
       linkBuilder = new LinkBuilder(configMock);
@@ -24,7 +26,7 @@ describe('LinkBuilder', () => {
 
       const expectedLinks = getExpectedLinks(linkBuilderData);
 
-      jest.spyOn(FS, 'readFileSync').mockReturnValue(linksTemplate);
+      vi.spyOn(fs, 'readFileSync').mockReturnValue(linksTemplate);
       const actualLinks = linkBuilder.createLinks(linkBuilderData);
 
       expect(actualLinks).toEqual(expectedLinks);

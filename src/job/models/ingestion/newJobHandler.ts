@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { context, trace } from '@opentelemetry/api';
@@ -25,18 +25,16 @@ import { CatalogClient } from '../../../httpClients/catalogClient';
 import { JobHandler } from '../jobHandler';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
-import { ReadProductGeometry } from '../../../utils/storage/productReader';
+import type { ReadProductGeometry } from '../../../utils/storage/productReader';
 
 @injectable()
-/* eslint-disable @typescript-eslint/brace-style */
 export class NewJobHandler
   extends JobHandler
   implements IJobHandler<IngestionNewCreateTasksJob, IngestionCreateTasksTask, IngestionNewFinalizeJob, IngestionNewFinalizeTask>
 {
-  /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
-    @inject(SERVICES.CONFIG) protected readonly config: IConfig,
+    @inject(SERVICES.CONFIG) protected override readonly config: IConfig,
     @inject(SERVICES.TRACER) public readonly tracer: Tracer,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) queueClient: QueueClient,

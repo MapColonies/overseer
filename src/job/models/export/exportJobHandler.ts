@@ -1,5 +1,5 @@
-import path from 'path';
-import { Feature, MultiPolygon, Polygon } from 'geojson';
+import path from 'node:path';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import { ogr2ogr } from 'ogr2ogr';
 import { inject, injectable } from 'tsyringe';
 import {
@@ -13,7 +13,8 @@ import {
   SourceType,
 } from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
-import { context, trace, Tracer } from '@opentelemetry/api';
+import { context, trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import {
@@ -26,7 +27,7 @@ import {
 } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
-import {
+import type {
   AggregationLayerMetadata,
   ExportFinalizeExecutionContext,
   ExportFinalizeGpkgPaths,
@@ -408,13 +409,13 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
 
       await Promise.all(
         targetCallbacks.map(async (callback) =>
-          this.callbackClient.send(callback.url, callbackParams).catch((err) => {
-            const error = err instanceof Error ? err.message : String(err);
+          this.callbackClient.send(callback.url, callbackParams).catch((error) => {
+            const err = error instanceof Error ? error.message : String(error);
             this.logger.error({
               msg: 'Failed to send callback',
               url: callback.url,
               jobId: job.id,
-              error,
+              err,
             });
           })
         )

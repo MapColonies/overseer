@@ -1,29 +1,30 @@
+import path from 'node:path';
+import type { MockInstance } from 'vitest';
 /* eslint-disable @typescript-eslint/unbound-method */
-import path from 'path';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { faker } from '@faker-js/faker';
 import { ExportFinalizeType } from '@map-colonies/raster-shared';
 import { ogr2ogr } from 'ogr2ogr';
 import { GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE } from '../../../../src/common/constants';
-import { ExportTask } from '../../../../src/common/interfaces';
+import type { ExportTask } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { createFakeAggregatedPartData } from '../../httpClients/catalogClientSetup';
 import { finalizeSuccessTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
 import { exportJob } from '../../mocks/jobsMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
-import { ExportFinalizeTask, ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
+import type { ExportFinalizeTask, ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { exportTaskSources, exportTileRangeBatches } from '../../mocks/exportTaskMockData';
 import { setupExportJobHandlerTest } from './exportJobHandlerSetup';
 
 // Mock ogr2ogr
-jest.mock('ogr2ogr', () => ({
-  ogr2ogr: jest.fn().mockResolvedValue(undefined),
+vi.mock('ogr2ogr', () => ({
+  ogr2ogr: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('ExportJobHandler', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     clear();
     registerDefaultConfig();
   });
@@ -118,9 +119,10 @@ describe('ExportJobHandler', () => {
     const gpkgFilePath = path.join(mountPath, gpkgSubPath, gpkgRelativePath);
     const jsonFilePath = gpkgFilePath.replace('.gpkg', '.json');
     const gpkgDirPath = '/path/to/gpkgs';
-    let dirnameSpy: jest.SpyInstance;
+    let dirnameSpy: MockInstance;
+
     beforeEach(() => {
-      dirnameSpy = jest.spyOn(path, 'dirname').mockReturnValue(gpkgDirPath);
+      dirnameSpy = vi.spyOn(path, 'dirname').mockReturnValue(gpkgDirPath);
     });
 
     describe('when handling GPKG file modification', () => {
@@ -214,7 +216,7 @@ describe('ExportJobHandler', () => {
         polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
         catalogClientMock.findLayer.mockResolvedValue(layerRecord);
 
-        (ogr2ogr as unknown as jest.Mock).mockRejectedValue(new Error('GPKG modification failed'));
+        (ogr2ogr as unknown as MockInstance).mockRejectedValue(new Error('GPKG modification failed'));
         jobManagerClientMock.getJob.mockResolvedValue(job);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -260,7 +262,7 @@ describe('ExportJobHandler', () => {
             filePath: gpkgFilePath,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             s3Key: expect.stringContaining(gpkgRelativePath),
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
             contentType: GPKG_CONTENT_TYPE,
           },
           {
@@ -486,7 +488,7 @@ describe('ExportJobHandler', () => {
         queueClientMock.ack.mockResolvedValue(undefined);
         jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.COMPLETED });
 
-        const completeTaskSpy = jest.spyOn(exportJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
+        const completeTaskSpy = vi.spyOn(exportJobHandler as unknown as { completeTask: (...args: unknown[]) => unknown }, 'completeTask');
 
         await exportJobHandler.handleJobFinalize(job, task);
 

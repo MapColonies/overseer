@@ -13,6 +13,7 @@ describe('utils', () => {
       it('should return the file extension', () => {
         const fileName = 'test.gpkg';
         const result = fileExtensionExtractor(fileName);
+
         expect(result).toBe('gpkg');
       });
     });
@@ -27,11 +28,13 @@ describe('utils', () => {
 
       test.each(testCases)('should return the image format', ({ transparency, expected }) => {
         const result = getTileOutputFormat(transparency);
+
         expect(result).toBe(expected);
       });
 
       it('should throw an error for unsupported transparency', () => {
         const transparency = 'unsupported' as Transparency;
+
         expect(() => getTileOutputFormat(transparency)).toThrow();
       });
     });

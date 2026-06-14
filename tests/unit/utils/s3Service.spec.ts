@@ -1,16 +1,18 @@
+import fs from 'node:fs';
+import type { MockInstance } from 'vitest';
 /* eslint-disable @typescript-eslint/naming-convention */
-import fs from 'fs';
 import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
-import jsLogger from '@map-colonies/js-logger';
-import { IS3Config } from '../../../src/common/interfaces';
-import { S3Service, UploadFile } from '../../../src/utils/storage/s3Service';
+import { getTestLogger } from '../../configurations/testLogger';
+import type { IS3Config } from '../../../src/common/interfaces';
+import type { UploadFile } from '../../../src/utils/storage/s3Service';
+import { S3Service } from '../../../src/utils/storage/s3Service';
 import { tracerMock } from '../mocks/tracerMock';
 import { GPKG_CONTENT_TYPE } from '../../../src/common/constants';
 import { S3Error } from '../../../src/common/errors';
 
-jest.mock('@aws-sdk/client-s3');
-jest.mock('@aws-sdk/lib-storage');
+vi.mock('@aws-sdk/client-s3');
+vi.mock('@aws-sdk/lib-storage');
 
 describe('s3Service', () => {
   const mockS3Config: IS3Config = {
@@ -23,8 +25,8 @@ describe('s3Service', () => {
   };
 
   let s3Service: S3Service;
-  let createReadStreamSpy: jest.SpyInstance;
-  let uploadDoneSpy: jest.Mock;
+  let createReadStreamSpy: MockInstance;
+  let uploadDoneSpy: MockInstance;
   const testS3Key = 'test/file.gpkg';
   const mockReadStream = { fake: 'stream' };
 
@@ -35,20 +37,20 @@ describe('s3Service', () => {
   ];
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
-    createReadStreamSpy = jest.spyOn(fs, 'createReadStream').mockReturnValue(mockReadStream as unknown as fs.ReadStream);
+    createReadStreamSpy = vi.spyOn(fs, 'createReadStream').mockReturnValue(mockReadStream as unknown as fs.ReadStream);
 
-    uploadDoneSpy = jest.fn().mockResolvedValue({
+    uploadDoneSpy = vi.fn().mockResolvedValue({
       Bucket: mockS3Config.bucket,
       Key: testS3Key,
     });
 
-    (Upload as unknown as jest.Mock).mockImplementation(() => ({
+    (Upload as unknown as MockInstance).mockImplementation(() => ({
       done: uploadDoneSpy,
     }));
 
-    s3Service = new S3Service(jsLogger({ enabled: false }), mockS3Config, tracerMock);
+    s3Service = new S3Service(getTestLogger(), mockS3Config, tracerMock);
   });
 
   describe('uploadFiles', () => {
@@ -59,7 +61,7 @@ describe('s3Service', () => {
         const index = callCount++;
         return Promise.resolve({
           Bucket: mockS3Config.bucket,
-          Key: testFiles[index % testFiles.length].s3Key,
+          Key: testFiles[index % testFiles.length]!.s3Key,
         });
       });
     });
@@ -105,7 +107,7 @@ describe('s3Service', () => {
     });
 
     it('should upload single file to S3', async () => {
-      const expectedUrl = `${mockS3Config.endpointUrl}/${mockS3Config.bucket}/${testFiles[0].s3Key}`;
+      const expectedUrl = `${mockS3Config.endpointUrl}/${mockS3Config.bucket}/${testFiles[0]!.s3Key}`;
       const s3ClientCtorArgs = {
         credentials: {
           accessKeyId: mockS3Config.accessKeyId,
@@ -115,22 +117,25 @@ describe('s3Service', () => {
         region: 'us-east-1',
         forcePathStyle: true,
       };
-      const urls = await s3Service.uploadFiles([testFiles[0]]);
+      const urls = await s3Service.uploadFiles([testFiles[0]!]);
+
       expect(urls).toEqual([expectedUrl]);
       expect(createReadStreamSpy).toHaveBeenCalledTimes(1);
       expect(S3Client).toHaveBeenCalledWith(s3ClientCtorArgs);
       expect(Upload).toHaveBeenCalledTimes(1);
-      expect(createReadStreamSpy).toHaveBeenCalledWith(testFiles[0].filePath);
+      expect(createReadStreamSpy).toHaveBeenCalledWith(testFiles[0]!.filePath);
+
       const expectedUploadParams = {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         client: expect.any(S3Client),
         params: {
           Bucket: mockS3Config.bucket,
-          Key: testFiles[0].s3Key,
-          ContentType: testFiles[0].contentType,
+          Key: testFiles[0]!.s3Key,
+          ContentType: testFiles[0]!.contentType,
           Body: mockReadStream,
         },
       };
+
       expect(Upload).toHaveBeenCalledWith(expectedUploadParams);
       expect(uploadDoneSpy).toHaveBeenCalledTimes(1);
     });

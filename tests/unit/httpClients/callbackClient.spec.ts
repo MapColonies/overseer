@@ -1,9 +1,9 @@
-import jsLogger from '@map-colonies/js-logger';
 import { faker } from '@faker-js/faker';
-import nock from 'nock';
+import nock, { cleanAll } from 'nock';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { CallbackExportResponse, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { CallbackExportResponse, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import { getTestLogger } from '../../configurations/testLogger';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { CallbackClient } from '../../../src/httpClients/callbackClient';
 import { createFakeRoiFeatureCollection } from '../mocks/exportMockData';
@@ -17,12 +17,12 @@ describe('callbackClient', () => {
 
   beforeEach(() => {
     registerDefaultConfig();
-    callbackClient = new CallbackClient(configMock, jsLogger({ enabled: false }), tracerMock);
+    callbackClient = new CallbackClient(configMock, getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
-    nock.cleanAll();
-    jest.resetAllMocks();
+    cleanAll();
+    vi.resetAllMocks();
   });
 
   describe('send', () => {

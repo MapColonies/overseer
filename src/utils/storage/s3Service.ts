@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import * as fs from 'fs';
+import fs from 'node:fs';
 import { inject, injectable } from 'tsyringe';
 import { Upload } from '@aws-sdk/lib-storage';
 import { S3Client } from '@aws-sdk/client-s3';
-import { Logger } from '@map-colonies/js-logger';
-import { context, trace, Tracer, SpanStatusCode } from '@opentelemetry/api';
+import type { Logger } from '@map-colonies/js-logger';
+import { context, trace, SpanStatusCode } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 import { SERVICES } from '../../common/constants';
-import { IS3Config } from '../../common/interfaces';
+import type { IS3Config } from '../../common/interfaces';
 import { S3Error } from '../../common/errors';
 
 export interface UploadFile {
@@ -85,17 +86,17 @@ export class S3Service {
         activeSpan?.setAttributes({ s3UrlCount: urls.length });
 
         return urls;
-      } catch (err) {
-        const error = new S3Error(err, 'Failed to upload files to S3');
+      } catch (error) {
+        const err = new S3Error(error, 'Failed to upload files to S3');
 
-        logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+        logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
 
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }

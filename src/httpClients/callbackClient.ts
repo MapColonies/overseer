@@ -1,17 +1,18 @@
-import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import type { CallbackExportResponse } from '@map-colonies/raster-shared';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { HttpClient } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
-import { context, trace, Tracer, SpanStatusCode } from '@opentelemetry/api';
+import { context, trace, SpanStatusCode } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
+import type { IConfig } from '../common/interfaces';
 import { SERVICES } from '../common/constants';
 
 @injectable()
 export class CallbackClient extends HttpClient {
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
-    @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.LOGGER) protected override readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer
   ) {
     const serviceName = 'RequestCallback';
@@ -40,7 +41,7 @@ export class CallbackClient extends HttpClient {
         activeSpan?.addEvent('callback.sent.success');
         this.logger.info({ msg: 'Callback sent successfully', callbackUrl });
       } catch (err) {
-        this.logger.error({ msg: 'Failed to send callback', error: err });
+        this.logger.error({ msg: 'Failed to send callback', err });
         activeSpan?.recordException(err as Error);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,

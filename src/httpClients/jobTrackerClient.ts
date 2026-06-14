@@ -1,4 +1,3 @@
-import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import { ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
@@ -6,13 +5,14 @@ import type { Tracer } from '@opentelemetry/api';
 import { HttpClient } from '@map-colonies/mc-utils';
 import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
+import type { IConfig } from '../common/interfaces';
 import { SERVICES } from '../common/constants';
 
 @injectable()
 export class JobTrackerClient extends HttpClient {
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
-    @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.LOGGER) protected override readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer
   ) {
     const serviceName = 'JobTracker';
@@ -39,7 +39,7 @@ export class JobTrackerClient extends HttpClient {
         if (err instanceof Error) {
           const message = 'Failed to notify job tracker';
           const error = new Error(`${message}: ${err.message}`);
-          logger.error({ msg: 'Failed to notify job tracker', error: err });
+          logger.error({ msg: 'Failed to notify job tracker', err });
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
           activeSpan?.recordException(error);
           throw error;

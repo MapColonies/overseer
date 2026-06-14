@@ -1,7 +1,7 @@
-import path from 'path';
+import path from 'node:path';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
-import { IConfig } from '../../common/interfaces';
+import type { IConfig } from '../../common/interfaces';
 import { buildUrl } from '../url';
 
 /* eslint-disable @typescript-eslint/naming-convention */

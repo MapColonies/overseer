@@ -1,6 +1,6 @@
-import jsLogger from '@map-colonies/js-logger';
-import nock from 'nock';
-import { ITaskResponse } from '@map-colonies/mc-priority-queue';
+import nock, { cleanAll } from 'nock';
+import type { ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../configurations/testLogger';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { JobTrackerClient } from '../../../src/httpClients/jobTrackerClient';
 import { tracerMock } from '../mocks/tracerMock';
@@ -15,12 +15,12 @@ describe('JobTrackerClient', () => {
     registerDefaultConfig();
     task = createFakeTask<unknown>();
     jobTrackerUrl = configMock.get<string>('servicesUrl.jobTracker');
-    jobTrackerClient = new JobTrackerClient(configMock, jsLogger({ enabled: false }), tracerMock);
+    jobTrackerClient = new JobTrackerClient(configMock, getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
-    nock.cleanAll();
-    jest.resetAllMocks();
+    cleanAll();
+    vi.resetAllMocks();
   });
 
   describe('notify', () => {

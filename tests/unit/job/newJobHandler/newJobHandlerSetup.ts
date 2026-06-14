@@ -1,43 +1,44 @@
-import jsLogger from '@map-colonies/js-logger';
-import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
-import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
-import { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
-import { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { Mocked } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../../configurations/testLogger';
+import type { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
+import type { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
+import type { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { NewJobHandler } from '../../../../src/job/models/ingestion/newJobHandler';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
-import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { configMock } from '../../mocks/configMock';
 import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
-import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 import { readProductGeometryMock } from '../../mocks/productReaderMock';
 
 export interface NewJobHandlerTestContext {
   newJobHandler: NewJobHandler;
-  taskBuilderMock: jest.Mocked<TileMergeTaskManager>;
-  queueClientMock: jest.Mocked<QueueClient>;
-  jobManagerClientMock: jest.Mocked<JobManagerClient>;
-  mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
-  geoserverClientMock: jest.Mocked<GeoserverClient>;
-  catalogClientMock: jest.Mocked<CatalogClient>;
-  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
-  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
+  taskBuilderMock: Mocked<TileMergeTaskManager>;
+  queueClientMock: Mocked<QueueClient>;
+  jobManagerClientMock: Mocked<JobManagerClient>;
+  mapproxyClientMock: Mocked<MapproxyApiClient>;
+  geoserverClientMock: Mocked<GeoserverClient>;
+  catalogClientMock: Mocked<CatalogClient>;
+  jobTrackerClientMock: Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
 }
 
 export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
   const taskBuilderMock = {
-    buildTasks: jest.fn(),
-    pushTasks: jest.fn(),
-  } as unknown as jest.Mocked<TileMergeTaskManager>;
+    buildTasks: vi.fn(),
+    pushTasks: vi.fn(),
+  } as unknown as Mocked<TileMergeTaskManager>;
 
-  const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
-  const geoserverClientMock = { publish: jest.fn() } as unknown as jest.Mocked<GeoserverClient>;
-  const catalogClientMock = { publish: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const mapproxyClientMock = { publish: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const geoserverClientMock = { publish: vi.fn() } as unknown as Mocked<GeoserverClient>;
+  const catalogClientMock = { publish: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const newJobHandler = new NewJobHandler(
-    jsLogger({ enabled: false }),
+    getTestLogger(),
     configMock,
     tracerMock,
     taskBuilderMock,

@@ -1,6 +1,7 @@
 import { Transparency, TileOutputFormat, RasterProductTypes, RASTER_DOMAIN } from '@map-colonies/raster-shared';
 import { zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
-import { OperationStatus, ICreateJobBody } from '@map-colonies/mc-priority-queue';
+import type { ICreateJobBody } from '@map-colonies/mc-priority-queue';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import type {
   ExportJob,
   IngestionNewCreateTasksJob,
@@ -9,7 +10,8 @@ import type {
   IngestionUpdateCreateTasksJob,
   IngestionUpdateFinalizeJob,
 } from '../../../src/utils/zod/schemas/job.schema';
-import { Grid, SeedTaskOptions, Footprint, SeedTaskParams } from '../../../src/common/interfaces';
+import type { SeedTaskOptions, Footprint, SeedTaskParams } from '../../../src/common/interfaces';
+import { Grid } from '../../../src/common/interfaces';
 import { SeedMode, LayerCacheType } from '../../../src/common/constants';
 
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers

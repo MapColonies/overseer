@@ -1,6 +1,6 @@
 import express from 'express';
 import type { Registry } from 'prom-client';
-import { collectMetricsExpressMiddleware } from '@map-colonies/telemetry/prom-metrics';
+import { collectMetricsExpressMiddleware } from '@map-colonies/prometheus';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { SERVICES } from './common/constants';

@@ -1,16 +1,18 @@
-import { setTimeout as setTimeoutPromise } from 'timers/promises';
-import { Logger } from '@map-colonies/js-logger';
+import { setTimeout as setTimeoutPromise } from 'node:timers/promises';
+import type { Logger } from '@map-colonies/js-logger';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { SpanStatusCode, Tracer } from '@opentelemetry/api';
+import { SpanStatusCode } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { ZodError } from 'zod';
 import { SERVICES } from '../../common/constants';
-import { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, type JobManagementConfig } from '../../common/interfaces';
+import type { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, JobManagementConfig } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 import { getAvailableJobTypes, getPollingJobs } from '../../utils/configUtil';
 import type { InstanceType } from '../../utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
-import { JOB_HANDLER_FACTORY_SYMBOL, JobHandlerFactory } from './jobHandlerFactory';
+import { JOB_HANDLER_FACTORY_SYMBOL } from './jobHandlerFactory';
+import type { JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
 export class JobProcessor {
@@ -62,12 +64,13 @@ export class JobProcessor {
       this.validateTaskAndJob(jobAndTask);
 
       await this.processJob(jobAndTask);
-    } catch (error) {
-      if (error instanceof Error && jobAndTask) {
-        const isRecoverable = !(error instanceof ZodError);
+    } catch (err) {
+      if (err instanceof Error && jobAndTask) {
+        const reachedMaxAttempts = jobAndTask.task.attempts >= this.pollingConfig.maxTaskAttempts;
+        const isRecoverable = !(err.name == 'ZodError') && !reachedMaxAttempts; //this is similar to jobHandler error handling and need to be refactored.
         const { job, task } = jobAndTask;
-        this.logger.error({ msg: 'rejecting task', error, jobId: job.id, taskId: task.id });
-        await this.queueClient.reject(job.id, task.id, isRecoverable, error.message);
+        this.logger.error({ msg: 'rejecting task', err, jobId: job.id, taskId: task.id });
+        await this.queueClient.reject(job.id, task.id, isRecoverable, err.message);
         if (!isRecoverable) {
           await this.jobTrackerClient.notify(task);
         }
@@ -101,13 +104,13 @@ export class JobProcessor {
             await jobHandler.handleJobFinalize(job, task);
             break;
         }
-      } catch (error) {
-        if (error instanceof Error) {
-          this.logger.error({ msg: `failed processing the job: ${error.message}`, error });
-          span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
-          span.recordException(error);
+      } catch (err) {
+        if (err instanceof Error) {
+          this.logger.error({ msg: `failed processing the job: ${err.message}`, err });
+          span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          span.recordException(err);
         }
-        throw error;
+        throw err;
       } finally {
         span.end();
       }
@@ -131,11 +134,11 @@ export class JobProcessor {
           return { job, task };
         }
       }
-    } catch (error) {
-      if (error instanceof Error) {
-        this.logger.error({ msg: `Failed to get job and task response: ${error.message}`, error });
+    } catch (err) {
+      if (err instanceof Error) {
+        this.logger.error({ msg: `Failed to get job and task response: ${err.message}`, err });
       }
-      throw error;
+      throw err;
     }
   }
 

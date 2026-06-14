@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { randomUUID } from 'crypto';
-import 'jest-extended';
-import nock from 'nock';
+import { randomUUID } from 'node:crypto';
+import nock, { cleanAll, isDone } from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
 import { exportJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
-import { FindLayerResponse } from '../../../src/common/interfaces';
+import type { FindLayerResponse } from '../../../src/common/interfaces';
 import { layerRecord } from '../mocks/catalogClientMockData';
 import { createFakeAggregatedPartData, layerNameFormats, setupCatalogClientTest } from './catalogClientSetup';
 
@@ -16,10 +15,11 @@ describe('CatalogClient', () => {
   });
 
   afterEach(() => {
-    nock.cleanAll();
+    cleanAll();
     clearConfig();
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
+
   describe('publish', () => {
     it('should publish a layer to catalog', async () => {
       const { catalogClient, createLinksMock, polygonPartsManagerClientMock } = setupCatalogClientTest();
@@ -34,7 +34,7 @@ describe('CatalogClient', () => {
       const action = catalogClient.publish(ingestionNewJobExtended, layerNameFormats);
 
       await expect(action).resolves.not.toThrow();
-      expect(nock.isDone()).toBe(true);
+      expect(isDone()).toBe(true);
     });
 
     it('should throw an PublishLayerError when the catalog returns an error', async () => {
@@ -50,6 +50,7 @@ describe('CatalogClient', () => {
       await expect(action).rejects.toThrow(PublishLayerError);
     });
   });
+
   describe('update', () => {
     it('should update a layer in catalog', async () => {
       const { catalogClient } = setupCatalogClientTest();
@@ -73,7 +74,7 @@ describe('CatalogClient', () => {
           ingestionDate: expect.toBeDateString(),
         },
       });
-      expect(nock.isDone()).toBe(true);
+      expect(isDone()).toBe(true);
     });
 
     it('should swap update a layer in catalog', async () => {
@@ -109,7 +110,7 @@ describe('CatalogClient', () => {
           ingestionDate: expect.toBeDateString(),
         },
       });
-      expect(nock.isDone()).toBe(true);
+      expect(isDone()).toBe(true);
     });
 
     it('should throw an UpdateLayerError when the catalog returns an error', async () => {

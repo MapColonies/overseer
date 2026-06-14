@@ -1,5 +1,5 @@
-import { Link } from '@map-colonies/mc-model-types';
-import { ILinkBuilderData } from '../../../src/utils/linkBuilder';
+import type { Link } from '@map-colonies/mc-model-types';
+import type { ILinkBuilderData } from '../../../src/utils/linkBuilder';
 
 export const linksTemplate = `[
   {

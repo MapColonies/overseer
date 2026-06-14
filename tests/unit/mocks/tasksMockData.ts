@@ -1,15 +1,16 @@
 import { faker } from '@faker-js/faker';
-import {
+import type {
   ExportFinalizeTaskParams,
-  ExportFinalizeType,
   IngestionNewFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
   IngestionUpdateFinalizeTaskParams,
   IngestionValidationTaskParams,
   TaskBlockDuplicationParam,
 } from '@map-colonies/raster-shared';
-import { ITaskResponse, OperationStatus } from '@map-colonies/mc-priority-queue';
-import { ExportFinalizeTask, ExportInitTask } from '../../../src/utils/zod/schemas/job.schema';
+import { ExportFinalizeType } from '@map-colonies/raster-shared';
+import type { ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
+import type { ExportFinalizeTask, ExportInitTask } from '../../../src/utils/zod/schemas/job.schema';
 import { exportJob, ingestionNewJob, ingestionSwapUpdateJob, ingestionUpdateJob } from './jobsMockData';
 
 export const createFakeTask = <T>(taskOverride?: Partial<ITaskResponse<T>>, parameters?: T): ITaskResponse<T> => ({

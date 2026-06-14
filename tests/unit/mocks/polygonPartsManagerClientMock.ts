@@ -1,6 +1,7 @@
-import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
+import type { Mocked } from 'vitest';
+import type { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 
 export const polygonPartsManagerClientMock = {
-  process: jest.fn(),
-  getAggregatedLayerMetadata: jest.fn(),
-} as unknown as jest.Mocked<PolygonPartsMangerClient>;
+  process: vi.fn(),
+  getAggregatedLayerMetadata: vi.fn(),
+} as unknown as Mocked<PolygonPartsMangerClient>;

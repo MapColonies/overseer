@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 
-import { Footprint, IntersectionState } from '../../../src/common/interfaces';
+import type { Footprint, IntersectionState } from '../../../src/common/interfaces';
 
 export const testData: {
   description: string;
