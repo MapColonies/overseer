@@ -169,6 +169,7 @@ env:
   protocol: TCP
   logLevel: info
   logPrettyPrintEnabled: false
+  logPinoCallerEnabled: false
   openTelemetryOptions:
     enabled: false
     url: ''

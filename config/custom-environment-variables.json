@@ -9,6 +9,10 @@
         "__name": "LOG_PRETTY_PRINT_ENABLED",
         "__format": "boolean"
       },
+      "pinoCaller": {
+        "__name": "LOG_PINO_CALLER_ENABLED",
+        "__format": "boolean"
+      },
       "opentelemetryOptions": {
         "enabled": {
           "__name": "OPENTELEMETRY_LOGGING_ENABLED",

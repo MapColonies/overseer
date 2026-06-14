@@ -3,6 +3,7 @@
     "logger": {
       "level": "info",
       "prettyPrint": false,
+      "pinoCaller": false,
       "opentelemetryOptions": {
         "enabled": false
       }

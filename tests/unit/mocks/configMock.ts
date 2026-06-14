@@ -56,6 +56,7 @@ const registerDefaultConfig = (): void => {
       logger: {
         level: 'info',
         prettyPrint: false,
+        pinoCaller: false,
       },
       tracing: {
         isEnabled: false,
