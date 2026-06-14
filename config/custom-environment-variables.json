@@ -32,6 +32,12 @@
         "__format": "boolean"
       },
       "url": "TELEMETRY_TRACING_URL"
+    },
+    "metrics": {
+      "buckets": {
+        "__name": "TELEMETRY_METRICS_BUCKETS",
+        "__format": "json"
+      }
     }
   },
   "server": {
