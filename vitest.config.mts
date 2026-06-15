@@ -1,17 +1,20 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
+
+const resolveConfig = {
+  alias: {
+    '@map-colonies/raster-shared': path.resolve(__dirname, 'node_modules/@map-colonies/raster-shared/dist/index.js'),
+    '@map-colonies/shapefile-reader': path.resolve(__dirname, 'node_modules/@map-colonies/shapefile-reader/dist/index.js'),
+  },
+  conditions: ['require'],
+};
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      '@map-colonies/raster-shared': '@map-colonies/raster-shared/dist/index.js',
-      '@map-colonies/shapefile-reader': '@map-colonies/shapefile-reader/dist/index.js',
-    },
-    conditions: ['require'],
-  },
   test: {
     globals: true,
     projects: [
       {
+        resolve: resolveConfig,
         test: {
           name: 'unit',
           globals: true,
@@ -26,6 +29,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: resolveConfig,
         test: {
           name: 'integration',
           globals: true,

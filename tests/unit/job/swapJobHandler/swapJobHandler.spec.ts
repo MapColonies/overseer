@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import crypto from 'node:crypto';
 import { getEntityName, getMapServingLayerName, type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
-import type { MergeTask, MergeTilesTaskParams, SeedJobParams } from '../../../../src/common/interfaces';
+import type { MergeTask, SeedJobParams } from '../../../../src/common/interfaces';
 import { Grid } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionSwapUpdate, createTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
@@ -36,6 +35,7 @@ describe('swapJobHandler', () => {
 
       await swapJobHandler.handleJobInit(job, task);
 
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
       expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(
         expect.objectContaining({
           inputFiles: job.parameters.inputFiles,
@@ -50,6 +50,7 @@ describe('swapJobHandler', () => {
         }),
         task
       );
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
       expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(task, job.id, job.type, mergeTasks);
       expect(completeInitTaskSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);

@@ -3,7 +3,6 @@ import { getEntityName, rasterProductTypeSchema } from '@map-colonies/raster-sha
 import type { LayerNameFormats } from '@map-colonies/raster-shared';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
-import { ZodError } from 'zod';
 import type { IConfig, JobAndTaskTelemetry, PollingConfig, StepKey } from '../../common/interfaces';
 import type { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 

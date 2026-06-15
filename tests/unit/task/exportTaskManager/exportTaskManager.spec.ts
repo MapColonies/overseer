@@ -1,5 +1,4 @@
 import { sep } from 'node:path';
-import { ZodError } from 'zod';
 import type { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { SourceType } from '@map-colonies/raster-shared';
 import { getTestLogger } from '../../../configurations/testLogger';

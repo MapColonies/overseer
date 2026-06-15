@@ -4,7 +4,6 @@ import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
-import { ZodError } from 'zod';
 import { SERVICES } from '../../common/constants';
 import type { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, JobManagementConfig } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
