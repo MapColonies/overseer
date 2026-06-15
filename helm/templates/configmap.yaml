@@ -15,7 +15,6 @@ data:
   RESPONSE_COMPRESSION_ENABLED: {{ .Values.env.responseCompressionEnabled | quote }}
   LOG_LEVEL: {{ .Values.env.logLevel | quote }}
   LOG_PRETTY_PRINT_ENABLED: {{ .Values.env.logPrettyPrintEnabled | quote }}
-  LOG_PINO_CALLER_ENABLED: {{ .Values.env.logPinoCallerEnabled | quote }}
   {{- with $openTelemetryOptions }}
   OPENTELEMETRY_LOGGING_ENABLED: {{ .enabled | quote }}
   {{ if .enabled }}
