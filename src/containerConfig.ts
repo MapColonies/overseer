@@ -117,9 +117,9 @@ export interface RegisterOptions {
 
 export const registerExternalValues = async (options?: RegisterOptions): Promise<DependencyContainer> => {
   const configInstance = getConfig();
-  const loggerConfig = configInstance.get('telemetry.logger') as { level: string; prettyPrint: boolean };
+  const loggerConfig = configInstance.get('telemetry.logger');
 
-  const logger = await jsLogger({ ...loggerConfig, mixin: getOtelMixin() });
+  const logger = await jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin() });
 
   const metricsRegistry = new Registry();
   configInstance.initializeMetrics(metricsRegistry);
