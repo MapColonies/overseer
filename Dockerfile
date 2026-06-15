@@ -3,6 +3,7 @@ FROM node:24-slim AS build
 WORKDIR /tmp/buildApp
 
 COPY ./package*.json ./
+COPY .husky/ .husky/
 
 RUN npm install
 COPY . .
@@ -24,6 +25,7 @@ ENV CONFIG_OFFLINE_MODE=true
 WORKDIR /usr/src/app
 
 COPY --chown=node:node package*.json ./
+COPY .husky/ .husky/
 
 RUN npm ci --only=production
 
