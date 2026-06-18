@@ -1,4 +1,5 @@
 import { ZodError } from 'zod';
+import { ConflictError } from '@map-colonies/error-types';
 import { JobAndTaskTelemetry } from '../../../../src/common/interfaces';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob } from '../../mocks/jobsMockData';
@@ -31,6 +32,21 @@ describe('JobHandler', () => {
       const task = createTasksTaskForIngestionNew;
       const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };
       const error = new ZodError([]);
+
+      await newJobHandler['handleError'](error, job, task, telemetry);
+
+      /* eslint-disable @typescript-eslint/unbound-method */
+      expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, false, error.message);
+      expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
+      /* eslint-enable @typescript-eslint/unbound-method */
+    });
+
+    it('should handle ConflictError as unrecoverable error', async () => {
+      const { newJobHandler, queueClientMock, jobTrackerClientMock } = setupJobHandlerTest();
+      const job = ingestionNewJob;
+      const task = createTasksTaskForIngestionNew;
+      const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };
+      const error = new ConflictError('Job already aborted');
 
       await newJobHandler['handleError'](error, job, task, telemetry);
 
