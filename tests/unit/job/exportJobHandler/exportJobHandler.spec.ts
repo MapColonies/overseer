@@ -250,7 +250,7 @@ describe('ExportJobHandler', () => {
     describe('when handling S3 upload', () => {
       it('should upload GPKG to S3 and delete local file when storage provider is S3', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        // Re-initialize with the updated config
+
         ({ exportJobHandler, s3ServiceMock, fsServiceMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = {
@@ -305,7 +305,7 @@ describe('ExportJobHandler', () => {
 
       it('should skip S3 upload when storage provider is not S3', async () => {
         setValue('gpkgStorageProvider', 'FS');
-        // Re-initialize with the updated config
+
         ({ exportJobHandler, s3ServiceMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = exportJob;
@@ -327,7 +327,7 @@ describe('ExportJobHandler', () => {
 
       it('should skip S3 upload if GPKG was not modified', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        // Re-initialize with the updated config
+
         ({ exportJobHandler, s3ServiceMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = exportJob;
@@ -351,7 +351,7 @@ describe('ExportJobHandler', () => {
     describe('when sending callbacks', () => {
       test.each(['FS', 'S3'])('should send callbacks with success status when process completes- %s storage', async (gpkgStorageProvider) => {
         setValue('gpkgStorageProvider', gpkgStorageProvider);
-        // Re-initialize with the updated config
+
         ({ exportJobHandler, jobManagerClientMock, callbackClientMock } = await setupExportJobHandlerTest());
         const callbackUrl = 'http://callback-url.com';
         const job: ExportJob = {
@@ -535,7 +535,7 @@ describe('ExportJobHandler', () => {
 
       it('should handle and report errors during S3 upload', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        // Re-initialize with the updated config
+
         ({ exportJobHandler, s3ServiceMock, queueClientMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = exportJob;
