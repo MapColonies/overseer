@@ -22,7 +22,6 @@ import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import type { S3Service } from '../../../../src/utils/storage/s3Service';
 import type { FSService } from '../../../../src/utils/storage/fsService';
 import type { CallbackClient } from '../../../../src/httpClients/callbackClient';
-import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 import { setupExportJobHandlerTest } from './exportJobHandlerSetup';
 

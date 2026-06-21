@@ -4,7 +4,6 @@ import streamPromises from 'node:stream/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import crypto from 'node:crypto';
-import { type Logger } from '@map-colonies/js-logger';
 import { getTestLogger } from '../../configurations/testLogger';
 import { FSService } from '../../../src/utils/storage/fsService';
 import { tracerMock } from '../mocks/tracerMock';
