@@ -26,7 +26,7 @@ describe('JobHandler', () => {
     });
 
     it('should handle unrecoverable error', async () => {
-      const { newJobHandler, queueClientMock, jobTrackerClientMock } = setupJobHandlerTest();
+      const { newJobHandler, queueClientMock, jobTrackerClientMock } = await setupJobHandlerTest();
       const job = ingestionNewJob;
       const task = createTasksTaskForIngestionNew;
       const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };

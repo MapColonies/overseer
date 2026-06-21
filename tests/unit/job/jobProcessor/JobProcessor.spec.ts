@@ -20,9 +20,10 @@ describe('JobProcessor', () => {
     vi.useFakeTimers();
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     registerDefaultConfig();
+    testContext = await setupJobProcessorTest({ useMockQueueClient: true });
   });
 
   afterEach(() => {
@@ -36,8 +37,6 @@ describe('JobProcessor', () => {
 
   describe('start', () => {
     it('should start polling and stop when stop is called', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
-
       const { jobProcessor, mockDequeue, configMock } = testContext;
       const pollingConfig = configMock.get<PollingConfig>('jobManagement.polling');
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
@@ -60,7 +59,6 @@ describe('JobProcessor', () => {
 
   describe('consumeAndProcess', () => {
     test.each(createTasksTestCases)('should process job of type $jobType and $taskType task successfully', async ({ job, task }) => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, mockJobHandlerFactory, configMock } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
 
@@ -98,7 +96,6 @@ describe('JobProcessor', () => {
     });
 
     test.each(finalizeTestCases)('should process job of type $jobType and finalize task successfully', async ({ job, task }) => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockGetJob, mockJobHandlerFactory, configMock, mockUpdateJob } = testContext;
       const dequeueIntervalMs = configMock.get<number>('jobManagement.config.dequeueIntervalMs');
 
@@ -135,7 +132,6 @@ describe('JobProcessor', () => {
     });
 
     it('should reject task if an error occurred during processing', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient, mockJobHandlerFactory } = testContext;
       const error = new Error('test error');
       const job = createTasksTestCases[0]!.job;
@@ -159,7 +155,6 @@ describe('JobProcessor', () => {
     });
 
     it('should notify jobTracker if task is unrecoverable', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue, mockUpdateJob, mockGetJob, queueClient, jobTrackerClientMock } = testContext;
       const job = { ...createTasksTestCases[0]!.job, id: 'invalidJobId' };
       const task = { ...createTasksTestCases[0]!.task, id: 'invalidTaskId' };
@@ -181,12 +176,18 @@ describe('JobProcessor', () => {
   });
 
   describe('getJobAndTaskResponse', () => {
+    beforeEach(() => {
+      vi.useRealTimers();
+    });
+
+    afterEach(() => {
+      vi.useFakeTimers();
+    });
+
     test.each([...createTasksTestCases, ...finalizeTestCases])(
       'dequeue $taskType task and get $jobType job with corresponding taskType',
       async ({ jobType, taskType, job, task, instanceType }) => {
-        vi.useRealTimers();
-
-        testContext = setupJobProcessorTest({ useMockQueueClient: false, instanceType });
+        testContext = await setupJobProcessorTest({ useMockQueueClient: false, instanceType });
 
         const { jobProcessor, configMock, queueClient } = testContext;
         const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
@@ -232,9 +233,7 @@ describe('JobProcessor', () => {
     );
 
     it('should continue to the next iteration if task reached max attempts', async () => {
-      vi.useRealTimers();
-
-      testContext = setupJobProcessorTest({ useMockQueueClient: false });
+      testContext = await setupJobProcessorTest({ useMockQueueClient: false });
       setValue('jobManagement.polling.maxTaskAttempts', 3);
 
       const { jobProcessor, configMock, queueClient, jobTrackerClientMock } = testContext;
@@ -281,9 +280,7 @@ describe('JobProcessor', () => {
     });
 
     it('should throw an error if an error occurred during dequeue task and get job', async () => {
-      vi.useRealTimers();
-
-      testContext = setupJobProcessorTest({ useMockQueueClient: false });
+      testContext = await setupJobProcessorTest({ useMockQueueClient: false });
 
       const { jobProcessor, configMock, queueClient } = testContext;
       const jobManagerBaseUrl = configMock.get<string>('jobManagement.config.jobManagerBaseUrl');
@@ -307,7 +304,6 @@ describe('JobProcessor', () => {
 
   describe('getTask', () => {
     it('should return a task if it exists', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue } = testContext;
       const jobType = createTasksTestCases[0]!.jobType;
       const taskType = createTasksTestCases[0]!.taskType;
@@ -322,7 +318,6 @@ describe('JobProcessor', () => {
     });
 
     it('should return null if task does not exist', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue } = testContext;
       const jobType = createTasksTestCases[0]!.jobType;
       const taskType = createTasksTestCases[0]!.taskType;
@@ -336,7 +331,6 @@ describe('JobProcessor', () => {
     });
 
     it('should return null if task reached max attempts', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       setValue('jobManagement.polling.maxTaskAttempts', 3);
 
       const { jobProcessor, mockDequeue, mockReject, mockUpdateJob } = testContext;
@@ -356,7 +350,6 @@ describe('JobProcessor', () => {
     });
 
     it('should throw an error if an error occurred during dequeue task', async () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor, mockDequeue } = testContext;
       const jobType = createTasksTestCases[0]!.jobType;
       const taskType = createTasksTestCases[0]!.taskType;
@@ -370,7 +363,6 @@ describe('JobProcessor', () => {
 
   describe('validateTaskAndJob', () => {
     it('should throw an error if no validation schemas exist for the job and task types', () => {
-      testContext = setupJobProcessorTest({ useMockQueueClient: true });
       const { jobProcessor } = testContext;
       const job = { ...createTasksTestCases[0]!.job, type: 'nonExistingJobType' };
       const task = { ...createTasksTestCases[0]!.task, type: 'nonExistingTaskType' };

@@ -30,7 +30,7 @@ export interface ExportJobHandlerTestContext {
   polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
 }
 
-export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
+export const setupExportJobHandlerTest = async (): Promise<ExportJobHandlerTestContext> => {
   const exportTaskManagerMock = {
     generateTileRangeBatches: vi.fn(),
     generateSources: vi.fn(),

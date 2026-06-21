@@ -4,24 +4,25 @@ import streamPromises from 'node:stream/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
 import crypto from 'node:crypto';
+import { type Logger } from '@map-colonies/js-logger';
 import { getTestLogger } from '../../configurations/testLogger';
 import { FSService } from '../../../src/utils/storage/fsService';
 import { tracerMock } from '../mocks/tracerMock';
 import { FSError } from '../../../src/common/errors';
 
-vi.mock('fs/promises');
-vi.mock('path');
+vi.mock('node:fs/promises');
+vi.mock('node:fs');
+vi.mock('node:path');
+vi.mock('node:stream/promises');
 
 describe('fsService', () => {
   let fsService: FSService;
-  let loggerMock: Logger;
   const testFilePath = '/path/to/test/file.gpkg';
   const testDirPath = '/path/to/test';
   const mockFilesList: Dirent<NonSharedBuffer>[] = [new Dirent()];
   const mockEmptyList: Dirent<NonSharedBuffer>[] = [];
 
   beforeEach(async () => {
-    loggerMock = await getTestLogger();
     vi.clearAllMocks();
     fsService = new FSService(await getTestLogger(), tracerMock);
   });
@@ -222,27 +223,29 @@ describe('fsService', () => {
     const expectedSha256 = 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890';
 
     it('should calculate SHA256 hash of file correctly', async () => {
-      const accessSpy = vi.spyOn(fsPromises, 'access').mockResolvedValue(undefined);
+      // Create mock stream
+      const mockStream = new Readable();
+      mockStream._read = () => {};
+      setImmediate(() => mockStream.push(null)); // End the stream after a tick
+
+      // Mock fs.access
+      vi.mocked(fsPromises.access).mockResolvedValue(undefined);
+
+      // Mock createReadStream
+      vi.mocked(fsSync.createReadStream).mockReturnValue(mockStream as unknown as ReadStream);
 
       // Mock crypto hash functions
       const mockHash = {
         update: vi.fn(),
         digest: vi.fn().mockReturnValue(expectedSha256),
       };
-      const createHashSpy = vi.spyOn(crypto, 'createHash').mockReturnValue(mockHash as unknown as crypto.Hash);
-
-      const mockStream = new Readable();
-      mockStream._read = () => {};
-      setImmediate(() => mockStream.push(null)); // Required implementation
-
-      const createReadStreamSpy = vi.spyOn(fsSync, 'createReadStream').mockReturnValue(mockStream as unknown as ReadStream);
+      vi.spyOn(crypto, 'createHash').mockReturnValue(mockHash as unknown as crypto.Hash);
 
       const result = await fsService.calculateFileSha256(testFilePath);
 
       expect(result).toBe(expectedSha256);
-      expect(accessSpy).toHaveBeenCalledWith(testFilePath);
-      expect(createHashSpy).toHaveBeenCalledWith('sha256');
-      expect(createReadStreamSpy).toHaveBeenCalledWith(testFilePath);
+      expect(vi.mocked(fsPromises.access)).toHaveBeenCalledWith(testFilePath);
+      expect(vi.mocked(fsSync.createReadStream)).toHaveBeenCalledWith(testFilePath);
       expect(mockHash.digest).toHaveBeenCalledWith('hex');
     });
 
@@ -262,13 +265,13 @@ describe('fsService', () => {
           return mockStream;
         }),
       };
-      vi.spyOn(fsSync, 'createReadStream').mockReturnValue(mockStream as never);
+      vi.mocked(fsSync.createReadStream).mockReturnValue(mockStream as never);
 
       const streamError = new Error('Stream processing failed');
-      vi.spyOn(streamPromises, 'finished').mockRejectedValue(streamError);
+      vi.mocked(streamPromises.finished).mockRejectedValue(streamError);
 
       await expect(fsService.calculateFileSha256(testFilePath)).rejects.toThrow(FSError);
-      expect(fsPromises.access).toHaveBeenCalledWith(testFilePath);
+      expect(vi.mocked(fsPromises.access)).toHaveBeenCalledWith(testFilePath);
     });
   });
 });
