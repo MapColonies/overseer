@@ -18,8 +18,8 @@ export interface TileDeletionTaskManagerContext {
   tileDeletionTaskManager: TileDeletionTaskManager;
 }
 
-export function setupTileDeletionTaskManagerTest(useMockQueueClient = true): TileDeletionTaskManagerContext {
-  const mockLogger = getTestLogger();
+export async function setupTileDeletionTaskManagerTest(useMockQueueClient = true): Promise<TileDeletionTaskManagerContext> {
+  const mockLogger = await getTestLogger();
 
   const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 

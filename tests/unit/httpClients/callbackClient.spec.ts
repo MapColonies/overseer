@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import nock, { cleanAll } from 'nock';
+import nock from 'nock';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import type { CallbackExportResponse, RoiFeatureCollection } from '@map-colonies/raster-shared';
@@ -15,13 +15,14 @@ describe('callbackClient', () => {
   const uri = '/api/callback';
   const roi: RoiFeatureCollection = createFakeRoiFeatureCollection();
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
-    callbackClient = new CallbackClient(configMock, getTestLogger(), tracerMock);
+    callbackClient = new CallbackClient(configMock, await getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
-    cleanAll();
+    // eslint-disable-next-line import-x/no-named-as-default-member
+    nock.cleanAll();
     vi.resetAllMocks();
   });
 

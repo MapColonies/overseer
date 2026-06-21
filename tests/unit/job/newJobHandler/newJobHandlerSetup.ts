@@ -27,7 +27,7 @@ export interface NewJobHandlerTestContext {
   polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
 }
 
-export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
+export const setupNewJobHandlerTest = async (): Promise<NewJobHandlerTestContext> => {
   const taskBuilderMock = {
     buildTasks: vi.fn(),
     pushTasks: vi.fn(),
@@ -38,7 +38,7 @@ export const setupNewJobHandlerTest = (): NewJobHandlerTestContext => {
   const catalogClientMock = { publish: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const newJobHandler = new NewJobHandler(
-    getTestLogger(),
+    await getTestLogger(),
     configMock,
     tracerMock,
     taskBuilderMock,

@@ -19,7 +19,7 @@ describe('swapJobHandler', () => {
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = createTasksTaskForIngestionSwapUpdate;
       const productGeometry = createFakePolygonalGeometry();
@@ -57,7 +57,7 @@ describe('swapJobHandler', () => {
     });
 
     it('should handle job init failure and reject the task', async () => {
-      const { swapJobHandler, taskBuilderMock, queueClientMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, taskBuilderMock, queueClientMock } = await setupSwapJobHandlerTest();
 
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = createTasksTaskForIngestionSwapUpdate;
@@ -84,7 +84,7 @@ describe('swapJobHandler', () => {
         catalogClientMock,
         seedingJobCreatorMock,
         polygonPartsManagerClientMock,
-      } = setupSwapJobHandlerTest();
+      } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateFinalizeJob);
 
       const task = { ...finalizeTaskForIngestionSwapUpdate };
@@ -124,7 +124,7 @@ describe('swapJobHandler', () => {
     });
 
     it('should handle job finalize failure and reject the task', async () => {
-      const { swapJobHandler, queueClientMock, catalogClientMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, catalogClientMock } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateFinalizeJob);
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 

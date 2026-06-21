@@ -1,4 +1,4 @@
-import nock, { cleanAll } from 'nock';
+import nock from 'nock';
 import type { ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { getTestLogger } from '../../configurations/testLogger';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
@@ -11,15 +11,16 @@ describe('JobTrackerClient', () => {
   let jobTrackerUrl: string;
   let task: ITaskResponse<unknown>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
     task = createFakeTask<unknown>();
     jobTrackerUrl = configMock.get<string>('servicesUrl.jobTracker');
-    jobTrackerClient = new JobTrackerClient(configMock, getTestLogger(), tracerMock);
+    jobTrackerClient = new JobTrackerClient(configMock, await getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
-    cleanAll();
+    // eslint-disable-next-line import-x/no-named-as-default-member
+    nock.cleanAll();
     vi.resetAllMocks();
   });
 

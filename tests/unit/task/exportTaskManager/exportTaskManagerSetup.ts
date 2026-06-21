@@ -7,8 +7,8 @@ export interface ExportTaskBuilderContext {
   exportTaskManager: ExportTaskManager;
 }
 
-export function setupExportTaskBuilderTest(): ExportTaskBuilderContext {
-  const mockLogger = getTestLogger();
+export async function setupExportTaskBuilderTest(): Promise<ExportTaskBuilderContext> {
+  const mockLogger = await getTestLogger();
 
   const exportTaskManager = new ExportTaskManager(mockLogger, configMock, tracerMock);
 

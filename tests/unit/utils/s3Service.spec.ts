@@ -5,8 +5,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { getTestLogger } from '../../configurations/testLogger';
 import type { IS3Config } from '../../../src/common/interfaces';
-import type { UploadFile } from '../../../src/utils/storage/s3Service';
-import { S3Service } from '../../../src/utils/storage/s3Service';
+import { S3Service, type UploadFile } from '../../../src/utils/storage/s3Service';
 import { tracerMock } from '../mocks/tracerMock';
 import { GPKG_CONTENT_TYPE } from '../../../src/common/constants';
 import { S3Error } from '../../../src/common/errors';
@@ -36,7 +35,7 @@ describe('s3Service', () => {
     { filePath: '/path/to/test/file3.gpkg', s3Key: 'test/file3.gpkg', contentType: GPKG_CONTENT_TYPE },
   ];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
 
     createReadStreamSpy = vi.spyOn(fs, 'createReadStream').mockReturnValue(mockReadStream as unknown as fs.ReadStream);
@@ -50,7 +49,7 @@ describe('s3Service', () => {
       done: uploadDoneSpy,
     }));
 
-    s3Service = new S3Service(getTestLogger(), mockS3Config, tracerMock);
+    s3Service = new S3Service(await getTestLogger(), mockS3Config, tracerMock);
   });
 
   describe('uploadFiles', () => {

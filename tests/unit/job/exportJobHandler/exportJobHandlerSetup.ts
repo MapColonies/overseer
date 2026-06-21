@@ -62,7 +62,7 @@ export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
   const pathBuilder = new ArtifactPathBuilder(configMock);
 
   const exportJobHandler = new ExportJobHandler(
-    getTestLogger(),
+    await getTestLogger(),
     configMock,
     tracerMock,
     queueClientMock,

@@ -30,7 +30,7 @@ export interface UpdateJobHandlerTestContext {
   readProductGeometryMock: MockedFunction<typeof readProductGeometryMock>;
 }
 
-export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
+export const setupUpdateJobHandlerTest = async (): Promise<UpdateJobHandlerTestContext> => {
   const taskBuilderMock = {
     buildAndPushTasks: vi.fn(),
   } as unknown as Mocked<TileMergeTaskManager>;
@@ -44,7 +44,7 @@ export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
 
   const seedingJobCreatorMock = { create: vi.fn() } as unknown as Mocked<SeedingJobCreator>;
   const updateJobHandler = new UpdateJobHandler(
-    getTestLogger(),
+    await getTestLogger(),
     configMock,
     tracerMock,
     taskBuilderMock,

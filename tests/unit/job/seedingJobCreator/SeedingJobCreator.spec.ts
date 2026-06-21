@@ -28,10 +28,10 @@ describe('SeedingJobCreator', () => {
   let seedingJobCreatorContext: SeedingJobCreatorTestContext;
   let productGeometry: Polygon | MultiPolygon;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetAllMocks();
     registerDefaultConfig();
-    seedingJobCreatorContext = setupSeedingJobCreatorTest();
+    seedingJobCreatorContext = await setupSeedingJobCreatorTest();
     productGeometry = createFakePolygonalGeometry();
   });
 

@@ -1,6 +1,5 @@
 import fsPromises from 'node:fs/promises';
-import type { ReadStream, Stats } from 'node:fs';
-import fsSync, { Dirent } from 'node:fs';
+import fsSync, { Dirent, type ReadStream, type Stats } from 'node:fs';
 import streamPromises from 'node:stream/promises';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -15,14 +14,16 @@ vi.mock('path');
 
 describe('fsService', () => {
   let fsService: FSService;
+  let loggerMock: Logger;
   const testFilePath = '/path/to/test/file.gpkg';
   const testDirPath = '/path/to/test';
   const mockFilesList: Dirent<NonSharedBuffer>[] = [new Dirent()];
   const mockEmptyList: Dirent<NonSharedBuffer>[] = [];
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    loggerMock = await getTestLogger();
     vi.clearAllMocks();
-    fsService = new FSService(getTestLogger(), tracerMock);
+    fsService = new FSService(await getTestLogger(), tracerMock);
   });
 
   describe('uploadJsonFile', () => {

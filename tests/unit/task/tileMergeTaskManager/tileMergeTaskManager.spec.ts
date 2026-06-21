@@ -19,9 +19,9 @@ describe('tileMergeTaskManager', () => {
   let testContext: MergeTilesTaskBuilderContext;
   let mockInitTask: IngestionCreateTasksTask;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
-    testContext = setupMergeTilesTaskBuilderTest();
+    testContext = await setupMergeTilesTaskBuilderTest();
     mockInitTask = createFakeTask<IngestionCreateTasksTask['parameters']>();
   });
 

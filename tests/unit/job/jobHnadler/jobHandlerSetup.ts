@@ -12,8 +12,8 @@ export interface JobHandlerTestContext {
   jobTrackerClientMock: Mocked<JobTrackerClient>;
 }
 
-export const setupJobHandlerTest = (): JobHandlerTestContext => {
-  const newJobHandler = new JobHandler(getTestLogger(), configMock, queueClientMock, jobTrackerClientMock);
+export const setupJobHandlerTest = async (): Promise<JobHandlerTestContext> => {
+  const newJobHandler = new JobHandler(await getTestLogger(), configMock, queueClientMock, jobTrackerClientMock);
 
   return {
     newJobHandler,

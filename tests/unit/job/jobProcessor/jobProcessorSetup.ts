@@ -28,14 +28,14 @@ export interface JobProcessorTestContext {
   jobTrackerClientMock: Mocked<JobTrackerClient>;
 }
 
-export function setupJobProcessorTest({
+export async function setupJobProcessorTest({
   instanceType = 'ingestion',
   useMockQueueClient = false,
 }: {
   useMockQueueClient?: boolean;
   instanceType?: InstanceType;
-}): JobProcessorTestContext {
-  const mockLogger = getTestLogger();
+} = {}): Promise<JobProcessorTestContext> {
+  const mockLogger = await getTestLogger();
 
   const mockJobHandlerFactory = vi.fn();
 

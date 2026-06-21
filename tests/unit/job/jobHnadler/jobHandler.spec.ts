@@ -13,7 +13,7 @@ describe('JobHandler', () => {
 
   describe('handleError', () => {
     it('should handle error', async () => {
-      const { newJobHandler, queueClientMock } = setupJobHandlerTest();
+      const { newJobHandler, queueClientMock } = await setupJobHandlerTest();
       const job = ingestionNewJob;
       const task = createTasksTaskForIngestionNew;
       const telemetry: JobAndTaskTelemetry = { taskTracker: undefined, tracingSpan: undefined };

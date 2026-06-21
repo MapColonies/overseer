@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker';
-import type { AggregationFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
-import { RasterProductTypes } from '@map-colonies/raster-shared';
-import nock, { cleanAll, isDone } from 'nock';
+import { RasterProductTypes, type AggregationFeature, type RoiFeatureCollection } from '@map-colonies/raster-shared';
+import nock from 'nock';
 import { getTestLogger } from '../../configurations/testLogger';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { createFakeRoiFeatureCollection } from '../mocks/exportMockData';
@@ -13,19 +12,19 @@ import { createFakeAggregatedFeature } from './catalogClientSetup';
 describe('polygonPartsManagerClient', () => {
   let polygonPartsManagerClient: PolygonPartsMangerClient;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
+    polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, await getTestLogger());
   });
 
   afterEach(() => {
-    cleanAll();
+    // eslint-disable-next-line import-x/no-named-as-default-member
+    nock.cleanAll();
     vi.resetAllMocks();
   });
 
   describe('process', () => {
     it('should process polygon parts successfully', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
-
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const payload: PolygonPartsProcessPayload = {
         productId: 'test_layer',
@@ -37,12 +36,11 @@ describe('polygonPartsManagerClient', () => {
       const action = polygonPartsManagerClient.process(payload);
 
       await expect(action).resolves.toBeUndefined();
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should process polygon parts and replacing old data successfully', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
-
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const payload: PolygonPartsProcessPayload = {
         shouldClearEntities: true,
@@ -55,12 +53,11 @@ describe('polygonPartsManagerClient', () => {
       const action = polygonPartsManagerClient.process(payload);
 
       await expect(action).resolves.toBeUndefined();
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should throw PolygonPartsProcessingError when the request fails', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
-
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const payload: PolygonPartsProcessPayload = {
         productId: 'test_layer',
@@ -72,14 +69,13 @@ describe('polygonPartsManagerClient', () => {
       const action = polygonPartsManagerClient.process(payload);
 
       await expect(action).rejects.toThrow(PolygonPartsProcessingError);
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
   });
 
   describe('getAggregatedLayerMetadata', () => {
     it('should return aggregated part data based on polygonPartsEntityName', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
-
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'bluemarble_orthophoto';
       const aggregatedFeature = createFakeAggregatedFeature();
@@ -93,11 +89,11 @@ describe('polygonPartsManagerClient', () => {
       };
 
       await expect(action).resolves.toEqual(expectedResult);
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should return aggregated part data based on polygonPartsEntityName and filter', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'bluemarble_orthophoto';
       const featureCollection: RoiFeatureCollection = createFakeRoiFeatureCollection();
@@ -113,12 +109,11 @@ describe('polygonPartsManagerClient', () => {
       };
 
       await expect(action).resolves.toEqual(expectedResult);
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should throw an LayerMetadataAggregationError when the request fails', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
-
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = faker.string.uuid();
       const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
@@ -127,12 +122,11 @@ describe('polygonPartsManagerClient', () => {
       const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
       await expect(action).rejects.toThrow(LayerMetadataAggregationError);
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should throw an LayerMetadataAggregationError when the entity does not exist', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
-
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = faker.string.uuid();
       const url = `/polygonParts/${polygonPartsEntityName}/aggregate`;
@@ -141,11 +135,11 @@ describe('polygonPartsManagerClient', () => {
       const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName);
 
       await expect(action).rejects.toThrow(LayerMetadataAggregationError);
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
 
     it('should throw a LayerMetadataAggregationError error when the response returns invalid due to filtering', async () => {
-      polygonPartsManagerClient = new PolygonPartsMangerClient(configMock, getTestLogger());
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'bluemarble_orthophoto';
       const featureCollection: RoiFeatureCollection = createFakeRoiFeatureCollection();

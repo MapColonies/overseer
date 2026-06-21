@@ -7,16 +7,18 @@ import { JobHandlerNotFoundError } from '../../../../src/common/errors';
 
 describe('jobHandlerFactory', () => {
   let mockContainer: Mocked<DependencyContainer>;
+  let logger: Awaited<ReturnType<typeof getTestLogger>>;
   const mockJobHandler = vi.fn();
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    logger = await getTestLogger();
     mockContainer = {
       resolve: vi.fn(),
     } as unknown as Mocked<DependencyContainer>;
 
     mockContainer.resolve.mockImplementation((token) => {
       if (token === SERVICES.LOGGER) {
-        return getTestLogger();
+        return logger;
       }
       if ('existingJobType' === token) {
         return mockJobHandler;

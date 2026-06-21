@@ -22,8 +22,8 @@ export interface MergeTilesTaskBuilderContext {
   tileMergeTaskManager: TileMergeTaskManager;
 }
 
-export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): MergeTilesTaskBuilderContext {
-  const mockLogger = getTestLogger();
+export async function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Promise<MergeTilesTaskBuilderContext> {
+  const mockLogger = await getTestLogger();
 
   const mockDequeue = vi.fn() as MockDequeue;
   const mockGetJob = vi.fn() as MockGetJob;

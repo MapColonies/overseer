@@ -1,4 +1,4 @@
-import nock, { cleanAll, isDone } from 'nock';
+import nock from 'nock';
 import type { LayerNameFormats } from '@map-colonies/raster-shared';
 import { getTestLogger } from '../../configurations/testLogger';
 import { GeoserverClient } from '../../../src/httpClients/geoserverClient';
@@ -9,13 +9,14 @@ import { tracerMock } from '../mocks/tracerMock';
 describe('GeoserverClient', () => {
   let geoServerClient: GeoserverClient;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
-    geoServerClient = new GeoserverClient(configMock, getTestLogger(), tracerMock);
+    geoServerClient = new GeoserverClient(configMock, await getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
-    cleanAll();
+    // eslint-disable-next-line import-x/no-named-as-default-member
+    nock.cleanAll();
     vi.resetAllMocks();
   });
 
@@ -34,7 +35,8 @@ describe('GeoserverClient', () => {
       const action = geoServerClient.publish(layersName);
 
       await expect(action).resolves.not.toThrow();
-      expect(isDone()).toBe(true);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
     });
   });
 

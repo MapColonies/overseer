@@ -1,6 +1,7 @@
 import { sep } from 'node:path';
 import type { RasterLayerMetadata } from '@map-colonies/raster-shared';
 import { SourceType } from '@map-colonies/raster-shared';
+import type { Logger } from '@map-colonies/js-logger';
 import { getTestLogger } from '../../../configurations/testLogger';
 import { extentSchema, tileRangeArraySchema } from '../../utils/schemas/export.schema';
 import {} from '@turf/turf';
@@ -13,8 +14,13 @@ import { tracerMock } from '../../mocks/tracerMock';
 import { setupExportTaskBuilderTest } from './exportTaskManagerSetup';
 
 describe('exportTaskManager', () => {
-  beforeEach(() => {
+  let exportTaskManager: ExportTaskManager;
+
+  beforeEach(async () => {
     registerDefaultConfig();
+
+    const { exportTaskManager: taskManager } = await setupExportTaskBuilderTest();
+    exportTaskManager = taskManager;
   });
 
   afterEach(() => {
@@ -23,7 +29,6 @@ describe('exportTaskManager', () => {
 
   describe('generateTileRangeBatches', () => {
     it('should generate tile range batches successfully', () => {
-      const { exportTaskManager } = setupExportTaskBuilderTest();
       const { metadata } = layerRecord;
 
       const batches = exportTaskManager.generateTileRangeBatches(mockRoi, metadata);
@@ -35,7 +40,6 @@ describe('exportTaskManager', () => {
     });
 
     it('should handle invalid footprint and throw zod validation error', () => {
-      const { exportTaskManager } = setupExportTaskBuilderTest();
       const { metadata } = layerRecord;
 
       const invalidLayerMetadata = { ...metadata, footprint: { type: 'Invalid' } };
@@ -46,7 +50,6 @@ describe('exportTaskManager', () => {
     });
 
     it('should handle roi that not intersecting with layer footprint and throw error', () => {
-      const { exportTaskManager } = setupExportTaskBuilderTest();
       const { roi, targetLayerMetadata } = nonIntersectingRoiCase;
 
       const action = () => exportTaskManager.generateTileRangeBatches(roi, targetLayerMetadata);
@@ -57,7 +60,6 @@ describe('exportTaskManager', () => {
 
   describe('generateSources', () => {
     it('should generate sources successfully', () => {
-      const { exportTaskManager } = setupExportTaskBuilderTest();
       // eslint-disable-next-line @typescript-eslint/naming-convention
       const tilesStorageProvider = configMock.get<string>('tilesStorageProvider');
       const separator = tilesStorageProvider === SourceType.S3 ? '/' : sep;
@@ -79,7 +81,6 @@ describe('exportTaskManager', () => {
     });
 
     it('should throw an error when the roi is invalid', () => {
-      const { exportTaskManager } = setupExportTaskBuilderTest();
       const job = exportJob;
 
       job.parameters.exportInputParams.roi.features[0]!.geometry.type = 'invalidType' as 'Polygon';
@@ -93,7 +94,11 @@ describe('exportTaskManager', () => {
 
   describe('private methods', () => {
     describe('getSeparator', () => {
-      const mockLogger = getTestLogger();
+      let mockLogger: Logger;
+
+      beforeEach(async () => {
+        mockLogger = await getTestLogger();
+      });
 
       it('should return / for S3 storage provider', () => {
         setValue('tilesStorageProvider', 'S3');

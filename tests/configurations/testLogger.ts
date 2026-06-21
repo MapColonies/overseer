@@ -1,4 +1,4 @@
-import { pino } from 'pino';
-import type { Logger } from '@map-colonies/js-logger';
+import { jsLogger, type Logger } from '@map-colonies/js-logger';
 
-export const getTestLogger = (): Logger => pino({ enabled: false });
+// eslint-disable-next-line @typescript-eslint/return-await
+export const getTestLogger = async (): Promise<Logger> => await jsLogger({ enabled: false });

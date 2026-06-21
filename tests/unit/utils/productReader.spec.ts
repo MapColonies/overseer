@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import type { MockInstance } from 'vitest';
-import type { ShapefileChunk } from '@map-colonies/shapefile-reader';
-import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
+import { ShapefileChunkReader, type ShapefileChunk } from '@map-colonies/shapefile-reader';
 import type { Feature, Polygon, MultiPolygon } from 'geojson';
 import type { DependencyContainer } from 'tsyringe';
 import { getTestLogger } from '../../configurations/testLogger';
@@ -14,10 +13,10 @@ import { mockShapefileReader } from '../mocks/productReaderMock';
 
 vi.mock('@map-colonies/shapefile-reader');
 
-describe('productReader', () => {
+describe('productReader', async () => {
   registerDefaultConfig();
   let mockContainer: DependencyContainer;
-  const mockLogger = getTestLogger();
+  const mockLogger = await getTestLogger();
   const testProductPath = 'test/Product.shp';
   const testIngestionSourcesDir = configMock.get<string>('ingestionSourcesDirPath');
   const fullProductPath = join(testIngestionSourcesDir, testProductPath);

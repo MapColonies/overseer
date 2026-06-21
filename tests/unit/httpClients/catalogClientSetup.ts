@@ -21,7 +21,7 @@ export interface CatalogClientTestContext {
   polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
 }
 
-export function setupCatalogClientTest(): CatalogClientTestContext {
+export async function setupCatalogClientTest(): Promise<CatalogClientTestContext> {
   registerDefaultConfig();
   const createLinksMock = vi.fn() as MockCreateLinks;
   const linkBuilder = {
@@ -32,7 +32,7 @@ export function setupCatalogClientTest(): CatalogClientTestContext {
     getAggregatedLayerMetadata: vi.fn(),
   } as unknown as Mocked<PolygonPartsMangerClient>;
 
-  const catalogClient = new CatalogClient(configMock, getTestLogger(), tracerMock, linkBuilder, polygonPartsManagerClientMock);
+  const catalogClient = new CatalogClient(configMock, await getTestLogger(), tracerMock, linkBuilder, polygonPartsManagerClientMock);
 
   return {
     createLinksMock,

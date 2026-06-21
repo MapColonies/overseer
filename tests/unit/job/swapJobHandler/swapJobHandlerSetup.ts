@@ -28,7 +28,7 @@ export interface SwapJobHandlerTestContext {
   readProductGeometryMock: MockedFunction<typeof readProductGeometryMock>;
 }
 
-export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
+export const setupSwapJobHandlerTest = async (): Promise<SwapJobHandlerTestContext> => {
   const taskBuilderMock = {
     buildTasks: vi.fn(),
     pushTasks: vi.fn(),
@@ -39,7 +39,7 @@ export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
   const seedingJobCreatorMock = { create: vi.fn() } as unknown as Mocked<SeedingJobCreator>;
 
   const swapJobHandler = new SwapJobHandler(
-    getTestLogger(),
+    await getTestLogger(),
     configMock,
     tracerMock,
     queueClientMock,

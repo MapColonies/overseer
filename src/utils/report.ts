@@ -21,9 +21,9 @@ async function processZip(tempZipPath: string, tempDir: string, shapefileReader:
   const conflictFeatures: Feature[] = [];
 
   await new Promise<void>((resolve, reject) => {
-    execFile('unzip', ['-o', tempZipPath, '-d', tempDir], (err) => {
+    execFile('unzip', ['-o', tempZipPath, '-d', tempDir], (err: Error | null) => {
       if (err !== null) {
-        reject(err instanceof Error ? err : new Error(String(err.message)));
+        reject(err);
       } else {
         resolve();
       }

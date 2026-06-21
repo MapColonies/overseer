@@ -110,8 +110,6 @@ dist
 # TernJS port file
 .tern-port
 
-reports
-
 #helm
 Chart.lock
 

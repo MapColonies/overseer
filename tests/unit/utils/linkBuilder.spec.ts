@@ -1,6 +1,5 @@
 import fs from 'node:fs';
-import type { ILinkBuilderData } from '../../../src/utils/linkBuilder';
-import { LinkBuilder } from '../../../src/utils/linkBuilder';
+import { LinkBuilder, type ILinkBuilderData } from '../../../src/utils/linkBuilder';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { getExpectedLinks, linksTemplate } from '../mocks/linksBuilderUtils';
 

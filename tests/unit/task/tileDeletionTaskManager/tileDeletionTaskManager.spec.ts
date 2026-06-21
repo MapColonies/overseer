@@ -22,9 +22,9 @@ describe('TileDeletionTaskManager', () => {
   const polygonPartsEntityName = `${ingestionUpdateJob.resourceId}_${String(ingestionUpdateJob.productType).toLowerCase()}`;
   const task = createFakeTask<TaskBlockDuplicationParam>({ jobId: ingestionUpdateJob.id, type: 'create-tasks' }) as IngestionCreateTasksTask;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
-    testContext = setupTileDeletionTaskManagerTest();
+    testContext = await setupTileDeletionTaskManagerTest();
   });
 
   afterEach(() => {

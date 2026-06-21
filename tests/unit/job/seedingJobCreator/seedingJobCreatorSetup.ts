@@ -20,7 +20,7 @@ export interface SeedingJobCreatorTestContext {
   catalogClientMock: Mocked<CatalogClient>;
 }
 
-export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
+export const setupSeedingJobCreatorTest = async (): Promise<SeedingJobCreatorTestContext> => {
   const jobManagerClientMock = {
     createJob: vi.fn(),
   } as unknown as Mocked<JobManagerClient>;
@@ -33,7 +33,7 @@ export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
   const catalogClientMock = { update: vi.fn(), findLayer: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const seedingJobCreator = new SeedingJobCreator(
-    getTestLogger(),
+    await getTestLogger(),
     tracerMock,
     configMock,
     queueClientMock,
