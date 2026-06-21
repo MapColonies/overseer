@@ -9,8 +9,7 @@ import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 import { getAvailableJobTypes, getPollingJobs } from '../../utils/configUtil';
 import type { InstanceType } from '../../utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
-import { JOB_HANDLER_FACTORY_SYMBOL } from './jobHandlerFactory';
-import type { JobHandlerFactory } from './jobHandlerFactory';
+import { JOB_HANDLER_FACTORY_SYMBOL, type JobHandlerFactory } from './jobHandlerFactory';
 
 @injectable()
 export class JobProcessor {
