@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { randomUUID } from 'node:crypto';
-import type { Mocked, MockedFunction } from 'vitest';
+import type { Mocked } from 'vitest';
 import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
@@ -8,9 +8,9 @@ import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../.
 import { exportJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import type { FindLayerResponse } from '../../../src/common/interfaces';
 import { layerRecord } from '../mocks/catalogClientMockData';
-import { createFakeAggregatedPartData, layerNameFormats, setupCatalogClientTest, type MockCreateLinks } from './catalogClientSetup';
 import type { CatalogClient } from '../../../src/httpClients/catalogClient';
 import type { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
+import { createFakeAggregatedPartData, layerNameFormats, setupCatalogClientTest, type MockCreateLinks } from './catalogClientSetup';
 
 describe('CatalogClient', () => {
   let catalogClient: CatalogClient;
