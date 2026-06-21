@@ -1,8 +1,7 @@
 import { setTimeout as setTimeoutPromise } from 'node:timers/promises';
 import type { Logger } from '@map-colonies/js-logger';
 import { IJobResponse, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { SpanStatusCode } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { SpanStatusCode, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import type { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, JobManagementConfig } from '../../common/interfaces';

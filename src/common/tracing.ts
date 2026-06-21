@@ -1,6 +1,5 @@
 import { Tracing } from '@map-colonies/tracing';
-import type { Span } from '@opentelemetry/api';
-import { context, trace } from '@opentelemetry/api';
+import { context, trace, type Span } from '@opentelemetry/api';
 import { IGNORED_INCOMING_TRACE_ROUTES, IGNORED_OUTGOING_TRACE_ROUTES, SERVICE_NAME } from './constants';
 
 let tracing: Tracing | undefined;

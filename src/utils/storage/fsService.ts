@@ -5,8 +5,7 @@ import crypto from 'node:crypto';
 import path from 'node:path';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
-import { context, trace, SpanStatusCode } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { context, trace, SpanStatusCode, type Tracer } from '@opentelemetry/api';
 import { SERVICES } from '../../common/constants';
 import { FSError } from '../../common/errors';
 

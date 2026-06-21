@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { accessSync } from 'node:fs';
-import type { Logger } from '@map-colonies/js-logger';
-import { jsLogger } from '@map-colonies/js-logger';
+import { jsLogger, type Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { getOtelMixin } from '@map-colonies/tracing-utils';

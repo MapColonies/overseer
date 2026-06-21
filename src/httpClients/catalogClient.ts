@@ -1,12 +1,10 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { HttpClient } from '@map-colonies/mc-utils';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
 import { LayerMetadata, Link } from '@map-colonies/mc-model-types';
 import { RecordType } from '@map-colonies/types';
-import { context, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import type { IConfig, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';

@@ -2,8 +2,7 @@ import { join } from 'node:path';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { context, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { context, trace, type Tracer } from '@opentelemetry/api';
 import type { IngestionUpdateFinalizeTaskParams } from '@map-colonies/raster-shared';
 import {
   IngestionCreateTasksTask,

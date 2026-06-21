@@ -1,9 +1,7 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { context, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
-import { HttpClient } from '@map-colonies/mc-utils';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import type { IConfig } from '../common/interfaces';
 import { SERVICES } from '../common/constants';

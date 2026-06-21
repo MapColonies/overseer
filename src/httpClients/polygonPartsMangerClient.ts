@@ -5,8 +5,7 @@ import type {
   IntersectionFeatureCollection,
   RoiFeatureCollection,
 } from '@map-colonies/raster-shared';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { HttpClient } from '@map-colonies/mc-utils';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import type { IConfig } from '../common/interfaces';
 import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';

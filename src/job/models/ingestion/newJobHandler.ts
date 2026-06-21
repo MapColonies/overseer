@@ -1,8 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
-import { context, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { context, trace, type Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { lookup as mimeLookup } from '@map-colonies/types';
 import type { TilesMimeFormat } from '@map-colonies/types';

@@ -13,8 +13,7 @@ import {
   SourceType,
 } from '@map-colonies/raster-shared';
 import { type Logger } from '@map-colonies/js-logger';
-import { context, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { context, trace, type Tracer } from '@opentelemetry/api';
 import { ArtifactRasterType } from '@map-colonies/types';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import {

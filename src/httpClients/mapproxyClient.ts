@@ -1,9 +1,7 @@
 import type { Logger } from '@map-colonies/js-logger';
 import type { TileOutputFormat } from '@map-colonies/raster-shared';
-import { context, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
-import { HttpClient } from '@map-colonies/mc-utils';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { NotFoundError } from '@map-colonies/error-types';
 import type { IConfig, GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
