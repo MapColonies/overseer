@@ -2,8 +2,7 @@
 import { getEntityName, getMapServingLayerName, type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
-import type { MergeTask, SeedJobParams } from '../../../../src/common/interfaces';
-import { Grid } from '../../../../src/common/interfaces';
+import { Grid, type MergeTask, type SeedJobParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionSwapUpdate, createTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
