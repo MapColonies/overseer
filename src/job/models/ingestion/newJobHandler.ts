@@ -3,11 +3,9 @@ import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { context, trace, type Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { lookup as mimeLookup } from '@map-colonies/types';
-import type { TilesMimeFormat } from '@map-colonies/types';
+import { lookup as mimeLookup, type TilesMimeFormat } from '@map-colonies/types';
 import type { IngestionNewFinalizeTaskParams, NewRasterLayerMetadata } from '@map-colonies/raster-shared';
-import { Grid } from '../../../common/interfaces';
-import type { IJobHandler, MergeTilesTaskParams, ExtendedRasterLayerMetadata, IConfig } from '../../../common/interfaces';
+import { Grid, type IJobHandler, type MergeTilesTaskParams, type ExtendedRasterLayerMetadata, type IConfig } from '../../../common/interfaces';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../../common/constants';
 import type {

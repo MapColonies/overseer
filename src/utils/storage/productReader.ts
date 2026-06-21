@@ -1,7 +1,6 @@
 import path from 'node:path';
 import type { Logger } from '@map-colonies/js-logger';
-import type { ChunkProcessor, ShapefileChunk } from '@map-colonies/shapefile-reader';
-import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
+import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
 import { productFeatureSchema } from '@map-colonies/raster-shared';
 import type { Feature, MultiPolygon, Polygon } from 'geojson';
 import type { DependencyContainer } from 'tsyringe';

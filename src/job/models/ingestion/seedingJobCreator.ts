@@ -104,7 +104,7 @@ export class SeedingJobCreator {
         if (err instanceof Error) {
           activeSpan?.recordException(err);
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR });
-          return this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, err });
+          this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, err });
         }
       } finally {
         activeSpan?.end();

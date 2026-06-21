@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
+import { createReadStream } from 'node:fs';
 import { finished } from 'node:stream/promises'; // Promise-based stream completion
 import crypto from 'node:crypto';
 import path from 'node:path';
@@ -208,7 +208,7 @@ export class FSService {
         await fs.access(filePath);
 
         const hash = crypto.createHash('sha256');
-        const fileStream = fsSync.createReadStream(filePath);
+        const fileStream = createReadStream(filePath);
 
         fileStream.on('data', (data) => {
           hash.update(data);

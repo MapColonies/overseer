@@ -1,6 +1,5 @@
 import type { IJobResponse, ITaskResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { getEntityName, rasterProductTypeSchema } from '@map-colonies/raster-shared';
-import type { LayerNameFormats } from '@map-colonies/raster-shared';
+import { getEntityName, rasterProductTypeSchema, type LayerNameFormats } from '@map-colonies/raster-shared';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
 import type { IConfig, JobAndTaskTelemetry, PollingConfig, StepKey } from '../../common/interfaces';
