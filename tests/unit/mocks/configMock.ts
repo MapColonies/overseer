@@ -52,6 +52,12 @@ const setConfigValues = (values: Record<string, unknown>): void => {
 
 const registerDefaultConfig = (): void => {
   const config = {
+    mclabels: {
+      prometheus: {
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500],
+      },
+    },
     telemetry: {
       logger: {
         level: 'info',
@@ -61,10 +67,7 @@ const registerDefaultConfig = (): void => {
         isEnabled: false,
         url: 'http://localhost:4318/v1/traces',
       },
-      metrics: {
-        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
-        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500],
-      },
+      metrics: {},
     },
     server: {
       port: 8080,

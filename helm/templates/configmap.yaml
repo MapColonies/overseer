@@ -26,7 +26,7 @@ data:
   {{ if $tracing.enabled }}
   TELEMETRY_TRACING_URL: {{ $tracing.url }}
   {{ end }}
-  TELEMETRY_METRICS_BUCKETS: {{ .Values.mclabels.buckets | toJson | quote }}
+  TELEMETRY_METRICS_BUCKETS: {{ .Values.mclabels.prometheus.buckets | toJson | quote }}
   {{- if eq (upper $storage.gpkgProvider) "S3" }}
   {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled -}}
   S3_ENDPOINT_URL: {{ printf "%s%s" $s3HttpProtocol $storage.s3.endpointUrl | quote }}

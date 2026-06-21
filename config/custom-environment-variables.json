@@ -1,4 +1,12 @@
 {
+  "mclabels": {
+    "prometheus": {
+      "buckets": {
+        "__name": "TELEMETRY_METRICS_BUCKETS",
+        "__format": "json"
+      }
+    }
+  },
   "telemetry": {
     "serviceName": "TELEMETRY_SERVICE_NAME",
     "hostname": "TELEMETRY_HOST_NAME",
@@ -29,12 +37,7 @@
       },
       "url": "TELEMETRY_TRACING_URL"
     },
-    "metrics": {
-      "buckets": {
-        "__name": "TELEMETRY_METRICS_BUCKETS",
-        "__format": "json"
-      }
-    }
+    "metrics": {}
   },
   "server": {
     "port": "SERVER_PORT",
