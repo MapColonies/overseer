@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.8.0](https://github.com/MapColonies/overseer/compare/v2.7.1...v2.8.0) (2026-06-22)
+
+
+### Features
+
+* update to boilerplate and migrate tests from Jest to Vitest (MAPCO-9938) ([#101](https://github.com/MapColonies/overseer/issues/101)) ([9a846fd](https://github.com/MapColonies/overseer/commit/9a846fd95d7954fc49b6b12d50cfca31f4fb1ad5))
+
 ## [2.7.1](https://github.com/MapColonies/overseer/compare/v2.7.0...v2.7.1) (2026-05-31)
 
 
