@@ -1,6 +1,6 @@
 {{- $configmapName := include "configmap.fullname" . }}
 {{- $tracing := (include "common.tracing.merged" .) | fromYaml }}
-{{- $metrics := (include "common.metrics.merged" .) | fromYaml }}
+{{- $openTelemetryOptions := (include "common.openTelemetryOptions.merged" .) | fromYaml }}
 {{- $serviceUrls := (include "common.serviceUrls.merged" .) | fromYaml }}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 {{- $jobDefinitions := (include "common.jobDefinitions.merged" .) | fromYaml }}
@@ -15,17 +15,18 @@ data:
   RESPONSE_COMPRESSION_ENABLED: {{ .Values.env.responseCompressionEnabled | quote }}
   LOG_LEVEL: {{ .Values.env.logLevel | quote }}
   LOG_PRETTY_PRINT_ENABLED: {{ .Values.env.logPrettyPrintEnabled | quote }}
-  LOG_PINO_CALLER_ENABLED: {{ .Values.env.logPinoCallerEnabled | quote }}
+  {{- with $openTelemetryOptions }}
+  OPENTELEMETRY_LOGGING_ENABLED: {{ .enabled | quote }}
+  {{ if .enabled }}
+  OPENTELEMETRY_LOGGING_URL: {{ .url | quote }}
+  OPENTELEMETRY_RESOURCE_ATTRIBUTES: {{ .resourceAttributes | toJson | quote }}
+  {{- end }}
+  {{- end }}
+  TELEMETRY_TRACING_ENABLED: {{ $tracing.enabled | quote }}
   {{ if $tracing.enabled }}
-  TELEMETRY_TRACING_ENABLED: 'true'
   TELEMETRY_TRACING_URL: {{ $tracing.url }}
   {{ end }}
-  {{ if $metrics.enabled }}
-  TELEMETRY_METRICS_ENABLED: 'true'
-  TELEMETRY_METRICS_URL: {{ $metrics.url }}
-  TELEMETRY_METRICS_INTERVAL: {{ $metrics.interval | quote }}
-  TELEMETRY_METRICS_BUCKETS: {{ $metrics.buckets | toJson | quote }}
-  {{ end }}
+  TELEMETRY_METRICS_BUCKETS: {{ .Values.mclabels.prometheus.buckets | toJson | quote }}
   {{- if eq (upper $storage.gpkgProvider) "S3" }}
   {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled -}}
   S3_ENDPOINT_URL: {{ printf "%s%s" $s3HttpProtocol $storage.s3.endpointUrl | quote }}
@@ -87,4 +88,11 @@ data:
   JOB_TRACKER_URL: {{ $serviceUrls.jobTracker | quote}}
   SHAPEFILE_READER_MAX_VERTICES_PER_CHUNK: {{ .Values.env.shapefileReader.maxVerticesPerChunk | quote }}
   INGESTION_SOURCES_DIR_PATH: {{ $storage.fs.ingestionSourcePvc.mountPath | quote }}
+
+  {{- with .Values.configManagement }}
+  CONFIG_NAME: {{ .name | quote }}
+  CONFIG_VERSION: {{ .version | quote }}
+  CONFIG_OFFLINE_MODE: {{ .offlineMode | quote }}
+  CONFIG_SERVER_URL: {{ .serverUrl | quote }}
+  {{- end }}
 {{- end }}

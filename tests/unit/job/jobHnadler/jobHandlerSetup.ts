@@ -1,18 +1,19 @@
-import jsLogger from '@map-colonies/js-logger';
-import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { Mocked } from 'vitest';
+import type { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { JobHandler } from '../../../../src/job/models/jobHandler';
-import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { configMock } from '../../mocks/configMock';
 
 export interface JobHandlerTestContext {
   newJobHandler: JobHandler;
-  queueClientMock: jest.Mocked<QueueClient>;
-  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
+  queueClientMock: Mocked<QueueClient>;
+  jobTrackerClientMock: Mocked<JobTrackerClient>;
 }
 
-export const setupJobHandlerTest = (): JobHandlerTestContext => {
-  const newJobHandler = new JobHandler(jsLogger({ enabled: false }), configMock, queueClientMock, jobTrackerClientMock);
+export const setupJobHandlerTest = async (): Promise<JobHandlerTestContext> => {
+  const newJobHandler = new JobHandler(await getTestLogger(), configMock, queueClientMock, jobTrackerClientMock);
 
   return {
     newJobHandler,

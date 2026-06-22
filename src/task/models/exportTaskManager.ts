@@ -1,10 +1,10 @@
-import { sep } from 'path';
+import { sep } from 'node:path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
 import { feature, featureCollection, intersect } from '@turf/turf';
-import PolygonBbox from '@turf/bbox';
-import { Logger } from '@map-colonies/js-logger';
+import polygonBbox from '@turf/bbox';
+import type { Logger } from '@map-colonies/js-logger';
 import {
   bboxSchema,
   multiPolygonSchema,
@@ -17,7 +17,7 @@ import {
 import { BBox2d, bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { SERVICES, StorageProvider } from '../../common/constants';
-import { IConfig, type TaskSources, type ZoomBoundsParameters } from '../../common/interfaces';
+import type { IConfig, TaskSources, ZoomBoundsParameters } from '../../common/interfaces';
 import type { ExportJob } from '../../utils/zod/schemas/job.schema';
 import { createChildSpan } from '../../common/tracing';
 
@@ -97,7 +97,7 @@ export class ExportTaskManager {
           jobId: job.id,
         });
 
-        const roiBbox = PolygonBbox(job.parameters.exportInputParams.roi);
+        const roiBbox = polygonBbox(job.parameters.exportInputParams.roi);
         logger.debug({ msg: 'roi bbox calculated', roiBbox });
 
         const separator = this.getSeparator();
@@ -171,7 +171,7 @@ export class ExportTaskManager {
 
       this.logger.debug({ msg: 'Intersection found', intersection });
 
-      const bbox = bboxSchema.parse(PolygonBbox(intersection));
+      const bbox = bboxSchema.parse(polygonBbox(intersection));
       this.logger.debug({ msg: 'bbox calculated and validated', bbox });
 
       return bbox;

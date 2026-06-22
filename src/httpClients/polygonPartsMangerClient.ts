@@ -1,4 +1,3 @@
-import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import type {
   AggregationFeature,
@@ -6,9 +5,9 @@ import type {
   IntersectionFeatureCollection,
   RoiFeatureCollection,
 } from '@map-colonies/raster-shared';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { HttpClient } from '@map-colonies/mc-utils';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
+import type { IConfig } from '../common/interfaces';
 import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
 import { LayerMetadataAggregationError, PolygonPartsProcessingError, IntersectionError } from '../common/errors';
@@ -16,7 +15,10 @@ import { AggregationLayerMetadata, PolygonPartsProcessPayload } from '../common/
 
 @injectable()
 export class PolygonPartsMangerClient extends HttpClient {
-  public constructor(@inject(SERVICES.CONFIG) private readonly config: IConfig, @inject(SERVICES.LOGGER) protected readonly logger: Logger) {
+  public constructor(
+    @inject(SERVICES.CONFIG) private readonly config: IConfig,
+    @inject(SERVICES.LOGGER) protected override readonly logger: Logger
+  ) {
     const serviceName = POLYGON_PARTS_MANAGER_SERVICE_NAME;
     const baseUrl = config.get<string>('servicesUrl.polygonPartsManager');
     const httpRetryConfig = config.get<IHttpRetryConfig>('httpRetry');

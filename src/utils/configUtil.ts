@@ -63,7 +63,7 @@ export const getPollingJobs = (jobManagementConfig: JobManagementConfig, instanc
 export const parseInstanceType = (instanceType: string): InstanceType => {
   try {
     return instanceTypeSchema.parse(instanceType);
-  } catch (err) {
+  } catch {
     throw new InvalidConfigError(`Invalid configuration for "instanceType". supported values: (${INSTANCE_TYPES.join(',')})`);
   }
 };

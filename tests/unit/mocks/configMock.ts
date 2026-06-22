@@ -1,30 +1,27 @@
-/* eslint-disable @typescript-eslint/no-magic-numbers */
-
-import config, { IConfig, IUtil } from 'config';
+import { vi } from 'vitest';
 import get from 'lodash.get';
 import set from 'lodash.set';
 import has from 'lodash.has';
+import type { IConfig } from '../../../src/common/interfaces';
 
 // The single source of truth for our mock configuration
 let mockConfig: Record<string, unknown> = {};
 
-const getMock = jest.fn();
-const hasMock = jest.fn();
-const utiMock = jest.fn() as unknown as IUtil;
+const getMock = vi.fn();
+const hasMock = vi.fn();
 
 const configMock: IConfig = {
   get: getMock,
   has: hasMock,
-  util: utiMock,
 };
 
 const init = (): void => {
   getMock.mockImplementation((key: string): unknown => {
-    return get(mockConfig, key) ?? config.get(key);
+    return get(mockConfig, key);
   });
 
   hasMock.mockImplementation((key: string): boolean => {
-    return has(mockConfig, key) || config.has(key);
+    return has(mockConfig, key);
   });
 };
 
@@ -37,8 +34,6 @@ const setValue = (key: string | Record<string, unknown>, value?: unknown): void 
   if (typeof key === 'string') {
     set(mockConfig, key, value);
   } else {
-    // When key is an object, iterate through it and set each key-value pair
-    // This preserves potential nested paths in object keys
     Object.entries(key).forEach(([objKey, objValue]) => {
       set(mockConfig, objKey, objValue);
     });
@@ -57,22 +52,22 @@ const setConfigValues = (values: Record<string, unknown>): void => {
 
 const registerDefaultConfig = (): void => {
   const config = {
+    mclabels: {
+      prometheus: {
+        // eslint-disable-next-line @typescript-eslint/no-magic-numbers
+        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500],
+      },
+    },
     telemetry: {
       logger: {
         level: 'info',
         prettyPrint: false,
-        pinoCaller: false,
       },
       tracing: {
-        enabled: true,
+        isEnabled: false,
         url: 'http://localhost:4318/v1/traces',
       },
-      metrics: {
-        enabled: false,
-        url: 'http://localhost:4318/v1/metrics',
-        interval: 5,
-        buckets: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 15, 50, 250, 500],
-      },
+      metrics: {},
     },
     server: {
       port: 8080,
@@ -190,4 +185,5 @@ const registerDefaultConfig = (): void => {
   setConfigValues(config);
 };
 
-export { getMock, hasMock, configMock, setValue, clear, init, setConfigValues, registerDefaultConfig, SetValueParams };
+export { getMock, hasMock, configMock, setValue, clear, init, setConfigValues, registerDefaultConfig };
+export type { SetValueParams };

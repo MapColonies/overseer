@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { context, trace } from '@opentelemetry/api';
@@ -13,7 +13,7 @@ import type {
   IngestionSwapUpdateFinalizeTask,
   IngestionSwapUpdateCreateTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
-import { ReadProductGeometry } from '../../../utils/storage/productReader';
+import type { ReadProductGeometry } from '../../../utils/storage/productReader';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
@@ -25,18 +25,15 @@ import { JobHandler } from '../jobHandler';
 import { SeedingJobCreator } from './seedingJobCreator';
 
 @injectable()
-/* eslint-disable @typescript-eslint/brace-style */
 export class SwapJobHandler
   extends JobHandler
-  implements
-    IJobHandler<IngestionSwapUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionSwapUpdateFinalizeJob, IngestionSwapUpdateFinalizeTask>
+  implements IJobHandler<IngestionSwapUpdateCreateTasksJob, IngestionCreateTasksTask, IngestionSwapUpdateFinalizeJob, IngestionSwapUpdateFinalizeTask>
 {
-  /* eslint-enable @typescript-eslint/brace-style */
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
-    @inject(SERVICES.CONFIG) protected readonly config: IConfig,
+    @inject(SERVICES.CONFIG) protected override readonly config: IConfig,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
-    @inject(SERVICES.QUEUE_CLIENT) protected queueClient: QueueClient,
+    @inject(SERVICES.QUEUE_CLIENT) protected override queueClient: QueueClient,
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,

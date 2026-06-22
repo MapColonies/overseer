@@ -1,20 +1,21 @@
-import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { JobTrackerClient } from '../../../src/httpClients/jobTrackerClient';
+import type { Mocked } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { JobTrackerClient } from '../../../src/httpClients/jobTrackerClient';
 
 export const jobManagerClientMock = {
-  updateJob: jest.fn(),
-  updateTask: jest.fn(),
-  createTaskForJob: jest.fn(),
-  getJob: jest.fn(),
-  findTasks: jest.fn(),
-} as unknown as jest.Mocked<JobManagerClient>;
+  updateJob: vi.fn(),
+  updateTask: vi.fn(),
+  createTaskForJob: vi.fn(),
+  getJob: vi.fn(),
+  findTasks: vi.fn(),
+} as unknown as Mocked<JobManagerClient>;
 
 export const queueClientMock = {
   jobManagerClient: jobManagerClientMock,
-  ack: jest.fn(),
-  reject: jest.fn(),
-} as unknown as jest.Mocked<QueueClient>;
+  ack: vi.fn(),
+  reject: vi.fn(),
+} as unknown as Mocked<QueueClient>;
 
 export const jobTrackerClientMock = {
-  notify: jest.fn(),
-} as unknown as jest.Mocked<JobTrackerClient>;
+  notify: vi.fn(),
+} as unknown as Mocked<JobTrackerClient>;

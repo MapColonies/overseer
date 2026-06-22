@@ -1,17 +1,20 @@
-import fs from 'fs/promises';
-import { createReadStream } from 'fs';
-import { finished } from 'stream/promises'; // Promise-based stream completion
-import crypto from 'crypto';
-import path from 'path';
+import fs from 'node:fs/promises';
+import { createReadStream } from 'node:fs';
+import { finished } from 'node:stream/promises'; // Promise-based stream completion
+import crypto from 'node:crypto';
+import path from 'node:path';
 import { inject, injectable } from 'tsyringe';
-import { Logger } from '@map-colonies/js-logger';
-import { context, trace, Tracer, SpanStatusCode } from '@opentelemetry/api';
+import type { Logger } from '@map-colonies/js-logger';
+import { context, trace, SpanStatusCode, type Tracer } from '@opentelemetry/api';
 import { SERVICES } from '../../common/constants';
 import { FSError } from '../../common/errors';
 
 @injectable()
 export class FSService {
-  public constructor(@inject(SERVICES.LOGGER) private readonly logger: Logger, @inject(SERVICES.TRACER) private readonly tracer: Tracer) {}
+  public constructor(
+    @inject(SERVICES.LOGGER) private readonly logger: Logger,
+    @inject(SERVICES.TRACER) private readonly tracer: Tracer
+  ) {}
 
   public async uploadJsonFile(filePath: string, data: Record<string, unknown>): Promise<void> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${FSService.name}.${this.uploadJsonFile.name}`)), async () => {
@@ -29,17 +32,17 @@ export class FSService {
 
         activeSpan?.addEvent('file.uploaded', { filePath });
         this.logger.info({ msg: 'JSON file uploaded successfully', filePath });
-      } catch (err) {
-        const error = new FSError(err, `Failed to upload JSON file ${filePath}`);
+      } catch (error) {
+        const err = new FSError(error, `Failed to upload JSON file ${filePath}`);
 
-        this.logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+        this.logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
 
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -60,17 +63,17 @@ export class FSService {
 
         activeSpan?.addEvent('file.deleted', { filePath });
         this.logger.info({ msg: 'File deleted successfully', filePath });
-      } catch (err) {
-        const error = new FSError(err, `Failed to delete file ${filePath}`);
+      } catch (error) {
+        const err = new FSError(error, `Failed to delete file ${filePath}`);
 
-        this.logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+        this.logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
 
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -109,15 +112,15 @@ export class FSService {
           activeSpan?.addEvent('directory.not.empty', { fileCount: dirContents.length });
           return false;
         }
-      } catch (err) {
-        const error = new FSError(err, `Failed to delete directory ${dirPath}`);
-        this.logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+      } catch (error) {
+        const err = new FSError(error, `Failed to delete directory ${dirPath}`);
+        this.logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -140,17 +143,17 @@ export class FSService {
         this.logger.info({ msg: 'File size retrieved successfully', filePath, size: stats.size });
 
         return stats.size;
-      } catch (err) {
-        const error = new FSError(err, `Failed to get file size for ${filePath}`);
+      } catch (error) {
+        const err = new FSError(error, `Failed to get file size for ${filePath}`);
 
-        this.logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+        this.logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
 
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -175,17 +178,17 @@ export class FSService {
         const deleted = await this.deleteDirectory(dirPath, { force: false });
 
         activeSpan?.addEvent('directory.processed', { dirPath, deleted });
-      } catch (err) {
-        const error = err instanceof FSError ? err : new FSError(err, `Failed to delete file and parent directory for ${filePath}`);
+      } catch (error) {
+        const err = error instanceof FSError ? error : new FSError(error, `Failed to delete file and parent directory for ${filePath}`);
 
-        this.logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+        this.logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
 
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -218,15 +221,15 @@ export class FSService {
         activeSpan?.addEvent('file.sha256.calculated', { sha256 });
         this.logger.info({ msg: 'SHA256 calculated successfully', filePath, sha256 });
         return sha256;
-      } catch (err) {
-        const error = new FSError(err, `Failed to calculate SHA256 for ${filePath}`);
-        this.logger.error({ msg: error.message, error });
-        activeSpan?.recordException(error);
+      } catch (error) {
+        const err = new FSError(error, `Failed to calculate SHA256 for ${filePath}`);
+        this.logger.error({ msg: err.message, err });
+        activeSpan?.recordException(err);
         activeSpan?.setStatus({
           code: SpanStatusCode.ERROR,
-          message: error.message,
+          message: err.message,
         });
-        throw error;
+        throw err;
       } finally {
         activeSpan?.end();
       }

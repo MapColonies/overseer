@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
-import { RasterLayerMetadata, type RoiFeatureCollection } from '@map-colonies/raster-shared';
-import { ITileRange } from '@map-colonies/mc-utils';
-import { TaskSources } from '../../../src/common/interfaces';
+import type { RasterLayerMetadata, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { ITileRange } from '@map-colonies/mc-utils';
+import type { TaskSources } from '../../../src/common/interfaces';
 import { layerRecord } from './catalogClientMockData';
 
 export const mockRoi: RoiFeatureCollection = {

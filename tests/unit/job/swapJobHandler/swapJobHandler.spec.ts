@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import crypto from 'crypto';
 import { getEntityName, getMapServingLayerName, type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
-import { Grid, MergeTask, MergeTilesTaskParams, SeedJobParams } from '../../../../src/common/interfaces';
+import { Grid, type MergeTask, type SeedJobParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionSwapUpdate, createTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
@@ -11,53 +10,53 @@ import { setupSwapJobHandlerTest } from './swapJobHandlerSetup';
 
 describe('swapJobHandler', () => {
   const mergeTasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
+
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
     registerDefaultConfig();
   });
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, taskBuilderMock, readProductGeometryMock } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = createTasksTaskForIngestionSwapUpdate;
       const productGeometry = createFakePolygonalGeometry();
 
       const additionalParams = swapUpdateAdditionalParamsSchema.parse(job.parameters.additionalParams);
 
-      const newDisplayPath = crypto.randomUUID();
-
-      jest.spyOn(crypto, 'randomUUID').mockReturnValue(newDisplayPath);
-
-      const taskBuildParams: MergeTilesTaskParams = {
-        inputFiles: job.parameters.inputFiles,
-        taskMetadata: {
-          layerRelativePath: `${job.internalId}/${newDisplayPath}`,
-          tileOutputFormat: additionalParams.tileOutputFormat,
-          isNewTarget: true,
-          grid: Grid.TWO_ON_ONE,
-        },
-        productGeometry,
-        ingestionResolution: job.parameters.ingestionResolution,
-      };
-
       readProductGeometryMock.mockResolvedValue(productGeometry);
       taskBuilderMock.buildTasks.mockReturnValue(mergeTasks);
       taskBuilderMock.pushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
-      const completeInitTaskSpy = jest.spyOn(swapJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
+      const completeInitTaskSpy = vi.spyOn(swapJobHandler as unknown as { completeTask: (...args: unknown[]) => unknown }, 'completeTask');
 
       await swapJobHandler.handleJobInit(job, task);
 
-      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(taskBuildParams, task);
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+      expect(taskBuilderMock.buildTasks).toHaveBeenCalledWith(
+        expect.objectContaining({
+          inputFiles: job.parameters.inputFiles,
+          taskMetadata: expect.objectContaining({
+            layerRelativePath: expect.stringMatching(new RegExp(`^${job.internalId}/[0-9a-f-]+$`)),
+            tileOutputFormat: additionalParams.tileOutputFormat,
+            isNewTarget: true,
+            grid: Grid.TWO_ON_ONE,
+          }),
+          productGeometry,
+          ingestionResolution: job.parameters.ingestionResolution,
+        }),
+        task
+      );
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment */
       expect(taskBuilderMock.pushTasks).toHaveBeenCalledWith(task, job.id, job.type, mergeTasks);
       expect(completeInitTaskSpy).toHaveBeenCalledWith(job, task, expect.any(Object));
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
     it('should handle job init failure and reject the task', async () => {
-      const { swapJobHandler, taskBuilderMock, queueClientMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, taskBuilderMock, queueClientMock } = await setupSwapJobHandlerTest();
 
       const job = structuredClone(ingestionSwapUpdateJob);
       const task = createTasksTaskForIngestionSwapUpdate;
@@ -84,7 +83,7 @@ describe('swapJobHandler', () => {
         catalogClientMock,
         seedingJobCreatorMock,
         polygonPartsManagerClientMock,
-      } = setupSwapJobHandlerTest();
+      } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateFinalizeJob);
 
       const task = { ...finalizeTaskForIngestionSwapUpdate };
@@ -124,7 +123,7 @@ describe('swapJobHandler', () => {
     });
 
     it('should handle job finalize failure and reject the task', async () => {
-      const { swapJobHandler, queueClientMock, catalogClientMock } = setupSwapJobHandlerTest();
+      const { swapJobHandler, queueClientMock, catalogClientMock } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateFinalizeJob);
       const task = { ...finalizeTaskForIngestionSwapUpdate };
 

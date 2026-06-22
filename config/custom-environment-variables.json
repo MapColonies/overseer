@@ -1,4 +1,12 @@
 {
+  "mclabels": {
+    "prometheus": {
+      "buckets": {
+        "__name": "TELEMETRY_METRICS_BUCKETS",
+        "__format": "json"
+      }
+    }
+  },
   "telemetry": {
     "serviceName": "TELEMETRY_SERVICE_NAME",
     "hostname": "TELEMETRY_HOST_NAME",
@@ -9,24 +17,27 @@
         "__name": "LOG_PRETTY_PRINT_ENABLED",
         "__format": "boolean"
       },
-      "pinoCaller": {
-        "__name": "LOG_PINO_CALLER_ENABLED",
-        "__format": "boolean"
+      "opentelemetryOptions": {
+        "enabled": {
+          "__name": "OPENTELEMETRY_LOGGING_ENABLED",
+          "__format": "boolean"
+        },
+        "url": "OPENTELEMETRY_LOGGING_URL",
+        "resourceAttributes": {
+          "__name": "OPENTELEMETRY_RESOURCE_ATTRIBUTES",
+          "__format": "json"
+        }
       }
     },
+    "shared": {},
     "tracing": {
-      "enabled": "TELEMETRY_TRACING_ENABLED",
+      "isEnabled": {
+        "__name": "TELEMETRY_TRACING_ENABLED",
+        "__format": "boolean"
+      },
       "url": "TELEMETRY_TRACING_URL"
     },
-    "metrics": {
-      "enabled": "TELEMETRY_METRICS_ENABLED",
-      "url": "TELEMETRY_METRICS_URL",
-      "interval": "TELEMETRY_METRICS_INTERVAL",
-      "buckets": {
-        "__name": "TELEMETRY_METRICS_BUCKETS",
-        "__format": "json"
-      }
-    }
+    "metrics": {}
   },
   "server": {
     "port": "SERVER_PORT",

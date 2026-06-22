@@ -1,22 +1,50 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/unbound-method */
+import type { Mocked } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { finalizeTaskForIngestionNew, createTasksTaskForIngestionNew } from '../../mocks/tasksMockData';
 import { ingestionNewJob, ingestionNewJobExtended } from '../../mocks/jobsMockData';
-import { MergeTask } from '../../../../src/common/interfaces';
-import { IngestionNewFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
+import type { MergeTask } from '../../../../src/common/interfaces';
+import type { IngestionNewFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { PublishLayerError } from '../../../../src/common/errors';
+import type { NewJobHandler } from '../../../../src/job/models/ingestion/newJobHandler';
+import type { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
+import type { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
+import type { GeoserverClient } from '../../../../src/httpClients/geoserverClient';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { setupNewJobHandlerTest } from './newJobHandlerSetup';
 
 describe('NewJobHandler', () => {
   const tasks: AsyncGenerator<MergeTask, void, void> = (async function* () {})();
-  beforeEach(() => {
-    jest.resetAllMocks();
+
+  let newJobHandler: NewJobHandler;
+  let taskBuilderMock: Mocked<TileMergeTaskManager>;
+  let queueClientMock: Mocked<QueueClient>;
+  let jobManagerClientMock: Mocked<JobManagerClient>;
+  let mapproxyClientMock: Mocked<MapproxyApiClient>;
+  let geoserverClientMock: Mocked<GeoserverClient>;
+  let catalogClientMock: Mocked<CatalogClient>;
+  let jobTrackerClientMock: Mocked<JobTrackerClient>;
+
+  beforeEach(async () => {
+    vi.resetAllMocks();
     registerDefaultConfig();
+    ({
+      newJobHandler,
+      taskBuilderMock,
+      queueClientMock,
+      jobManagerClientMock,
+      mapproxyClientMock,
+      geoserverClientMock,
+      catalogClientMock,
+      jobTrackerClientMock,
+    } = await setupNewJobHandlerTest());
   });
+
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { newJobHandler, taskBuilderMock, queueClientMock, jobManagerClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJob;
       const task = createTasksTaskForIngestionNew;
 
@@ -37,8 +65,6 @@ describe('NewJobHandler', () => {
     });
 
     it('should handle job init failure and reject the task', async () => {
-      const { newJobHandler, taskBuilderMock, queueClientMock } = setupNewJobHandlerTest();
-
       const job = ingestionNewJob;
       const task = createTasksTaskForIngestionNew;
 
@@ -56,15 +82,6 @@ describe('NewJobHandler', () => {
 
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
-      const {
-        newJobHandler,
-        queueClientMock,
-        jobManagerClientMock,
-        mapproxyClientMock,
-        geoserverClientMock,
-        catalogClientMock,
-        jobTrackerClientMock,
-      } = setupNewJobHandlerTest();
       const job = ingestionNewJobExtended;
       const task = finalizeTaskForIngestionNew;
 
@@ -82,7 +99,6 @@ describe('NewJobHandler', () => {
     });
 
     it('should handle job finalize failure, reject the task and fail the job (zod validation error)', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock, jobTrackerClientMock } = setupNewJobHandlerTest();
       const job = { ...ingestionNewJobExtended, productType: undefined };
       const task = finalizeTaskForIngestionNew;
 
@@ -97,7 +113,6 @@ describe('NewJobHandler', () => {
     });
 
     it('should handle job finalize failure and reject the task (mapproxyApi publish failed)', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock, mapproxyClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJobExtended;
       const task = finalizeTaskForIngestionNew;
 
@@ -114,7 +129,6 @@ describe('NewJobHandler', () => {
     });
 
     it('should handle job finalize failure and reject the task (geoserverApi publish failed)', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock, mapproxyClientMock, geoserverClientMock } = setupNewJobHandlerTest();
       const job = ingestionNewJobExtended;
       const task = finalizeTaskForIngestionNew;
 
@@ -132,8 +146,6 @@ describe('NewJobHandler', () => {
     });
 
     it('should handle job finalize failure and reject the task (catalogApi publish failed)', async () => {
-      const { newJobHandler, queueClientMock, jobManagerClientMock, mapproxyClientMock, geoserverClientMock, catalogClientMock } =
-        setupNewJobHandlerTest();
       const job = ingestionNewJobExtended;
       const task = finalizeTaskForIngestionNew;
 

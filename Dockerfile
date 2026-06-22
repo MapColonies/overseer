@@ -3,6 +3,7 @@ FROM node:24-slim AS build
 WORKDIR /tmp/buildApp
 
 COPY ./package*.json ./
+COPY .husky/ .husky/
 
 RUN npm install
 COPY . .
@@ -18,11 +19,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV NODE_ENV=production
 ENV SERVER_PORT=8080
+ENV CONFIG_OFFLINE_MODE=true
 
 
 WORKDIR /usr/src/app
 
 COPY --chown=node:node package*.json ./
+COPY .husky/ .husky/
 
 RUN npm ci --only=production
 
@@ -32,4 +35,4 @@ COPY --chown=node:node ./config ./config
 
 USER node
 EXPOSE 8080
-CMD ["dumb-init", "node", "--require", "./common/tracing.js", "./index.js"]
+CMD ["dumb-init", "node", "--import", "./instrumentation.mjs", "./index.js"]

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { NotFoundError } from '@map-colonies/error-types';
-import { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
-import { Polygon } from 'geojson';
+import type { TaskBlockDuplicationParam } from '@map-colonies/raster-shared';
+import type { Polygon } from 'geojson';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateJob } from '../../mocks/jobsMockData';
 import {
@@ -11,7 +11,7 @@ import {
   validationTaskWithResolutionErrors,
   validationTaskWithResolutionErrorsNoReportUrl,
 } from '../../mocks/tasksMockData';
-import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
+import type { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { jobManagerClientMock } from '../../mocks/jobManagerMocks';
 import * as reportUtils from '../../../../src/utils/report';
 import { polygonPartsMangerClientMock, setupTileDeletionTaskManagerTest, type TileDeletionTaskManagerContext } from './tileDeletionTaskManagerSetup';
@@ -22,13 +22,13 @@ describe('TileDeletionTaskManager', () => {
   const polygonPartsEntityName = `${ingestionUpdateJob.resourceId}_${String(ingestionUpdateJob.productType).toLowerCase()}`;
   const task = createFakeTask<TaskBlockDuplicationParam>({ jobId: ingestionUpdateJob.id, type: 'create-tasks' }) as IngestionCreateTasksTask;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerDefaultConfig();
-    testContext = setupTileDeletionTaskManagerTest();
+    testContext = await setupTileDeletionTaskManagerTest();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('buildAndPushTasks', () => {
@@ -83,8 +83,8 @@ describe('TileDeletionTaskManager', () => {
 
       jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
 
-      const buildTasksSpy = jest.spyOn(tileDeletionTaskManager, 'buildTasks');
-      const pushTasksSpy = jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockResolvedValue(undefined);
+      const buildTasksSpy = vi.spyOn(tileDeletionTaskManager, 'buildTasks');
+      const pushTasksSpy = vi.spyOn(tileDeletionTaskManager, 'pushTasks').mockResolvedValue(undefined);
 
       await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
@@ -105,8 +105,8 @@ describe('TileDeletionTaskManager', () => {
       const { tileDeletionTaskManager } = testContext;
 
       jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
-      jest.spyOn(tileDeletionTaskManager, 'buildTasks');
-      jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new Error('unexpected push failure'));
+      vi.spyOn(tileDeletionTaskManager, 'buildTasks');
+      vi.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new Error('unexpected push failure'));
 
       await expect(tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)).rejects.toThrow(
         'unexpected push failure'
@@ -143,7 +143,7 @@ describe('TileDeletionTaskManager', () => {
         ],
       };
 
-      jest.spyOn(reportUtils, 'readConflictFeatures').mockResolvedValue([
+      vi.spyOn(reportUtils, 'readConflictFeatures').mockResolvedValue([
         // eslint-disable-next-line @typescript-eslint/naming-convention
         { type: 'Feature', geometry: eResGeometry, properties: { e_res: 'Resolution Conflict' } },
         // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -182,9 +182,9 @@ describe('TileDeletionTaskManager', () => {
       const { tileDeletionTaskManager } = testContext;
 
       jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
-      jest.spyOn(tileDeletionTaskManager, 'buildTasks');
+      vi.spyOn(tileDeletionTaskManager, 'buildTasks');
       // pushTasks is inside the try block, so a NotFoundError it throws IS caught and swallowed
-      jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new NotFoundError('from pushTasks'));
+      vi.spyOn(tileDeletionTaskManager, 'pushTasks').mockRejectedValue(new NotFoundError('from pushTasks'));
 
       // NotFoundError from inside the try block is swallowed
       await expect(
@@ -214,7 +214,7 @@ describe('TileDeletionTaskManager', () => {
 
       // First task has no resolution errors, second has — only first should be used
       jobManagerClientMock.findTasks.mockResolvedValue([validationTaskForIngestionUpdate, validationTaskWithResolutionErrors]);
-      jest.spyOn(tileDeletionTaskManager, 'pushTasks').mockResolvedValue(undefined);
+      vi.spyOn(tileDeletionTaskManager, 'pushTasks').mockResolvedValue(undefined);
 
       await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 

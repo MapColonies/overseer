@@ -1,4 +1,4 @@
-import { basename } from 'path';
+import { basename } from 'node:path';
 import { context, SpanStatusCode, trace } from '@opentelemetry/api';
 import type { Span, Tracer } from '@opentelemetry/api';
 import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map-colonies/mc-utils';
@@ -8,12 +8,8 @@ import type { Logger } from '@map-colonies/js-logger';
 import { type InputFiles } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import type { IConfig } from 'config';
-import { SERVICES, type StorageProvider } from '../../common/constants';
-import { fileExtensionExtractor } from '../../utils/fileUtil';
-import { TaskMetrics } from '../../utils/metrics/taskMetrics';
-import { createChildSpan } from '../../common/tracing';
 import type {
+  IConfig,
   MergeParameters,
   TaskSources,
   MergeTaskParameters,
@@ -24,6 +20,10 @@ import type {
   ZoomDefinitions,
   FeatureTask,
 } from '../../common/interfaces';
+import { SERVICES, type StorageProvider } from '../../common/constants';
+import { fileExtensionExtractor } from '../../utils/fileUtil';
+import { TaskMetrics } from '../../utils/metrics/taskMetrics';
+import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
 import { Grid } from '../../common/interfaces';
 
@@ -79,13 +79,13 @@ export class TileMergeTaskManager {
 
         logger.debug({ msg: `Successfully built tasks for ${this.taskType} task` });
         return tasks;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        const errorMsg = error.message;
-        logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, error });
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        const errorMsg = err.message;
+        logger.error({ msg: `Failed to build tasks for ${this.taskType} task: ${errorMsg}`, err });
         activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: errorMsg });
-        activeSpan?.recordException(error);
-        throw error;
+        activeSpan?.recordException(err);
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -141,13 +141,13 @@ export class TileMergeTaskManager {
           taskBatch = [];
         }
         logger.info({ msg: `Successfully pushed all Merge tasks to queue` });
-      } catch (error) {
-        if (error instanceof Error) {
-          activeSpan?.recordException(error);
-          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.recordException(err);
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
         }
-        logger.error({ msg: 'Failed to push tasks to queue', error });
-        throw error;
+        logger.error({ msg: 'Failed to push tasks to queue', err });
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -197,12 +197,12 @@ export class TileMergeTaskManager {
         },
       });
       logger.info({ msg: `Successfully enqueued Merge task batch`, batchLength: tasks.length });
-    } catch (error) {
-      const errorMsg = (error as Error).message;
+    } catch (err) {
+      const errorMsg = (err as Error).message;
       const message = `Failed to enqueue tasks: ${errorMsg}`;
-      logger.error({ msg: message, error });
+      logger.error({ msg: message, err });
 
-      throw error;
+      throw err;
     }
   }
 
@@ -233,7 +233,7 @@ export class TileMergeTaskManager {
     if (gpkgFilesPath.length > 1) {
       throw new Error('Multiple files ingestion is currently not supported');
     }
-    const tilesPath = gpkgFilesPath[0];
+    const tilesPath = gpkgFilesPath[0]!;
     const fileName = basename(tilesPath);
 
     return {

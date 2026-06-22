@@ -8,11 +8,10 @@ import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
 import type { IntersectionFeatureCollection, IngestionValidationTaskParams, TilesDeletionParams } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import type { IConfig } from 'config';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { NotFoundError, UnprocessableEntityError } from '@map-colonies/error-types';
+import type { IConfig, BuildDeletionTaskParams } from '../../common/interfaces';
 import { SERVICES, StorageProvider } from '../../common/constants';
-import type { BuildDeletionTaskParams } from '../../common/interfaces';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
@@ -88,13 +87,13 @@ export class TileDeletionTaskManager {
         }
 
         logger.info({ msg: 'Successfully pushed all deletion tasks to queue' });
-      } catch (error) {
-        if (error instanceof Error) {
-          activeSpan?.recordException(error);
-          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+      } catch (err) {
+        if (err instanceof Error) {
+          activeSpan?.recordException(err);
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
         }
-        logger.error({ msg: 'Failed to push deletion tasks to queue', error });
-        throw error;
+        logger.error({ msg: 'Failed to push deletion tasks to queue', err });
+        throw err;
       } finally {
         activeSpan?.end();
       }
@@ -127,7 +126,7 @@ export class TileDeletionTaskManager {
         logger.info({ msg: 'No resolution conflicts found, skipping deletion tasks generation' });
         return;
       } else {
-        logger.error({ msg: 'Error occurred while building deletion tasks', error: err });
+        logger.error({ msg: 'Error occurred while building deletion tasks', err });
         throw err;
       }
     }
@@ -161,7 +160,7 @@ export class TileDeletionTaskManager {
         .map((feature) => turfFeature(feature.geometry as Polygon | MultiPolygon));
 
       logger.info({ msg: 'Unioning conflict features into single geometry', conflictFeatureCount: conflictGeometries.length });
-      const unionedConflictGeometry = conflictGeometries.length === 1 ? conflictGeometries[0] : union(turfFeatureCollection(conflictGeometries));
+      const unionedConflictGeometry = conflictGeometries.length === 1 ? conflictGeometries[0]! : union(turfFeatureCollection(conflictGeometries));
 
       if (unionedConflictGeometry === null) {
         logger.error({ msg: 'Union conflicted features returned null', conflictGeometries });
@@ -200,12 +199,12 @@ export class TileDeletionTaskManager {
           yield* this.createTasksForPart(intersectionFeature.geometry, zoom, layerRelativePath, tileOutputFormat, span);
         }
       }
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
-      span.recordException(error);
-      logger.error({ msg: 'Failed to build deletion tasks', error });
-      throw error;
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      span.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+      span.recordException(err);
+      logger.error({ msg: 'Failed to build deletion tasks', err });
+      throw err;
     } finally {
       span.end();
     }
@@ -255,7 +254,7 @@ export class TileDeletionTaskManager {
       throw new NotFoundError(`No validation tasks found for job ${jobId} with type ${validationTaskType}`);
     }
 
-    return validationTasks[0];
+    return validationTasks[0]!;
   }
 
   private getResolutionConflictReportUrl(validationTask: ITaskResponse<IngestionValidationTaskParams>, jobId: string): string {

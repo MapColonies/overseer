@@ -1,21 +1,19 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import path from 'path';
-import { accessSync } from 'fs';
-import type { Logger, LoggerOptions } from '@map-colonies/js-logger';
-import jsLogger from '@map-colonies/js-logger';
+import path from 'node:path';
+import { accessSync } from 'node:fs';
+import { jsLogger, type Logger } from '@map-colonies/js-logger';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { TileRanger } from '@map-colonies/mc-utils';
-import { getOtelMixin } from '@map-colonies/telemetry';
+import { TileRanger, type IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { getOtelMixin } from '@map-colonies/tracing-utils';
 import { trace } from '@opentelemetry/api';
-import config from 'config';
 import { Registry } from 'prom-client';
-import { instanceCachingFactory, instancePerContainerCachingFactory } from 'tsyringe';
+import { instancePerContainerCachingFactory } from 'tsyringe';
 import type { DependencyContainer } from 'tsyringe/dist/typings/types';
 import { SERVICES, SERVICE_NAME, SERVICE_VERSION } from './common/constants';
-import { InjectionObject, registerDependencies } from './common/dependencyRegistration';
-import { IConfig, IS3Config, JobManagerConfig, type JobManagementConfig } from './common/interfaces';
-import { tracing } from './common/tracing';
+import type { InjectionObject } from './common/dependencyRegistration';
+import { registerDependencies } from './common/dependencyRegistration';
+import type { IConfig, IS3Config, JobManagerConfig, JobManagementConfig } from './common/interfaces';
+import { getTracing } from './common/tracing';
+import { getConfig } from './common/config';
 import { ExportJobHandler } from './job/models/export/exportJobHandler';
 import { NewJobHandler } from './job/models/ingestion/newJobHandler';
 import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
@@ -23,7 +21,7 @@ import { UpdateJobHandler } from './job/models/ingestion/updateJobHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { getPollingJobs, parseInstanceType, validateAndGetHandlersTokens } from './utils/configUtil';
 import { productReaderFactory } from './utils/storage/productReader';
-import { InstanceType } from './utils/zod/schemas/instance.schema';
+import type { InstanceType } from './utils/zod/schemas/instance.schema';
 
 const validateRequiredDirectories = (container: DependencyContainer): void => {
   const config = container.resolve<IConfig>(SERVICES.CONFIG);
@@ -52,7 +50,7 @@ const validateRequiredDirectories = (container: DependencyContainer): void => {
         name: dir.name,
         path: dir.path,
       });
-    } catch (error) {
+    } catch {
       missingDirectories.push(`${dir.name}: ${dir.path}`);
     }
   }
@@ -68,17 +66,20 @@ const registerInstanceHandlers = (instanceType: InstanceType, handlersTokens: Re
   switch (instanceType) {
     case 'ingestion':
       return [
-        { token: handlersTokens.Ingestion_New, provider: { useClass: NewJobHandler } },
-        { token: handlersTokens.Ingestion_Update, provider: { useClass: UpdateJobHandler } },
-        { token: handlersTokens.Ingestion_Swap_Update, provider: { useClass: SwapJobHandler } },
+        { token: handlersTokens['Ingestion_New']!, provider: { useClass: NewJobHandler } },
+
+        { token: handlersTokens['Ingestion_Update']!, provider: { useClass: UpdateJobHandler } },
+
+        { token: handlersTokens['Ingestion_Swap_Update']!, provider: { useClass: SwapJobHandler } },
       ];
     case 'export':
-      return [{ token: handlersTokens.Export, provider: { useClass: ExportJobHandler } }];
+      return [{ token: handlersTokens['Export']!, provider: { useClass: ExportJobHandler } }];
   }
 };
 
 const registerInstanceDependencies = (instanceType: InstanceType): InjectionObject<unknown>[] => {
-  const s3Config = config.get<IS3Config>('S3');
+  const configInstance = getConfig();
+  const s3Config = configInstance.get('S3') as IS3Config;
   switch (instanceType) {
     case 'ingestion':
       return [{ token: SERVICES.TILE_RANGER, provider: { useClass: TileRanger } }];
@@ -113,23 +114,26 @@ export interface RegisterOptions {
   useChild?: boolean;
 }
 
-export const registerExternalValues = (options?: RegisterOptions): DependencyContainer => {
-  const loggerConfig = config.get<LoggerOptions>('telemetry.logger');
+export const registerExternalValues = async (options?: RegisterOptions): Promise<DependencyContainer> => {
+  const configInstance = getConfig();
+  const loggerConfig = configInstance.get('telemetry.logger');
 
-  const logger = jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin(), pinoCaller: loggerConfig.pinoCaller });
+  const logger = await jsLogger({ ...loggerConfig, prettyPrint: loggerConfig.prettyPrint, mixin: getOtelMixin() });
 
   const metricsRegistry = new Registry();
+  configInstance.initializeMetrics(metricsRegistry);
   const tracer = trace.getTracer(SERVICE_NAME, SERVICE_VERSION);
 
-  const instanceType = parseInstanceType(config.get<InstanceType>('instanceType'));
-  const jobManagementConfig = config.get<JobManagementConfig>('jobManagement');
+  const instanceType = parseInstanceType(configInstance.get('instanceType') as string);
+  const jobManagementConfig = configInstance.get('jobManagement') as JobManagementConfig;
   const pollingJobs = getPollingJobs(jobManagementConfig, instanceType);
   const handlersTokens = validateAndGetHandlersTokens(pollingJobs, instanceType);
 
   const dependencies: InjectionObject<unknown>[] = [
-    { token: SERVICES.CONFIG, provider: { useValue: config } },
+    { token: SERVICES.CONFIG, provider: { useValue: configInstance } },
     { token: SERVICES.LOGGER, provider: { useValue: logger } },
     { token: SERVICES.TRACER, provider: { useValue: tracer } },
+    { token: SERVICES.METRICS, provider: { useValue: metricsRegistry } },
     { token: SERVICES.INSTANCE_TYPE, provider: { useValue: instanceType } },
     { token: SERVICES.QUEUE_CLIENT, provider: { useFactory: instancePerContainerCachingFactory(queueClientFactory) } },
     { token: JOB_HANDLER_FACTORY_SYMBOL, provider: { useFactory: instancePerContainerCachingFactory(jobHandlerFactory) } },
@@ -137,27 +141,10 @@ export const registerExternalValues = (options?: RegisterOptions): DependencyCon
     ...registerInstanceHandlers(instanceType, handlersTokens),
     ...registerInstanceDependencies(instanceType),
     {
-      token: SERVICES.METRICS,
-      provider: {
-        useFactory: instanceCachingFactory((container) => {
-          const config = container.resolve<IConfig>(SERVICES.CONFIG);
-
-          if (config.get<boolean>('telemetry.metrics.enabled')) {
-            metricsRegistry.setDefaultLabels({
-              app: SERVICE_NAME,
-            });
-            return metricsRegistry;
-          }
-        }),
-      },
-    },
-    {
       token: 'onSignal',
       provider: {
-        useValue: {
-          useValue: async (): Promise<void> => {
-            await Promise.all([tracing.stop()]);
-          },
+        useValue: async (): Promise<void> => {
+          await Promise.all([getTracing().stop()]);
         },
       },
     },

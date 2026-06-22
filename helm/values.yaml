@@ -1,7 +1,7 @@
 global:
   cloudProvider: {}
   tracing: {}
-  metrics: {}
+  openTelemetryOptions: {}
   environment: ''
   serviceUrls: {}
   jobDefinitions: {}
@@ -25,6 +25,22 @@ mclabels:
   prometheus:
     enabled: true
     port: 8080
+    buckets:
+    - 0.005
+    - 0.01
+    - 0.025
+    - 0.05
+    - 0.1
+    - 0.25
+    - 0.5
+    - 1
+    - 2.5
+    - 5
+    - 10
+    - 15
+    - 50
+    - 250
+    - 500
 
 enabled: true
 environment: development
@@ -105,27 +121,12 @@ serviceUrls:
 tracing:
   enabled: false
   url: ""
-metrics:
-  enabled: false
-  url: ""
-  buckets:
-  - 0.005
-  - 0.01
-  - 0.025
-  - 0.05
-  - 0.1
-  - 0.25
-  - 0.5
-  - 1
-  - 2.5
-  - 5
-  - 10
-  - 15
-  - 50
-  - 250
-  - 500
-  prometheus:
-    scrape: false
+
+configManagement:
+  offlineMode: false
+  name: 'overseer'
+  version: 'latest'
+  serverUrl: 'http://localhost:8080/api'
 
 instanceType: "" # supported values: ingestion | export
 jobDefinitions:
@@ -141,7 +142,7 @@ jobDefinitions:
     export:
       type: ""
       cleanupExpirationDays: 14
-      
+
   tasks:
     createTasks:
       type: ""
@@ -184,7 +185,10 @@ env:
   protocol: TCP
   logLevel: info
   logPrettyPrintEnabled: false
-  logPinoCallerEnabled: false
+  openTelemetryOptions:
+    enabled: false
+    url: ''
+    resourceAttributes: {}
   responseCompressionEnabled: true
   requestPayloadLimit: 1mb
 

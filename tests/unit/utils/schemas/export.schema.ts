@@ -1,5 +1,6 @@
-import { ITileRange } from '@map-colonies/mc-utils';
-import { z, ZodType } from 'zod';
+import type { ITileRange } from '@map-colonies/mc-utils';
+import type { ZodType } from 'zod';
+import { z } from 'zod';
 
 const extentSchema = z.object({
   minX: z.number(),

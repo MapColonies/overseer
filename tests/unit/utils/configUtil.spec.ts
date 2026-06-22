@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { MissingConfigError } from '../../../src/common/errors';
-import { PollingJobs } from '../../../src/common/interfaces';
+import type { PollingJobs } from '../../../src/common/interfaces';
 import { validateAndGetHandlersTokens } from '../../../src/utils/configUtil';
 import { registerDefaultConfig } from '../mocks/configMock';
 

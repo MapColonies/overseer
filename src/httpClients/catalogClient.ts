@@ -1,16 +1,14 @@
-import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { HttpClient } from '@map-colonies/mc-utils';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
 import { LayerMetadata, Link } from '@map-colonies/mc-model-types';
 import { RecordType } from '@map-colonies/types';
-import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
+import type { IConfig, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { SERVICES } from '../common/constants';
-import type { CatalogUpdateRequestBody, FindLayerResponse, FindLayerBody } from '../common/interfaces';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
@@ -22,7 +20,7 @@ export class CatalogClient extends HttpClient {
   private readonly geoserverDns: string;
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
-    @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.LOGGER) protected override readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer,
     private readonly linkBuilder: LinkBuilder,
     private readonly polygonPartsMangerClient: PolygonPartsMangerClient
@@ -106,7 +104,7 @@ export class CatalogClient extends HttpClient {
           throw new LayerNotFoundError(id);
         }
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer found successfully' });
-        return records[0];
+        return records[0]!;
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });

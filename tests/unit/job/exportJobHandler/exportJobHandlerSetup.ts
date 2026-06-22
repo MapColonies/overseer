@@ -1,67 +1,68 @@
-import { IConfig } from 'config';
-import jsLogger from '@map-colonies/js-logger';
-import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { ExportTaskManager } from '../../../../src/task/models/exportTaskManager';
-import { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { Mocked } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { IConfig } from '../../../../src/common/interfaces';
+import { getTestLogger } from '../../../configurations/testLogger';
+import type { ExportTaskManager } from '../../../../src/task/models/exportTaskManager';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { ExportJobHandler } from '../../../../src/job/models/export/exportJobHandler';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 import { configMock } from '../../mocks/configMock';
-import { S3Service } from '../../../../src/utils/storage/s3Service';
-import { FSService } from '../../../../src/utils/storage/fsService';
-import { CallbackClient } from '../../../../src/httpClients/callbackClient';
-import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
-import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
+import type { S3Service } from '../../../../src/utils/storage/s3Service';
+import type { FSService } from '../../../../src/utils/storage/fsService';
+import type { CallbackClient } from '../../../../src/httpClients/callbackClient';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 import { ArtifactPathBuilder } from '../../../../src/utils/storage/artifactPathBuilder';
 
 export interface ExportJobHandlerTestContext {
   configMock: IConfig;
   exportJobHandler: ExportJobHandler;
-  exportTaskManagerMock: jest.Mocked<ExportTaskManager>;
-  queueClientMock: jest.Mocked<QueueClient>;
-  jobManagerClientMock: jest.Mocked<JobManagerClient>;
-  catalogClientMock: jest.Mocked<CatalogClient>;
-  s3ServiceMock: jest.Mocked<S3Service>;
-  fsServiceMock: jest.Mocked<FSService>;
-  callbackClientMock: jest.Mocked<CallbackClient>;
-  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
-  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
+  exportTaskManagerMock: Mocked<ExportTaskManager>;
+  queueClientMock: Mocked<QueueClient>;
+  jobManagerClientMock: Mocked<JobManagerClient>;
+  catalogClientMock: Mocked<CatalogClient>;
+  s3ServiceMock: Mocked<S3Service>;
+  fsServiceMock: Mocked<FSService>;
+  callbackClientMock: Mocked<CallbackClient>;
+  jobTrackerClientMock: Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
 }
 
-export const setupExportJobHandlerTest = (): ExportJobHandlerTestContext => {
+export const setupExportJobHandlerTest = async (): Promise<ExportJobHandlerTestContext> => {
   const exportTaskManagerMock = {
-    generateTileRangeBatches: jest.fn(),
-    generateSources: jest.fn(),
-  } as unknown as jest.Mocked<ExportTaskManager>;
+    generateTileRangeBatches: vi.fn(),
+    generateSources: vi.fn(),
+  } as unknown as Mocked<ExportTaskManager>;
 
-  const catalogClientMock = { findLayer: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const catalogClientMock = { findLayer: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const s3ServiceMock = {
-    uploadFiles: jest.fn(),
-  } as unknown as jest.Mocked<S3Service>;
+    uploadFiles: vi.fn(),
+  } as unknown as Mocked<S3Service>;
 
   const fsServiceMock = {
-    deleteFile: jest.fn(),
-    deleteDirectory: jest.fn(),
-    deleteFileAndParentDir: jest.fn(),
-    getFileSize: jest.fn(),
-    uploadJsonFile: jest.fn(),
-    calculateFileSha256: jest.fn(),
-  } as unknown as jest.Mocked<FSService>;
+    deleteFile: vi.fn(),
+    deleteDirectory: vi.fn(),
+    deleteFileAndParentDir: vi.fn(),
+    getFileSize: vi.fn(),
+    uploadJsonFile: vi.fn(),
+    calculateFileSha256: vi.fn(),
+  } as unknown as Mocked<FSService>;
 
   const callbackClientMock = {
-    send: jest.fn(),
-  } as unknown as jest.Mocked<CallbackClient>;
+    send: vi.fn(),
+  } as unknown as Mocked<CallbackClient>;
 
   const polygonPartsManagerClientMock = {
-    getAggregatedLayerMetadata: jest.fn(),
-  } as unknown as jest.Mocked<PolygonPartsMangerClient>;
+    getAggregatedLayerMetadata: vi.fn(),
+  } as unknown as Mocked<PolygonPartsMangerClient>;
 
   const pathBuilder = new ArtifactPathBuilder(configMock);
 
   const exportJobHandler = new ExportJobHandler(
-    jsLogger({ enabled: false }),
+    await getTestLogger(),
     configMock,
     tracerMock,
     queueClientMock,

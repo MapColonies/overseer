@@ -4,24 +4,41 @@ import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } fro
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
-import { setupUpdateJobHandlerTest } from './updateJobHandlerSetup';
+import { setupUpdateJobHandlerTest, type UpdateJobHandlerTestContext } from './updateJobHandlerSetup';
 
 describe('updateJobHandler', () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
+  let updateJobHandler: UpdateJobHandlerTestContext['updateJobHandler'];
+  let queueClientMock: UpdateJobHandlerTestContext['queueClientMock'];
+  let taskBuilderMock: UpdateJobHandlerTestContext['taskBuilderMock'];
+  let tileDeletionTaskManagerMock: UpdateJobHandlerTestContext['tileDeletionTaskManagerMock'];
+  let readProductGeometryMock: UpdateJobHandlerTestContext['readProductGeometryMock'];
+  let catalogClientMock: UpdateJobHandlerTestContext['catalogClientMock'];
+  let jobManagerClientMock: UpdateJobHandlerTestContext['jobManagerClientMock'];
+  let jobTrackerClientMock: UpdateJobHandlerTestContext['jobTrackerClientMock'];
+
+  beforeEach(async () => {
+    vi.resetAllMocks();
     registerDefaultConfig();
+
+    const setup = await setupUpdateJobHandlerTest();
+    updateJobHandler = setup.updateJobHandler;
+    queueClientMock = setup.queueClientMock;
+    taskBuilderMock = setup.taskBuilderMock;
+    tileDeletionTaskManagerMock = setup.tileDeletionTaskManagerMock;
+    readProductGeometryMock = setup.readProductGeometryMock;
+    catalogClientMock = setup.catalogClientMock;
+    jobManagerClientMock = setup.jobManagerClientMock;
+    jobTrackerClientMock = setup.jobTrackerClientMock;
   });
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { updateJobHandler, queueClientMock, taskBuilderMock, tileDeletionTaskManagerMock, readProductGeometryMock } =
-        setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const productGeometry = createFakePolygonalGeometry();
       const additionalParams = updateAdditionalParamsSchema.parse(job.parameters.additionalParams);
       const layerRelativePath = `${job.internalId}/${additionalParams.displayPath}`;
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
       const polygonPartsEntityName = `${job.resourceId}_${String(job.productType).toLowerCase()}`;
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
@@ -37,8 +54,6 @@ describe('updateJobHandler', () => {
     });
 
     it('should reject task when mergeTaskManager.buildAndPushTasks throws', async () => {
-      const { updateJobHandler, taskBuilderMock, tileDeletionTaskManagerMock, queueClientMock, readProductGeometryMock } =
-        setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const error = new Error('Test error');
@@ -54,7 +69,6 @@ describe('updateJobHandler', () => {
     });
 
     it('should reject task when tileDeletionTaskManager.buildAndPushTasks throws', async () => {
-      const { updateJobHandler, tileDeletionTaskManagerMock, queueClientMock, readProductGeometryMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateJob);
       const task = createTasksTaskForIngestionUpdate;
       const error = new Error('Deletion task error');
@@ -68,9 +82,9 @@ describe('updateJobHandler', () => {
       expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, error.message);
     });
   });
+
   describe('handleJobFinalize', () => {
     it('should handle job finalize successfully', async () => {
-      const { updateJobHandler, catalogClientMock, jobManagerClientMock, queueClientMock, jobTrackerClientMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
       const entityName = `${job.resourceId}_${job.productType.toLowerCase()}`;
@@ -90,7 +104,6 @@ describe('updateJobHandler', () => {
     });
 
     it('should handle job finalize failure and reject the task', async () => {
-      const { updateJobHandler, queueClientMock, catalogClientMock } = setupUpdateJobHandlerTest();
       const job = structuredClone(ingestionUpdateFinalizeJob);
       const task = finalizeTaskForIngestionUpdate;
 

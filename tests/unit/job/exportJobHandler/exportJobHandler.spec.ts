@@ -1,37 +1,67 @@
+import path from 'node:path';
+import type { MockInstance, Mocked } from 'vitest';
 /* eslint-disable @typescript-eslint/unbound-method */
-import path from 'path';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { faker } from '@faker-js/faker';
 import { ExportFinalizeType } from '@map-colonies/raster-shared';
 import { ogr2ogr } from 'ogr2ogr';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { GPKG_CONTENT_TYPE, JSON_CONTENT_TYPE } from '../../../../src/common/constants';
-import { ExportTask } from '../../../../src/common/interfaces';
+import type { ExportTask, IConfig } from '../../../../src/common/interfaces';
 import { LayerNotFoundError } from '../../../../src/common/errors';
 import { clear, registerDefaultConfig, setValue } from '../../mocks/configMock';
 import { createFakeAggregatedPartData } from '../../httpClients/catalogClientSetup';
 import { finalizeSuccessTaskForExport, initTaskForExport } from '../../mocks/tasksMockData';
 import { exportJob } from '../../mocks/jobsMockData';
 import { layerRecord } from '../../mocks/catalogClientMockData';
-import { ExportFinalizeTask, ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
+import type { ExportFinalizeTask, ExportJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { exportTaskSources, exportTileRangeBatches } from '../../mocks/exportTaskMockData';
+import type { ExportJobHandler } from '../../../../src/job/models/export/exportJobHandler';
+import type { ExportTaskManager } from '../../../../src/task/models/exportTaskManager';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { S3Service } from '../../../../src/utils/storage/s3Service';
+import type { FSService } from '../../../../src/utils/storage/fsService';
+import type { CallbackClient } from '../../../../src/httpClients/callbackClient';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 import { setupExportJobHandlerTest } from './exportJobHandlerSetup';
 
 // Mock ogr2ogr
-jest.mock('ogr2ogr', () => ({
-  ogr2ogr: jest.fn().mockResolvedValue(undefined),
+vi.mock('ogr2ogr', () => ({
+  ogr2ogr: vi.fn().mockResolvedValue(undefined),
 }));
 
 describe('ExportJobHandler', () => {
-  beforeEach(() => {
-    jest.resetAllMocks();
+  let exportJobHandler: ExportJobHandler;
+  let exportTaskManagerMock: Mocked<ExportTaskManager>;
+  let queueClientMock: Mocked<QueueClient>;
+  let jobManagerClientMock: Mocked<JobManagerClient>;
+  let catalogClientMock: Mocked<CatalogClient>;
+  let s3ServiceMock: Mocked<S3Service>;
+  let fsServiceMock: Mocked<FSService>;
+  let callbackClientMock: Mocked<CallbackClient>;
+  let polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
+  let configMock: IConfig;
+
+  beforeEach(async () => {
+    vi.resetAllMocks();
     clear();
     registerDefaultConfig();
+    ({
+      exportJobHandler,
+      exportTaskManagerMock,
+      queueClientMock,
+      jobManagerClientMock,
+      catalogClientMock,
+      s3ServiceMock,
+      fsServiceMock,
+      callbackClientMock,
+      polygonPartsManagerClientMock,
+      configMock,
+    } = await setupExportJobHandlerTest());
   });
 
   describe('handleJobInit', () => {
     it('should handle job init successfully', async () => {
-      const { exportJobHandler, exportTaskManagerMock, queueClientMock, jobManagerClientMock, catalogClientMock, configMock } =
-        setupExportJobHandlerTest();
       const exportTaskType = configMock.get<string>('jobManagement.export.tasks.tilesExporting.type');
       const job = exportJob;
       const task = initTaskForExport;
@@ -62,7 +92,6 @@ describe('ExportJobHandler', () => {
     });
 
     it('should handle job init failure when catalog client fails', async () => {
-      const { exportJobHandler, queueClientMock, catalogClientMock } = setupExportJobHandlerTest();
       const job = exportJob;
       const task = initTaskForExport;
       const error = new LayerNotFoundError('Layer not found');
@@ -76,7 +105,6 @@ describe('ExportJobHandler', () => {
     });
 
     it('should handle job init failure when generating tile ranges fails', async () => {
-      const { exportJobHandler, exportTaskManagerMock, queueClientMock, catalogClientMock } = setupExportJobHandlerTest();
       const job = exportJob;
       const task = initTaskForExport;
       const error = new Error('Failed to generate tile ranges');
@@ -93,7 +121,6 @@ describe('ExportJobHandler', () => {
     });
 
     it('should handle job init failure when generating sources fails', async () => {
-      const { exportJobHandler, exportTaskManagerMock, queueClientMock, catalogClientMock } = setupExportJobHandlerTest();
       const job = exportJob;
       const task = initTaskForExport;
       const error = new Error('Failed to generate sources');
@@ -118,16 +145,14 @@ describe('ExportJobHandler', () => {
     const gpkgFilePath = path.join(mountPath, gpkgSubPath, gpkgRelativePath);
     const jsonFilePath = gpkgFilePath.replace('.gpkg', '.json');
     const gpkgDirPath = '/path/to/gpkgs';
-    let dirnameSpy: jest.SpyInstance;
+    let dirnameSpy: MockInstance;
+
     beforeEach(() => {
-      dirnameSpy = jest.spyOn(path, 'dirname').mockReturnValue(gpkgDirPath);
+      dirnameSpy = vi.spyOn(path, 'dirname').mockReturnValue(gpkgDirPath);
     });
 
     describe('when handling GPKG file modification', () => {
       it('should modify GPKG metadata and update file size', async () => {
-        const { exportJobHandler, fsServiceMock, jobManagerClientMock, polygonPartsManagerClientMock, catalogClientMock } =
-          setupExportJobHandlerTest();
-
         const job = {
           ...exportJob,
           parameters: {
@@ -206,15 +231,13 @@ describe('ExportJobHandler', () => {
       });
 
       it('should not proceed with S3 upload if GPKG modification fails', async () => {
-        const { exportJobHandler, s3ServiceMock, polygonPartsManagerClientMock, catalogClientMock, jobManagerClientMock } =
-          setupExportJobHandlerTest();
         const job = exportJob;
         const task = finalizeSuccessTaskForExport;
 
         polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
         catalogClientMock.findLayer.mockResolvedValue(layerRecord);
 
-        (ogr2ogr as unknown as jest.Mock).mockRejectedValue(new Error('GPKG modification failed'));
+        (ogr2ogr as unknown as MockInstance).mockRejectedValue(new Error('GPKG modification failed'));
         jobManagerClientMock.getJob.mockResolvedValue(job);
 
         await exportJobHandler.handleJobFinalize(job, task);
@@ -227,7 +250,8 @@ describe('ExportJobHandler', () => {
     describe('when handling S3 upload', () => {
       it('should upload GPKG to S3 and delete local file when storage provider is S3', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        const { exportJobHandler, s3ServiceMock, fsServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
+
+        ({ exportJobHandler, s3ServiceMock, fsServiceMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = {
           ...exportJob,
@@ -260,7 +284,7 @@ describe('ExportJobHandler', () => {
             filePath: gpkgFilePath,
             // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
             s3Key: expect.stringContaining(gpkgRelativePath),
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
             contentType: GPKG_CONTENT_TYPE,
           },
           {
@@ -281,7 +305,8 @@ describe('ExportJobHandler', () => {
 
       it('should skip S3 upload when storage provider is not S3', async () => {
         setValue('gpkgStorageProvider', 'FS');
-        const { exportJobHandler, s3ServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
+
+        ({ exportJobHandler, s3ServiceMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = exportJob;
         const task = {
@@ -302,7 +327,8 @@ describe('ExportJobHandler', () => {
 
       it('should skip S3 upload if GPKG was not modified', async () => {
         setValue('gpkgStorageProvider', 'S3');
-        const { exportJobHandler, s3ServiceMock, jobManagerClientMock } = setupExportJobHandlerTest();
+
+        ({ exportJobHandler, s3ServiceMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = exportJob;
         const task = {
@@ -325,7 +351,8 @@ describe('ExportJobHandler', () => {
     describe('when sending callbacks', () => {
       test.each(['FS', 'S3'])('should send callbacks with success status when process completes- %s storage', async (gpkgStorageProvider) => {
         setValue('gpkgStorageProvider', gpkgStorageProvider);
-        const { exportJobHandler, jobManagerClientMock, callbackClientMock } = setupExportJobHandlerTest();
+
+        ({ exportJobHandler, jobManagerClientMock, callbackClientMock } = await setupExportJobHandlerTest());
         const callbackUrl = 'http://callback-url.com';
         const job: ExportJob = {
           ...exportJob,
@@ -399,7 +426,6 @@ describe('ExportJobHandler', () => {
       });
 
       it('should skip callbacks when no callback URLs provided', async () => {
-        const { exportJobHandler, callbackClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job: ExportJob = {
           ...exportJob,
           parameters: {
@@ -434,7 +460,6 @@ describe('ExportJobHandler', () => {
       });
 
       it(`should skip full processing and send callbacks when finalize type is ${ExportFinalizeType.Error_Callback}`, async () => {
-        const { exportJobHandler, callbackClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job: ExportJob = {
           ...exportJob,
           parameters: {
@@ -470,7 +495,6 @@ describe('ExportJobHandler', () => {
 
     describe('when completing the task', () => {
       it('should complete the task when all steps are done', async () => {
-        const { exportJobHandler, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job = exportJob;
         const task = {
           ...finalizeSuccessTaskForExport,
@@ -486,7 +510,7 @@ describe('ExportJobHandler', () => {
         queueClientMock.ack.mockResolvedValue(undefined);
         jobManagerClientMock.getJob.mockResolvedValue({ ...job, status: OperationStatus.COMPLETED });
 
-        const completeTaskSpy = jest.spyOn(exportJobHandler as unknown as { completeTask: jest.Func }, 'completeTask');
+        const completeTaskSpy = vi.spyOn(exportJobHandler as unknown as { completeTask: (...args: unknown[]) => unknown }, 'completeTask');
 
         await exportJobHandler.handleJobFinalize(job, task);
 
@@ -496,7 +520,6 @@ describe('ExportJobHandler', () => {
 
     describe('when handling errors', () => {
       it('should handle and report errors during GPKG modification', async () => {
-        const { exportJobHandler, polygonPartsManagerClientMock, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job = exportJob;
         const task = finalizeSuccessTaskForExport;
         const error = new Error('GPKG modification failed');
@@ -513,7 +536,7 @@ describe('ExportJobHandler', () => {
       it('should handle and report errors during S3 upload', async () => {
         setValue('gpkgStorageProvider', 'S3');
 
-        const { exportJobHandler, s3ServiceMock, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
+        ({ exportJobHandler, s3ServiceMock, queueClientMock, jobManagerClientMock } = await setupExportJobHandlerTest());
 
         const job = exportJob;
         const task = {
@@ -535,7 +558,6 @@ describe('ExportJobHandler', () => {
       });
 
       it('should handle and report errors during callback sending', async () => {
-        const { exportJobHandler, callbackClientMock, queueClientMock, jobManagerClientMock } = setupExportJobHandlerTest();
         const job: ExportJob = {
           ...exportJob,
           parameters: {

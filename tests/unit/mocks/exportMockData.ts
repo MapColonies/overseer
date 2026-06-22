@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
-import { CORE_VALIDATIONS, RoiFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import type { RoiFeature, RoiFeatureCollection } from '@map-colonies/raster-shared';
+import { CORE_VALIDATIONS } from '@map-colonies/raster-shared';
 import { createFakePolygon } from './geometryMockData';
 
 export function createFakeRoiFeature(): RoiFeature {

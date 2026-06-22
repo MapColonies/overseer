@@ -1,13 +1,10 @@
-import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import type { LayerNameFormats } from '@map-colonies/raster-shared';
-import { HttpClient } from '@map-colonies/mc-utils';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
-import { context, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
+import type { IConfig, InsertGeoserverRequest } from '../common/interfaces';
 import { SERVICES } from '../common/constants';
-import type { InsertGeoserverRequest } from '../common/interfaces';
 import { PublishLayerError } from '../common/errors';
 
 @injectable()
@@ -16,7 +13,7 @@ export class GeoserverClient extends HttpClient {
   private readonly dataStore: string;
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
-    @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.LOGGER) protected override readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer
   ) {
     const serviceName = 'GeoserverApi';

@@ -1,30 +1,30 @@
-import { Logger } from '@map-colonies/js-logger';
+import type { Logger } from '@map-colonies/js-logger';
 import type { ICreateTaskBody, IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import type { ITileRange } from '@map-colonies/mc-utils';
-import {
-  type IngestionNewFinalizeTaskParams,
-  type IngestionSwapUpdateFinalizeTaskParams,
-  type IngestionUpdateFinalizeTaskParams,
-  type InputFiles,
-  type LayerName,
+import type {
   PolygonPartsPayload,
-  type RasterLayerMetadata,
-  type TileFormatStrategy,
-  type TileOutputFormat,
   aggregationFeatureSchema,
+  IngestionNewFinalizeTaskParams,
+  IngestionSwapUpdateFinalizeTaskParams,
+  IngestionUpdateFinalizeTaskParams,
+  InputFiles,
+  LayerName,
+  RasterLayerMetadata,
+  TileFormatStrategy,
+  TileOutputFormat,
 } from '@map-colonies/raster-shared';
 import type { Span, SpanContext } from '@opentelemetry/api';
 import type { Units } from '@turf/turf';
 import type { BBox, Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson';
-import { z } from 'zod';
+import type { z } from 'zod';
 import type { ExportFinalizeTask, ExportJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
-import {
+import type {
   extendedRasterLayerMetadataSchema,
   ingestionNewExtendedJobParamsSchema,
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
-import { LayerCacheType, SeedMode } from './constants';
+import type { LayerCacheType, SeedMode } from './constants';
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
@@ -209,8 +209,8 @@ export interface TilesSource {
   tilesPath: string;
 }
 
-export interface ProductFeature extends Feature<Polygon | MultiPolygon, ProductProperties> {}
-export interface FeatureTask extends ProductFeature {}
+export type ProductFeature = Feature<Polygon | MultiPolygon, ProductProperties>;
+export type FeatureTask = ProductFeature;
 
 export interface MergeParameters {
   product: ProductFeature;

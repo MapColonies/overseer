@@ -1,17 +1,17 @@
-import { Logger } from '@map-colonies/js-logger';
+import type { Logger } from '@map-colonies/js-logger';
 import { degreesPerPixelToZoomLevel, getUTCDate, featureToTilesCount } from '@map-colonies/mc-utils';
 import { feature } from '@turf/turf';
-import { MultiPolygon, Polygon } from 'geojson';
+import type { MultiPolygon, Polygon } from 'geojson';
 import { ICreateJobBody, ICreateTaskBody, OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { inject, injectable } from 'tsyringe';
-import { context, SpanStatusCode, trace, Tracer } from '@opentelemetry/api';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SeedMode, SERVICES } from '../../../common/constants';
-import { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../common/interfaces';
+import type { Footprint, IConfig, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../common/interfaces';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
 import { splitGeometryByTileCount } from '../../../utils/geoUtils';
-import { ReadProductGeometry } from '../../../utils/storage/productReader';
+import type { ReadProductGeometry } from '../../../utils/storage/productReader';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 
 @injectable()
@@ -104,7 +104,7 @@ export class SeedingJobCreator {
         if (err instanceof Error) {
           activeSpan?.recordException(err);
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR });
-          return this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, error: err });
+          this.logger.error({ msg: `Failed to create seeding job: ${err.message}`, err });
         }
       } finally {
         activeSpan?.end();

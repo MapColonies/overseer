@@ -1,12 +1,9 @@
-import { ZodError } from 'zod';
-import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import { getEntityName, rasterProductTypeSchema } from '@map-colonies/raster-shared';
-import type { LayerNameFormats } from '@map-colonies/raster-shared';
-import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { IJobResponse, ITaskResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getEntityName, rasterProductTypeSchema, type LayerNameFormats } from '@map-colonies/raster-shared';
 import { SpanStatusCode } from '@opentelemetry/api';
 import type { Logger } from '@map-colonies/js-logger';
 import type { IConfig, JobAndTaskTelemetry, PollingConfig, StepKey } from '../../common/interfaces';
-import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
+import type { JobTrackerClient } from '../../httpClients/jobTrackerClient';
 
 export class JobHandler {
   private readonly pollingConfig: PollingConfig;
@@ -38,7 +35,7 @@ export class JobHandler {
 
   protected isAllStepsCompleted<T>(steps: Record<keyof T, boolean>): boolean {
     this.logger.debug({ msg: 'checking if all steps are completed', steps });
-    return Object.values(steps).every((step) => step);
+    return Object.values(steps).every((step) => step === true);
   }
 
   protected async completeTask(job: IJobResponse<unknown, unknown>, task: ITaskResponse<unknown>, telemetry: JobAndTaskTelemetry): Promise<void> {
@@ -57,27 +54,27 @@ export class JobHandler {
   }
 
   protected async handleError(
-    error: unknown,
+    err: unknown,
     job: IJobResponse<unknown, unknown>,
     task: ITaskResponse<unknown>,
     telemetry: JobAndTaskTelemetry
   ): Promise<void> {
     const { taskTracker, tracingSpan } = telemetry;
     const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
-    const errName = error instanceof Error ? error.name : 'unknown';
+    const errName = err instanceof Error ? err.name : 'unknown';
     const msg = `Failed to handle ${job.type} job with ${task.type} task`;
-    const reason = error instanceof Error ? error.message : String(error);
+    const reason = err instanceof Error ? err.message : String(err);
     const taskAttempts = task.attempts + 1; // rejecting the task increments the attempts
     logger.info({ msg: 'task attempts', taskAttempts, maxAttempts: this.pollingConfig.maxTaskAttempts });
     const reachedMaxAttempts = taskAttempts >= this.pollingConfig.maxTaskAttempts;
-    const isRecoverable = !(error instanceof ZodError) && !reachedMaxAttempts;
+    const isRecoverable = !(errName == 'ZodError') && !reachedMaxAttempts;
 
     await this.queueClient.reject(job.id, task.id, isRecoverable, reason);
 
-    logger.error({ msg, reason, error, reachedMaxAttempts, isRecoverable });
+    logger.error({ msg, reason, err, reachedMaxAttempts, isRecoverable });
     taskTracker?.failure(errName);
     tracingSpan?.setStatus({ code: SpanStatusCode.ERROR, message: reason });
-    tracingSpan?.recordException(error instanceof Error ? error : new Error(reason));
+    tracingSpan?.recordException(err instanceof Error ? err : new Error(reason));
 
     if (!isRecoverable) {
       await this.jobTrackerClient.notify(task);

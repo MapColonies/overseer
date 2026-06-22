@@ -1,7 +1,6 @@
 import { feature, featureCollection, bbox, bboxPolygon, intersect } from '@turf/turf';
 import { featureToTilesCount } from '@map-colonies/mc-utils';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import type { BBox } from 'geojson';
+import type { Feature, MultiPolygon, Polygon, BBox } from 'geojson';
 
 /**
  * Splits a geometry into smaller sub-geometries based on tile count limitations.

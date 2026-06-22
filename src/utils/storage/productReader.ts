@@ -1,10 +1,10 @@
-import path from 'path';
-import { Logger } from '@map-colonies/js-logger';
-import { ChunkProcessor, ShapefileChunk, ShapefileChunkReader } from '@map-colonies/shapefile-reader';
-import { IConfig } from 'config';
+import path from 'node:path';
+import type { Logger } from '@map-colonies/js-logger';
+import { ShapefileChunkReader, type ChunkProcessor, type ShapefileChunk } from '@map-colonies/shapefile-reader';
 import { productFeatureSchema } from '@map-colonies/raster-shared';
-import { Feature, MultiPolygon, Polygon } from 'geojson';
-import { DependencyContainer } from 'tsyringe';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import type { DependencyContainer } from 'tsyringe';
+import type { IConfig } from '../../common/interfaces';
 import { SERVICES } from '../../common/constants';
 import { ProductReadError } from '../../common/errors';
 

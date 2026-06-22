@@ -17,7 +17,7 @@ export class TaskMetrics {
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
     @inject(SERVICES.METRICS) private readonly metricsRegistry?: Registry
   ) {
-    this.taskBucket = this.config.get<number[]>('telemetry.metrics.buckets');
+    this.taskBucket = this.config.get<number[]>('mclabels.prometheus.buckets');
     if (this.metricsRegistry) {
       this.tasksProcessedCounter = new Counter({
         name: 'overseer_tasks_processed_total',

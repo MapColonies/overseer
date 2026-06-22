@@ -1,9 +1,11 @@
 import nock from 'nock';
-import jsLogger from '@map-colonies/js-logger';
-import { trace, Tracer } from '@opentelemetry/api';
-import { LayerName, TileOutputFormat } from '@map-colonies/raster-shared';
+import type { Tracer } from '@opentelemetry/api';
+import { trace } from '@opentelemetry/api';
+import type { LayerName } from '@map-colonies/raster-shared';
+import { TileOutputFormat } from '@map-colonies/raster-shared';
+import { getTestLogger } from '../../configurations/testLogger';
 import { MapproxyApiClient } from '../../../src/httpClients/mapproxyClient';
-import { configMock, init as InitConfig, setValue } from '../mocks/configMock';
+import { configMock, init as InitConfig, setValue, registerDefaultConfig } from '../mocks/configMock';
 import {
   LayerCacheNotFoundError,
   PublishLayerError,
@@ -17,21 +19,22 @@ describe('mapproxyClient', () => {
   let mapproxyApiClient: MapproxyApiClient;
   let tracerMock: Tracer;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     tracerMock = trace.getTracer('test');
     InitConfig();
+    registerDefaultConfig();
+    setValue('tilesStorageProvider', 'FS');
+    mapproxyApiClient = new MapproxyApiClient(configMock, await getTestLogger(), tracerMock);
   });
 
   afterEach(() => {
+    // eslint-disable-next-line import-x/no-named-as-default-member
     nock.cleanAll();
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('publish', () => {
     it('should publish a layer to mapproxy', async () => {
-      setValue('tilesStorageProvider', 'FS');
-
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'testLayer';
       const layerRelativePath = 'testLayerPath';
@@ -42,24 +45,22 @@ describe('mapproxyClient', () => {
       const action = mapproxyApiClient.publish(layerName, layerRelativePath, tileOutputFormat);
 
       await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
     });
 
-    it('should throw an error for unsupported storage provider', () => {
+    it('should throw an error for unsupported storage provider', async () => {
       setValue('tilesStorageProvider', 'unsupported');
 
       try {
-        mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
+        mapproxyApiClient = new MapproxyApiClient(configMock, await getTestLogger(), tracerMock);
       } catch (err) {
-        // eslint-disable-next-line jest/no-conditional-expect
+        // eslint-disable-next-line vitest/no-conditional-expect
         expect(err).toBeInstanceOf(UnsupportedStorageProviderError);
       }
     });
 
     it('should throw an PublishLayerError when mapproxyApi client returns an error', async () => {
-      setValue('tilesStorageProvider', 'FS');
-
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'errorTestLayer';
       const layerRelativePath = 'errorTestLayerPath';
@@ -72,11 +73,9 @@ describe('mapproxyClient', () => {
       await expect(action).rejects.toThrow(PublishLayerError);
     });
   });
+
   describe('update', () => {
     it('should update a layer in mapproxy', async () => {
-      setValue('tilesStorageProvider', 'FS');
-
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'test-layer';
       const layerRelativePath = 'bfa79f98-79af-44b2-8acd-6dc1ebb9fd1c/c3959032-c6df-41ba-945a-80633510123a';
@@ -87,23 +86,21 @@ describe('mapproxyClient', () => {
       const action = mapproxyApiClient.update(layerName, layerRelativePath, tileOutputFormat);
 
       await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
     });
 
-    it('should throw an error for unsupported storage provider', () => {
+    it('should throw an error for unsupported storage provider', async () => {
       setValue('tilesStorageProvider', 'unsupported');
       try {
-        mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
+        mapproxyApiClient = new MapproxyApiClient(configMock, await getTestLogger(), tracerMock);
       } catch (err) {
-        // eslint-disable-next-line jest/no-conditional-expect
+        // eslint-disable-next-line vitest/no-conditional-expect
         expect(err).toBeInstanceOf(UnsupportedStorageProviderError);
       }
     });
 
     it('should throw an PublishLayerError when mapproxyApi client returns an error', async () => {
-      setValue('tilesStorageProvider', 'FS');
-
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName = 'errorTest-Layer';
       const layerRelativePath = 'bfa79f98-79af-44b2-8acd-6dc1ebb9fd1c/c3959032-c6df-41ba-945a-80633510123a';
@@ -116,9 +113,9 @@ describe('mapproxyClient', () => {
       await expect(action).rejects.toThrow(UpdateLayerError);
     });
   });
+
   describe('getCacheName', () => {
     it('should get cache name from mapproxy', async () => {
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'test-Orthophoto';
       const cacheType = LayerCacheType.REDIS;
@@ -131,12 +128,12 @@ describe('mapproxyClient', () => {
       const action = mapproxyApiClient.getCacheName({ layerName, cacheType });
 
       await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
-      expect(await action).toBe(cacheName);
+      await expect(action).resolves.toBe(cacheName);
     });
 
     it('should throw an error for unsupported layer cache type', async () => {
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'test-Orthophoto';
       const cacheType = LayerCacheType.FS;
@@ -152,9 +149,6 @@ describe('mapproxyClient', () => {
     });
 
     it('should throw an LayerCacheNotFoundError when mapproxyApi client returns an error', async () => {
-      setValue('tilesStorageProvider', 'FS');
-
-      mapproxyApiClient = new MapproxyApiClient(configMock, jsLogger({ enabled: false }), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'not_found-Orthophoto';
       const cacheType = LayerCacheType.REDIS;

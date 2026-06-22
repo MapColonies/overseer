@@ -1,29 +1,36 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { randomUUID } from 'crypto';
-import 'jest-extended';
+import { randomUUID } from 'node:crypto';
+import type { Mocked } from 'vitest';
 import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
 import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
 import { exportJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
-import { FindLayerResponse } from '../../../src/common/interfaces';
+import type { FindLayerResponse } from '../../../src/common/interfaces';
 import { layerRecord } from '../mocks/catalogClientMockData';
-import { createFakeAggregatedPartData, layerNameFormats, setupCatalogClientTest } from './catalogClientSetup';
+import type { CatalogClient } from '../../../src/httpClients/catalogClient';
+import type { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
+import { createFakeAggregatedPartData, layerNameFormats, setupCatalogClientTest, type MockCreateLinks } from './catalogClientSetup';
 
 describe('CatalogClient', () => {
-  beforeEach(() => {
+  let catalogClient: CatalogClient;
+  let createLinksMock: MockCreateLinks;
+  let polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
+
+  beforeEach(async () => {
     registerDefaultConfig();
+    ({ catalogClient, createLinksMock, polygonPartsManagerClientMock } = await setupCatalogClientTest());
   });
 
   afterEach(() => {
+    // eslint-disable-next-line import-x/no-named-as-default-member
     nock.cleanAll();
     clearConfig();
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
+
   describe('publish', () => {
     it('should publish a layer to catalog', async () => {
-      const { catalogClient, createLinksMock, polygonPartsManagerClientMock } = setupCatalogClientTest();
-
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
 
@@ -34,12 +41,11 @@ describe('CatalogClient', () => {
       const action = catalogClient.publish(ingestionNewJobExtended, layerNameFormats);
 
       await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
     });
 
     it('should throw an PublishLayerError when the catalog returns an error', async () => {
-      const { catalogClient, createLinksMock } = setupCatalogClientTest();
-
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
 
@@ -50,9 +56,9 @@ describe('CatalogClient', () => {
       await expect(action).rejects.toThrow(PublishLayerError);
     });
   });
+
   describe('update', () => {
     it('should update a layer in catalog', async () => {
-      const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = ingestionUpdateJob.internalId;
       let requestBody;
@@ -70,14 +76,14 @@ describe('CatalogClient', () => {
           productVersion: expect.any(String),
           classification: expect.any(String),
           displayPath: expect.any(String),
-          ingestionDate: expect.toBeDateString(),
+          ingestionDate: expect.any(String),
         },
       });
+      // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
     });
 
     it('should swap update a layer in catalog', async () => {
-      const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const swapUpdateJob: IngestionSwapUpdateFinalizeJob = {
         ...ingestionSwapUpdateJob,
@@ -106,14 +112,14 @@ describe('CatalogClient', () => {
           productVersion: expect.any(String),
           classification: expect.any(String),
           displayPath: expect.any(String),
-          ingestionDate: expect.toBeDateString(),
+          ingestionDate: expect.any(String),
         },
       });
+      // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
     });
 
     it('should throw an UpdateLayerError when the catalog returns an error', async () => {
-      const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = ingestionUpdateJob.internalId;
       nock(baseUrl).put(`/records/${recordId}`).reply(500);
@@ -124,7 +130,6 @@ describe('CatalogClient', () => {
     });
 
     it('should throw an UpdateLayerError when getting aggregation layer metadata failed', async () => {
-      const { catalogClient, polygonPartsManagerClientMock } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
       const polygonPartsEntityName = 'some_polygon_parts_entity_name_orthophoto';
       nock(baseUrl).get(`/aggregation/${polygonPartsEntityName}`).reply(500);
@@ -138,7 +143,6 @@ describe('CatalogClient', () => {
 
   describe('findLayer', () => {
     it('should return layer', async () => {
-      const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const recordId = exportJob.internalId as string;
       const reqBody = { id: recordId };
@@ -154,7 +158,6 @@ describe('CatalogClient', () => {
     });
 
     it('should throw LayerNotFoundError when layer not found', async () => {
-      const { catalogClient } = setupCatalogClientTest();
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       const nonExistingRecordId = randomUUID();
       const reqBody = { id: nonExistingRecordId };

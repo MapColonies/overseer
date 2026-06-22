@@ -1,49 +1,50 @@
-import jsLogger from '@map-colonies/js-logger';
-import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import type { Mocked, MockedFunction } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { configMock } from '../../mocks/configMock';
-import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
-import { TileDeletionTaskManager } from '../../../../src/task/models/deletionTaskManager';
-import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
-import { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
+import type { TileDeletionTaskManager } from '../../../../src/task/models/deletionTaskManager';
+import type { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { UpdateJobHandler } from '../../../../src/job/models/ingestion/updateJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
+import type { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
-import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
 import { readProductGeometryMock } from '../../mocks/productReaderMock';
-import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export interface UpdateJobHandlerTestContext {
   updateJobHandler: UpdateJobHandler;
-  taskBuilderMock: jest.Mocked<TileMergeTaskManager>;
-  tileDeletionTaskManagerMock: jest.Mocked<TileDeletionTaskManager>;
-  queueClientMock: jest.Mocked<QueueClient>;
-  jobManagerClientMock: jest.Mocked<JobManagerClient>;
-  mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
-  catalogClientMock: jest.Mocked<CatalogClient>;
-  seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
-  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
-  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
-  readProductGeometryMock: jest.MockedFunction<typeof readProductGeometryMock>;
+  taskBuilderMock: Mocked<TileMergeTaskManager>;
+  tileDeletionTaskManagerMock: Mocked<TileDeletionTaskManager>;
+  queueClientMock: Mocked<QueueClient>;
+  jobManagerClientMock: Mocked<JobManagerClient>;
+  mapproxyClientMock: Mocked<MapproxyApiClient>;
+  catalogClientMock: Mocked<CatalogClient>;
+  seedingJobCreatorMock: Mocked<SeedingJobCreator>;
+  jobTrackerClientMock: Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
+  readProductGeometryMock: MockedFunction<typeof readProductGeometryMock>;
 }
 
-export const setupUpdateJobHandlerTest = (): UpdateJobHandlerTestContext => {
+export const setupUpdateJobHandlerTest = async (): Promise<UpdateJobHandlerTestContext> => {
   const taskBuilderMock = {
-    buildAndPushTasks: jest.fn(),
-  } as unknown as jest.Mocked<TileMergeTaskManager>;
+    buildAndPushTasks: vi.fn(),
+  } as unknown as Mocked<TileMergeTaskManager>;
 
   const tileDeletionTaskManagerMock = {
-    buildAndPushTasks: jest.fn(),
-  } as unknown as jest.Mocked<TileDeletionTaskManager>;
+    buildAndPushTasks: vi.fn(),
+  } as unknown as Mocked<TileDeletionTaskManager>;
 
-  const mapproxyClientMock = { publish: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
-  const catalogClientMock = { publish: jest.fn(), update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const mapproxyClientMock = { publish: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const catalogClientMock = { publish: vi.fn(), update: vi.fn() } as unknown as Mocked<CatalogClient>;
 
-  const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
+  const seedingJobCreatorMock = { create: vi.fn() } as unknown as Mocked<SeedingJobCreator>;
   const updateJobHandler = new UpdateJobHandler(
-    jsLogger({ enabled: false }),
+    await getTestLogger(),
     configMock,
     tracerMock,
     taskBuilderMock,

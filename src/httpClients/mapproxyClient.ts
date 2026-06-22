@@ -1,13 +1,10 @@
-import type { IConfig } from 'config';
 import type { Logger } from '@map-colonies/js-logger';
 import type { TileOutputFormat } from '@map-colonies/raster-shared';
-import { context, SpanStatusCode, trace } from '@opentelemetry/api';
-import type { Tracer } from '@opentelemetry/api';
-import { HttpClient } from '@map-colonies/mc-utils';
-import type { IHttpRetryConfig } from '@map-colonies/mc-utils';
+import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
+import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { NotFoundError } from '@map-colonies/error-types';
-import type { GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
+import type { IConfig, GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
 import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, StorageProvider } from '../common/constants';
 import {
   LayerCacheNotFoundError,
@@ -23,7 +20,7 @@ export class MapproxyApiClient extends HttpClient {
   private readonly layerCacheType: LayerCacheType;
   public constructor(
     @inject(SERVICES.CONFIG) private readonly config: IConfig,
-    @inject(SERVICES.LOGGER) protected readonly logger: Logger,
+    @inject(SERVICES.LOGGER) protected override readonly logger: Logger,
     @inject(SERVICES.TRACER) private readonly tracer: Tracer
   ) {
     const serviceName = 'MapproxyApi';

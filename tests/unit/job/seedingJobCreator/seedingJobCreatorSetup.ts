@@ -1,38 +1,39 @@
-import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import jsLogger from '@map-colonies/js-logger';
+import type { Mocked, MockedFunction } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
-import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
+import type { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import { configMock } from '../../mocks/configMock';
-import { SeedJobParams } from '../../../../src/common/interfaces';
+import type { SeedJobParams } from '../../../../src/common/interfaces';
 import { ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import { tracerMock } from '../../mocks/tracerMock';
 import { readProductGeometryMock } from '../../mocks/productReaderMock';
-import { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 
 export interface SeedingJobCreatorTestContext {
   seedingJobCreator: SeedingJobCreator;
-  queueClientMock: jest.Mocked<QueueClient>;
-  jobManagerClientMock: jest.Mocked<JobManagerClient>;
-  mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
+  queueClientMock: Mocked<QueueClient>;
+  jobManagerClientMock: Mocked<JobManagerClient>;
+  mapproxyClientMock: Mocked<MapproxyApiClient>;
   configMock: typeof configMock;
-  readProductGeometryMock: jest.MockedFunction<typeof readProductGeometryMock>;
-  catalogClientMock: jest.Mocked<CatalogClient>;
+  readProductGeometryMock: MockedFunction<typeof readProductGeometryMock>;
+  catalogClientMock: Mocked<CatalogClient>;
 }
 
-export const setupSeedingJobCreatorTest = (): SeedingJobCreatorTestContext => {
+export const setupSeedingJobCreatorTest = async (): Promise<SeedingJobCreatorTestContext> => {
   const jobManagerClientMock = {
-    createJob: jest.fn(),
-  } as unknown as jest.Mocked<JobManagerClient>;
+    createJob: vi.fn(),
+  } as unknown as Mocked<JobManagerClient>;
 
   const queueClientMock = {
     jobManagerClient: jobManagerClientMock,
-  } as unknown as jest.Mocked<QueueClient>;
+  } as unknown as Mocked<QueueClient>;
 
-  const mapproxyClientMock = { getCacheName: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
-  const catalogClientMock = { update: jest.fn(), findLayer: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
+  const mapproxyClientMock = { getCacheName: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const catalogClientMock = { update: vi.fn(), findLayer: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const seedingJobCreator = new SeedingJobCreator(
-    jsLogger({ enabled: false }),
+    await getTestLogger(),
     tracerMock,
     configMock,
     queueClientMock,

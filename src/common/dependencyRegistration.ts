@@ -1,5 +1,4 @@
-import type { ClassProvider, FactoryProvider, InjectionToken, ValueProvider } from 'tsyringe';
-import { container as defaultContainer } from 'tsyringe';
+import { container as defaultContainer, type ClassProvider, type FactoryProvider, type InjectionToken, type ValueProvider } from 'tsyringe';
 import type { constructor, DependencyContainer } from 'tsyringe/dist/typings/types';
 
 export type Providers<T> = ValueProvider<T> | FactoryProvider<T> | ClassProvider<T> | constructor<T>;

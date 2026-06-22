@@ -1,11 +1,11 @@
-/* eslint-disable jest/no-commented-out-tests */
-import { randomUUID } from 'crypto';
+/* eslint-disable vitest/no-commented-out-tests */
+import { randomUUID } from 'node:crypto';
 import nock from 'nock';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
 import { configMock, registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionNewJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import type { MergeTaskParameters, JobResumeState, MergeTilesTaskParams } from '../../../../src/common/interfaces';
-import { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
+import type { IngestionCreateTasksTask } from '../../../../src/utils/zod/schemas/job.schema';
 import { createFakeTask } from '../../mocks/tasksMockData';
 import {
   createMergeTilesTaskParams,
@@ -18,14 +18,15 @@ describe('tileMergeTaskManager', () => {
   const buildTasksParams = createMergeTilesTaskParams();
   let testContext: MergeTilesTaskBuilderContext;
   let mockInitTask: IngestionCreateTasksTask;
-  beforeEach(() => {
+
+  beforeEach(async () => {
     registerDefaultConfig();
-    testContext = setupMergeTilesTaskBuilderTest();
+    testContext = await setupMergeTilesTaskBuilderTest();
     mockInitTask = createFakeTask<IngestionCreateTasksTask['parameters']>();
   });
 
   afterEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('buildTasks', () => {
@@ -62,7 +63,7 @@ describe('tileMergeTaskManager', () => {
         expect(task.isNewTarget).toBe(true);
         expect(task.targetFormat).toBe(TileOutputFormat.PNG);
         expect(task.sources.length).toBeGreaterThan(0);
-        expect(task.sources[0].path).toBe('layerRelativePath');
+        expect(task.sources[0]!.path).toBe('layerRelativePath');
         expect(task.batches.length).toBeGreaterThan(0);
       });
     });
@@ -82,7 +83,7 @@ describe('tileMergeTaskManager', () => {
       expect(action).toThrow();
     });
 
-    it('resume state initialization - should handle initTask with valid resume parameters', async () => {
+    it('should resume state initialization - should handle initTask with valid resume parameters', async () => {
       const { tileMergeTaskManager } = testContext;
 
       const resumeZoomLevel = 6;
@@ -121,7 +122,7 @@ describe('tileMergeTaskManager', () => {
       });
     });
 
-    it('resume state initialization - should handle initTask with boundary resume parameters', async () => {
+    it('should resume state initialization - should handle initTask with boundary resume parameters', async () => {
       const { tileMergeTaskManager } = testContext;
 
       mockInitTask.parameters.latestTaskState = {
@@ -157,7 +158,7 @@ describe('tileMergeTaskManager', () => {
       });
     });
 
-    it('resume state initialization - should handle high skip index values', async () => {
+    it('should resume state initialization - should handle high skip index values', async () => {
       const { tileMergeTaskManager } = testContext;
 
       mockInitTask.parameters.latestTaskState = {
@@ -191,6 +192,7 @@ describe('tileMergeTaskManager', () => {
       });
 
       const zoomLevels = taskResumeSample.map((taskIndex) => taskIndex.zoomLevel);
+
       expect(zoomLevels.filter((zoom) => zoom === 0).length).toBeGreaterThan(0);
       expect(zoomLevels.filter((zoom) => zoom === 1).length).toBeGreaterThan(0);
       expect(zoomLevels.filter((zoom) => zoom === 2).length).toBeGreaterThan(0);
@@ -209,6 +211,7 @@ describe('tileMergeTaskManager', () => {
       // Should not throw error - implementation should handle gracefully
       expect(() => {
         const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
+
         expect(tasks).toBeDefined();
       }).not.toThrow();
 
@@ -230,7 +233,7 @@ describe('tileMergeTaskManager', () => {
       expect(taskSample).toHaveLength(0);
 
       // Spy on updateTask to verify it's not called
-      const updateTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
+      const updateTaskSpy = vi.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
 
       const jobId = randomUUID();
       await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
@@ -375,7 +378,7 @@ describe('tileMergeTaskManager', () => {
 
       const tasks = createTaskGenerator(numberOfTasks);
 
-      const enqueueTasksSpy = jest.spyOn(tileMergeTaskManager as unknown as { enqueueTasks: jest.Func }, 'enqueueTasks');
+      const enqueueTasksSpy = vi.spyOn(tileMergeTaskManager as unknown as { enqueueTasks: (...args: unknown[]) => unknown }, 'enqueueTasks');
 
       let error: Error | null = null;
       try {
@@ -418,8 +421,8 @@ describe('tileMergeTaskManager', () => {
       nock(jobManagerBaseUrl).put(updateTaskPath).reply(200).persist();
 
       // Spy on the job manager client methods
-      const updateTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
-      const createTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'createTaskForJob');
+      const updateTaskSpy = vi.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
+      const createTaskSpy = vi.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'createTaskForJob');
 
       const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
       await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);
@@ -432,7 +435,7 @@ describe('tileMergeTaskManager', () => {
       createTaskSpy.mockRestore();
     });
 
-    it('resume state initialization - should handle progress tracking with resume state on pushTasks', async () => {
+    it('should resume state initialization - should handle progress tracking with resume state on pushTasks', async () => {
       const { tileMergeTaskManager } = testContext;
 
       const jobId = randomUUID();
@@ -450,7 +453,7 @@ describe('tileMergeTaskManager', () => {
       nock(jobManagerBaseUrl).post(createTasksPath).reply(200).persist();
       nock(jobManagerBaseUrl).put(updateTaskPath).reply(200).persist();
 
-      const updateTaskSpy = jest.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
+      const updateTaskSpy = vi.spyOn(tileMergeTaskManager['queueClient'].jobManagerClient, 'updateTask');
 
       const tasks = tileMergeTaskManager.buildTasks(buildTasksParams, mockInitTask);
       await tileMergeTaskManager.pushTasks(mockInitTask, jobId, ingestionNewJob.type, tasks);

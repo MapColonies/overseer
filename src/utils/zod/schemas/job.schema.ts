@@ -1,4 +1,4 @@
-/* eslint-disable import/exports-last */
+/* eslint-disable import-x/exports-last */
 /* eslint-disable @typescript-eslint/naming-convention */
 import { z } from 'zod';
 import {
@@ -15,8 +15,9 @@ import {
   exportFinalizeTaskParamsSchema,
   rasterProductTypeSchema,
 } from '@map-colonies/raster-shared';
-import { ingestionNewExtendedJobParamsSchema, internalIdSchema } from './jobParameters.schema';
 import {
+  ingestionNewExtendedJobParamsSchema,
+  internalIdSchema,
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
   extendedTaskBlockDuplicationParamSchema,

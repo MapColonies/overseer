@@ -1,46 +1,48 @@
-import jsLogger from '@map-colonies/js-logger';
-import { IJobResponse, ITaskResponse, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { JobManagerConfig } from '../../../../src/common/interfaces';
-import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
-import { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory';
+import type { Mocked, MockedFunction } from 'vitest';
+import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
+import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../../configurations/testLogger';
+import type { JobManagerConfig } from '../../../../src/common/interfaces';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import type { JobHandlerFactory } from '../../../../src/job/models/jobHandlerFactory';
 import { JobProcessor } from '../../../../src/job/models/jobProcessor';
 import type { InstanceType } from '../../../../src/utils/zod/schemas/instance.schema';
 import { configMock } from '../../mocks/configMock';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
 
-export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
-export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
-export type MockUpdateJob = jest.MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
-export type MockReject = jest.MockedFunction<(jobId: string, taskId: string, isRecoverable: boolean, message: string) => Promise<void>>;
+export type MockDequeue = MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
+export type MockGetJob = MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
+export type MockUpdateJob = MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
+export type MockReject = MockedFunction<(jobId: string, taskId: string, isRecoverable: boolean, message: string) => Promise<void>>;
 
 export interface JobProcessorTestContext {
   jobProcessor: JobProcessor;
-  mockJobHandlerFactory: jest.MockedFunction<JobHandlerFactory>;
+  mockJobHandlerFactory: MockedFunction<JobHandlerFactory>;
   mockDequeue: MockDequeue;
   mockGetJob: MockGetJob;
   mockReject: MockReject;
   mockUpdateJob: MockUpdateJob;
   configMock: typeof configMock;
   queueClient: QueueClient;
-  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
+  jobTrackerClientMock: Mocked<JobTrackerClient>;
 }
 
-export function setupJobProcessorTest({
+export async function setupJobProcessorTest({
   instanceType = 'ingestion',
   useMockQueueClient = false,
 }: {
   useMockQueueClient?: boolean;
   instanceType?: InstanceType;
-}): JobProcessorTestContext {
-  const mockLogger = jsLogger({ enabled: false });
+} = {}): Promise<JobProcessorTestContext> {
+  const mockLogger = await getTestLogger();
 
-  const mockJobHandlerFactory = jest.fn();
+  const mockJobHandlerFactory = vi.fn();
 
-  const mockDequeue = jest.fn() as MockDequeue;
-  const mockGetJob = jest.fn() as MockGetJob;
-  const mockUpdateJob = jest.fn() as MockUpdateJob;
-  const mockReject = jest.fn() as MockReject;
+  const mockDequeue = vi.fn() as MockDequeue;
+  const mockGetJob = vi.fn() as MockGetJob;
+  const mockUpdateJob = vi.fn() as MockUpdateJob;
+  const mockReject = vi.fn() as MockReject;
 
   const mockQueueClient = {
     dequeue: mockDequeue,
@@ -49,7 +51,7 @@ export function setupJobProcessorTest({
       getJob: mockGetJob,
       updateJob: mockUpdateJob,
     },
-  } as unknown as jest.Mocked<QueueClient>;
+  } as unknown as Mocked<QueueClient>;
 
   const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 

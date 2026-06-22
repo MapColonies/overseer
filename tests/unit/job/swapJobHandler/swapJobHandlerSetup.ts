@@ -1,44 +1,45 @@
-import jsLogger from '@map-colonies/js-logger';
-import { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
-import { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
-import { CatalogClient } from '../../../../src/httpClients/catalogClient';
+import type { Mocked, MockedFunction } from 'vitest';
+import type { JobManagerClient, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
+import { getTestLogger } from '../../../configurations/testLogger';
+import type { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
+import type { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
+import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { SwapJobHandler } from '../../../../src/job/models/ingestion/swapJobHandler';
-import { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
+import type { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
-import { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
+import type { JobTrackerClient } from '../../../../src/httpClients/jobTrackerClient';
 import { configMock } from '../../mocks/configMock';
 import { polygonPartsManagerClientMock } from '../../mocks/polygonPartsManagerClientMock';
 import { readProductGeometryMock } from '../../mocks/productReaderMock';
-import { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
+import type { PolygonPartsMangerClient } from '../../../../src/httpClients/polygonPartsMangerClient';
 
 export interface SwapJobHandlerTestContext {
   swapJobHandler: SwapJobHandler;
-  taskBuilderMock: jest.Mocked<TileMergeTaskManager>;
-  queueClientMock: jest.Mocked<QueueClient>;
-  jobManagerClientMock: jest.Mocked<JobManagerClient>;
-  mapproxyClientMock: jest.Mocked<MapproxyApiClient>;
-  catalogClientMock: jest.Mocked<CatalogClient>;
-  seedingJobCreatorMock: jest.Mocked<SeedingJobCreator>;
-  jobTrackerClientMock: jest.Mocked<JobTrackerClient>;
-  polygonPartsManagerClientMock: jest.Mocked<PolygonPartsMangerClient>;
-  readProductGeometryMock: jest.MockedFunction<typeof readProductGeometryMock>;
+  taskBuilderMock: Mocked<TileMergeTaskManager>;
+  queueClientMock: Mocked<QueueClient>;
+  jobManagerClientMock: Mocked<JobManagerClient>;
+  mapproxyClientMock: Mocked<MapproxyApiClient>;
+  catalogClientMock: Mocked<CatalogClient>;
+  seedingJobCreatorMock: Mocked<SeedingJobCreator>;
+  jobTrackerClientMock: Mocked<JobTrackerClient>;
+  polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
+  readProductGeometryMock: MockedFunction<typeof readProductGeometryMock>;
 }
 
-export const setupSwapJobHandlerTest = (): SwapJobHandlerTestContext => {
+export const setupSwapJobHandlerTest = async (): Promise<SwapJobHandlerTestContext> => {
   const taskBuilderMock = {
-    buildTasks: jest.fn(),
-    pushTasks: jest.fn(),
-  } as unknown as jest.Mocked<TileMergeTaskManager>;
+    buildTasks: vi.fn(),
+    pushTasks: vi.fn(),
+  } as unknown as Mocked<TileMergeTaskManager>;
 
-  const mapproxyClientMock = { update: jest.fn() } as unknown as jest.Mocked<MapproxyApiClient>;
-  const catalogClientMock = { update: jest.fn() } as unknown as jest.Mocked<CatalogClient>;
-  const seedingJobCreatorMock = { create: jest.fn() } as unknown as jest.Mocked<SeedingJobCreator>;
+  const mapproxyClientMock = { update: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const catalogClientMock = { update: vi.fn() } as unknown as Mocked<CatalogClient>;
+  const seedingJobCreatorMock = { create: vi.fn() } as unknown as Mocked<SeedingJobCreator>;
 
   const swapJobHandler = new SwapJobHandler(
-    jsLogger({ enabled: false }),
+    await getTestLogger(),
     configMock,
     tracerMock,
     queueClientMock,

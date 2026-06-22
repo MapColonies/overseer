@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
-import { randomUUID } from 'crypto';
-import { MultiPolygon, Polygon } from 'geojson';
+import { randomUUID } from 'node:crypto';
+import type { MultiPolygon, Polygon } from 'geojson';
 import nock from 'nock';
 import { degreesPerPixelToZoomLevel } from '@map-colonies/mc-utils';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { LayerCacheType, SeedMode } from '../../../../src/common/constants';
-import { FindLayerResponse, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../../src/common/interfaces';
+import type { FindLayerResponse, SeedJobParams, SeedTaskOptions, SeedTaskParams, TilesSeedingTaskConfig } from '../../../../src/common/interfaces';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { LayerCacheNotFoundError } from '../../../../src/common/errors';
@@ -21,22 +21,24 @@ import {
 } from '../../mocks/jobsMockData';
 import { splitGeometryByTileCount } from '../../../../src/utils/geoUtils';
 import { layerRecord } from '../../mocks/catalogClientMockData';
-import { SeedingJobCreatorTestContext, seedJobParameters, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
+import type { SeedingJobCreatorTestContext } from './seedingJobCreatorSetup';
+import { seedJobParameters, setupSeedingJobCreatorTest } from './seedingJobCreatorSetup';
 
 describe('SeedingJobCreator', () => {
   let seedingJobCreatorContext: SeedingJobCreatorTestContext;
   let productGeometry: Polygon | MultiPolygon;
-  beforeEach(() => {
-    jest.resetAllMocks();
+
+  beforeEach(async () => {
+    vi.resetAllMocks();
     registerDefaultConfig();
-    seedingJobCreatorContext = setupSeedingJobCreatorTest();
+    seedingJobCreatorContext = await setupSeedingJobCreatorTest();
     productGeometry = createFakePolygonalGeometry();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
-    jest.resetAllMocks();
-    jest.restoreAllMocks();
+    vi.useRealTimers();
+    vi.resetAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('createSeedingJob', () => {
@@ -93,7 +95,7 @@ describe('SeedingJobCreator', () => {
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
       catalogClientMock.findLayer.mockResolvedValue(layer);
-      jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
+      vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
@@ -180,7 +182,7 @@ describe('SeedingJobCreator', () => {
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
       catalogClientMock.findLayer.mockResolvedValue(layer);
-      jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
+      vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
@@ -266,7 +268,7 @@ describe('SeedingJobCreator', () => {
       };
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
-      jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
+      vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
       mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
@@ -304,7 +306,10 @@ describe('SeedingJobCreator', () => {
         ...seedJobParameters,
       };
 
-      jest.spyOn(seedingJobCreator as unknown as { calculateGeometryByMode: jest.Func }, 'calculateGeometryByMode').mockReturnValue(undefined);
+      vi.spyOn(
+        seedingJobCreator as unknown as { calculateGeometryByMode: (...args: unknown[]) => unknown },
+        'calculateGeometryByMode'
+      ).mockReturnValue(undefined);
       await seedingJobCreator.create(seedJobParams);
 
       expect(jobManagerClientMock.createJob).not.toHaveBeenCalled();
@@ -369,7 +374,7 @@ describe('SeedingJobCreator', () => {
         ]);
 
         readProductGeometryMock.mockResolvedValue(productGeometry);
-        jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
+        vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
         mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
         jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
@@ -427,7 +432,7 @@ describe('SeedingJobCreator', () => {
         ]);
 
         readProductGeometryMock.mockResolvedValue(productGeometry);
-        jest.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
+        vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
         mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
         jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 

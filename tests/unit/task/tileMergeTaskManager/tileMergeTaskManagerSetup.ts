@@ -1,10 +1,11 @@
-import { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
-import jsLogger from '@map-colonies/js-logger';
+import type { Mocked, MockedFunction } from 'vitest';
+import { TaskHandler as QueueClient, type IJobResponse, type ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TileOutputFormat } from '@map-colonies/raster-shared';
-import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import { TileRanger, zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
+import { getTestLogger } from '../../../configurations/testLogger';
 import { configMock } from '../../mocks/configMock';
-import { JobManagerConfig, MergeTaskParameters, JobResumeState, MergeTilesTaskParams, Grid } from '../../../../src/common/interfaces';
+import type { JobManagerConfig, MergeTaskParameters, JobResumeState, MergeTilesTaskParams } from '../../../../src/common/interfaces';
+import { Grid } from '../../../../src/common/interfaces';
 import { TileMergeTaskManager } from '../../../../src/task/models/tileMergeTaskManager';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { tracerMock } from '../../mocks/tracerMock';
@@ -13,20 +14,20 @@ import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 // eslint-disable-next-line @typescript-eslint/no-magic-numbers
 const TEST_INGESTION_RESOLUTION = zoomLevelToResolutionDeg(4)!;
 
-export type MockDequeue = jest.MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
-export type MockGetJob = jest.MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
-export type MockUpdateJob = jest.MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
+export type MockDequeue = MockedFunction<(jobType: string, taskType: string) => Promise<ITaskResponse<unknown> | null>>;
+export type MockGetJob = MockedFunction<(jobId: string) => Promise<IJobResponse<unknown, unknown>>>;
+export type MockUpdateJob = MockedFunction<(jobId: string, update: Record<string, unknown>) => Promise<void>>;
 
 export interface MergeTilesTaskBuilderContext {
   tileMergeTaskManager: TileMergeTaskManager;
 }
 
-export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): MergeTilesTaskBuilderContext {
-  const mockLogger = jsLogger({ enabled: false });
+export async function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Promise<MergeTilesTaskBuilderContext> {
+  const mockLogger = await getTestLogger();
 
-  const mockDequeue = jest.fn() as MockDequeue;
-  const mockGetJob = jest.fn() as MockGetJob;
-  const mockUpdateJob = jest.fn() as MockUpdateJob;
+  const mockDequeue = vi.fn() as MockDequeue;
+  const mockGetJob = vi.fn() as MockGetJob;
+  const mockUpdateJob = vi.fn() as MockUpdateJob;
 
   const mockQueueClient = {
     dequeue: mockDequeue,
@@ -34,7 +35,7 @@ export function setupMergeTilesTaskBuilderTest(useMockQueueClient = false): Merg
       getJob: mockGetJob,
       updateJob: mockUpdateJob,
     },
-  } as unknown as jest.Mocked<QueueClient>;
+  } as unknown as Mocked<QueueClient>;
 
   const jobManagerConfig = configMock.get<JobManagerConfig>('jobManagement.config');
 
