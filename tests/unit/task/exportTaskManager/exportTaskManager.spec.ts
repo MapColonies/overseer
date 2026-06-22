@@ -69,15 +69,15 @@ describe('exportTaskManager', () => {
 
       const sources = exportTaskManager.generateSources(job, metadata);
 
-      const [source1, source2] = sources as [(typeof sources)[0], (typeof sources)[0]];
-      const isExtentExistInSource1 = extentSchema.safeParse(source1.extent).success;
+      const [source1, source2] = sources;
+      const isExtentExistInSource1 = extentSchema.safeParse(source1!.extent).success;
 
       expect(sources).toHaveLength(2);
-      expect(source1.type).toBe(SourceType.GPKG);
-      expect(source1.path).toBe(job.parameters.additionalParams.packageRelativePath);
+      expect(source1!.type).toBe(SourceType.GPKG);
+      expect(source1!.path).toBe(job.parameters.additionalParams.packageRelativePath);
       expect(isExtentExistInSource1).toBe(true);
-      expect(source2.type).toBe(tilesStorageProvider);
-      expect(source2.path).toBe(expectedPath);
+      expect(source2!.type).toBe(tilesStorageProvider);
+      expect(source2!.path).toBe(expectedPath);
     });
 
     it('should throw an error when the roi is invalid', () => {
