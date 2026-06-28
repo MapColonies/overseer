@@ -4,7 +4,7 @@ import type { Mocked } from 'vitest';
 import nock from 'nock';
 import { clear as clearConfig, configMock, registerDefaultConfig } from '../mocks/configMock';
 import { type IngestionSwapUpdateFinalizeJob } from '../../../src/utils/zod/schemas/job.schema';
-import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
+import { DeleteLayerError, LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../../../src/common/errors';
 import { exportJob, ingestionNewJobExtended, ingestionSwapUpdateJob, ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../mocks/jobsMockData';
 import type { FindLayerResponse } from '../../../src/common/interfaces';
 import { layerRecord } from '../mocks/catalogClientMockData';
@@ -168,6 +168,43 @@ describe('CatalogClient', () => {
       const action = catalogClient.findLayer(nonExistingRecordId);
 
       await expect(action).rejects.toThrow(LayerNotFoundError);
+    });
+  });
+
+  describe('deleteRecord', () => {
+    it('should delete a catalog record', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const catalogId = randomUUID();
+
+      nock(baseUrl).delete(`/records/${catalogId}`).reply(200);
+
+      const action = catalogClient.deleteRecord(catalogId);
+
+      await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it('should treat a 404 as success (idempotent re-run)', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const catalogId = randomUUID();
+
+      nock(baseUrl).delete(`/records/${catalogId}`).reply(404);
+
+      const action = catalogClient.deleteRecord(catalogId);
+
+      await expect(action).resolves.not.toThrow();
+    });
+
+    it('should throw DeleteLayerError on a server error', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const catalogId = randomUUID();
+
+      nock(baseUrl).delete(`/records/${catalogId}`).reply(500);
+
+      const action = catalogClient.deleteRecord(catalogId);
+
+      await expect(action).rejects.toThrow(DeleteLayerError);
     });
   });
 });

@@ -10,7 +10,8 @@ import type { IConfig, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBod
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { SERVICES } from '../common/constants';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
-import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
+import { NotFoundError } from '@map-colonies/error-types';
+import { DeleteLayerError, LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
@@ -80,6 +81,32 @@ export class CatalogClient extends HttpClient {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
           activeSpan?.recordException(err);
           throw new UpdateLayerError(this.targetService, internalId, err);
+        }
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
+
+  public async deleteRecord(catalogId: string): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.deleteRecord.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttribute('catalogId', catalogId);
+
+      try {
+        const url = `/records/${catalogId}`;
+        await this.delete(url);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Catalog record deleted successfully' });
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          this.logger.warn({ msg: 'catalog record not found, treating as already deleted', catalogId });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Catalog record already absent' });
+          return;
+        }
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new DeleteLayerError(this.targetService, catalogId, err);
         }
       } finally {
         activeSpan?.end();
