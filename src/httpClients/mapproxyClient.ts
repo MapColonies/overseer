@@ -7,6 +7,7 @@ import { NotFoundError } from '@map-colonies/error-types';
 import type { IConfig, GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
 import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, StorageProvider } from '../common/constants';
 import {
+  DeleteLayerError,
   LayerCacheNotFoundError,
   PublishLayerError,
   UnsupportedLayerCacheError,
@@ -85,6 +86,39 @@ export class MapproxyApiClient extends HttpClient {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
           activeSpan?.recordException(err);
           throw new UpdateLayerError(this.targetService, layerName, err);
+        }
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
+
+  public async removeLayer(layerName: string): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${MapproxyApiClient.name}.${this.removeLayer.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttribute('layerName', layerName);
+
+      try {
+        const failed = await this.delete<string[]>('/layer', { layerNames: [layerName] });
+        if (failed.includes(layerName)) {
+          throw new DeleteLayerError(this.targetService, layerName, new Error(`mapproxy reported layer as failed to remove`));
+        }
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer removed successfully from mapproxy' });
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          this.logger.warn({ msg: 'layer not found in mapproxy, treating as already removed', layerName });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer already absent in mapproxy' });
+          return;
+        }
+        if (err instanceof DeleteLayerError) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw err;
+        }
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new DeleteLayerError(this.targetService, layerName, err);
         }
       } finally {
         activeSpan?.end();

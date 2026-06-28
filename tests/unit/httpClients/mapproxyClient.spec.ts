@@ -7,6 +7,7 @@ import { getTestLogger } from '../../configurations/testLogger';
 import { MapproxyApiClient } from '../../../src/httpClients/mapproxyClient';
 import { configMock, init as InitConfig, setValue, registerDefaultConfig } from '../mocks/configMock';
 import {
+  DeleteLayerError,
   LayerCacheNotFoundError,
   PublishLayerError,
   UnsupportedLayerCacheError,
@@ -158,6 +159,54 @@ describe('mapproxyClient', () => {
       const action = mapproxyApiClient.getCacheName({ layerName, cacheType });
 
       await expect(action).rejects.toThrow(LayerCacheNotFoundError);
+    });
+  });
+
+  describe('removeLayer', () => {
+    it('should remove a layer from mapproxy', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName = 'test_orthophoto';
+
+      nock(baseUrl).delete('/layer').query({ 'layerNames[]': layerName }).reply(200, []);
+
+      const action = mapproxyApiClient.removeLayer(layerName);
+
+      await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it('should treat a 404 as success (idempotent re-run)', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName = 'already_removed_orthophoto';
+
+      nock(baseUrl).delete('/layer').query({ 'layerNames[]': layerName }).reply(404);
+
+      const action = mapproxyApiClient.removeLayer(layerName);
+
+      await expect(action).resolves.not.toThrow();
+    });
+
+    it('should throw DeleteLayerError when mapproxy reports the layer as failed', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName = 'failed_orthophoto';
+
+      nock(baseUrl).delete('/layer').query({ 'layerNames[]': layerName }).reply(200, [layerName]);
+
+      const action = mapproxyApiClient.removeLayer(layerName);
+
+      await expect(action).rejects.toThrow(DeleteLayerError);
+    });
+
+    it('should throw DeleteLayerError on a server error', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName = 'error_orthophoto';
+
+      nock(baseUrl).delete('/layer').query({ 'layerNames[]': layerName }).reply(500);
+
+      const action = mapproxyApiClient.removeLayer(layerName);
+
+      await expect(action).rejects.toThrow(DeleteLayerError);
     });
   });
 });
