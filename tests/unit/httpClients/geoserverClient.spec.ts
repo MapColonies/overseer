@@ -56,8 +56,8 @@ describe('GeoserverClient', () => {
     await expect(action).rejects.toThrow(PublishLayerError);
   });
 
-  describe('delete', () => {
-    it('should delete a layer feature type from geoserver', async () => {
+  describe('unpublishLayer', () => {
+    it('should unpublish a layer feature type from geoserver', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.geoserverApi');
       const workspace = configMock.get<string>('geoserver.workspace');
       const dataStore = configMock.get<string>('geoserver.dataStore');
@@ -65,7 +65,7 @@ describe('GeoserverClient', () => {
 
       nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).reply(204);
 
-      const action = geoServerClient.deleteLayer(layerName);
+      const action = geoServerClient.unpublishLayer(layerName);
 
       await expect(action).resolves.not.toThrow();
       // eslint-disable-next-line import-x/no-named-as-default-member
@@ -80,7 +80,7 @@ describe('GeoserverClient', () => {
 
       nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).reply(404);
 
-      const action = geoServerClient.deleteLayer(layerName);
+      const action = geoServerClient.unpublishLayer(layerName);
 
       await expect(action).resolves.not.toThrow();
     });
@@ -93,7 +93,7 @@ describe('GeoserverClient', () => {
 
       nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).reply(500);
 
-      const action = geoServerClient.deleteLayer(layerName);
+      const action = geoServerClient.unpublishLayer(layerName);
 
       await expect(action).rejects.toThrow(DeleteLayerError);
     });

@@ -54,19 +54,19 @@ export class GeoserverClient extends HttpClient {
     });
   }
 
-  public async deleteLayer(layerName: string): Promise<void> {
-    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${GeoserverClient.name}.${this.deleteLayer.name}`)), async () => {
+  public async unpublishLayer(layerName: string): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${GeoserverClient.name}.${this.unpublishLayer.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       activeSpan?.setAttribute('layerName', layerName);
 
       try {
         const url = `/featureTypes/${this.workspace}/${this.dataStore}/${layerName}`;
         await this.delete(url);
-        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer deleted successfully from geoserver' });
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer unpublished successfully from geoserver' });
       } catch (err) {
         if (err instanceof NotFoundError) {
-          // already gone — deletion is idempotent, a 404 on (re)run is success (§6)
-          this.logger.warn({ msg: 'Layer feature type not found in geoserver, treating as already deleted', layerName });
+          // already gone — unpublish is idempotent, a 404 on (re)run is success (§6)
+          this.logger.warn({ msg: 'Layer feature type not found in geoserver, treating as already unpublished', layerName });
           activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer already absent in geoserver' });
           return;
         }
