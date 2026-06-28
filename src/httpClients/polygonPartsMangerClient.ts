@@ -7,10 +7,11 @@ import type {
 } from '@map-colonies/raster-shared';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
+import { NotFoundError } from '@map-colonies/error-types';
 import type { IConfig } from '../common/interfaces';
 import { POLYGON_PARTS_MANAGER_SERVICE_NAME, SERVICES } from '../common/constants';
 import { requiredAggregationFeatureSchema } from '../utils/zod/schemas/aggregation.schema';
-import { LayerMetadataAggregationError, PolygonPartsProcessingError, IntersectionError } from '../common/errors';
+import { DeleteLayerError, LayerMetadataAggregationError, PolygonPartsProcessingError, IntersectionError } from '../common/errors';
 import { AggregationLayerMetadata, PolygonPartsProcessPayload } from '../common/interfaces';
 
 @injectable()
@@ -69,6 +70,19 @@ export class PolygonPartsMangerClient extends HttpClient {
       const intersectionError = new IntersectionError(err, polygonPartsEntityName);
       this.logger.error({ msg: intersectionError.message, polygonPartsEntityName, err });
       throw intersectionError;
+    }
+  }
+
+  public async deleteEntities(polygonPartsEntityName: string): Promise<void> {
+    try {
+      this.logger.info({ msg: 'deleting polygon parts entities', polygonPartsEntityName });
+      await this.delete(`/polygonParts/${polygonPartsEntityName}`);
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        this.logger.warn({ msg: 'polygon parts entity not found, treating as already deleted', polygonPartsEntityName });
+        return;
+      }
+      throw new DeleteLayerError(this.targetService, polygonPartsEntityName, err instanceof Error ? err : new Error(String(err)));
     }
   }
 
