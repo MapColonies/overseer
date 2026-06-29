@@ -45,6 +45,47 @@ describe('CatalogClient', () => {
       expect(nock.isDone()).toBe(true);
     });
 
+    it('should include keywords in the publish request body when job has keywords', async () => {
+      createLinksMock.mockReturnValue([]);
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      const jobWithKeywords: typeof ingestionNewJobExtended = {
+        ...ingestionNewJobExtended,
+        parameters: {
+          ...ingestionNewJobExtended.parameters,
+          metadata: { ...ingestionNewJobExtended.parameters.metadata, keywords: 'satellite,aerial' },
+        },
+      };
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
+
+      let requestBody: unknown;
+      nock(baseUrl)
+        .post('/records')
+        .reply(201, (_, reqBody) => {
+          requestBody = reqBody;
+        });
+
+      await catalogClient.publish(jobWithKeywords, layerNameFormats);
+
+      expect(requestBody).toMatchObject({ metadata: { keywords: 'satellite,aerial' } });
+    });
+
+    it('should not include keywords in the publish request body when job has no keywords', async () => {
+      createLinksMock.mockReturnValue([]);
+      const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
+      polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
+
+      let requestBody: Record<string, unknown> | undefined;
+      nock(baseUrl)
+        .post('/records')
+        .reply(201, (_, reqBody) => {
+          requestBody = reqBody as Record<string, unknown>;
+        });
+
+      await catalogClient.publish(ingestionNewJobExtended, layerNameFormats);
+
+      expect((requestBody?.['metadata'] as Record<string, unknown>)?.['keywords']).toBeUndefined();
+    });
+
     it('should throw an PublishLayerError when the catalog returns an error', async () => {
       createLinksMock.mockReturnValue([]);
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
