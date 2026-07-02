@@ -327,7 +327,8 @@ export interface GetMapproxyCacheRequest {
 
 export interface GetMapproxyCacheResponse {
   cacheName: string;
-  cache: { type: LayerCacheType };
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  cache: { type: LayerCacheType; bucket_name?: string };
 }
 //#endregion mapproxyApi
 

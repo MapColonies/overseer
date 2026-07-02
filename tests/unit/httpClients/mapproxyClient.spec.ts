@@ -162,6 +162,60 @@ describe('mapproxyClient', () => {
     });
   });
 
+  describe('getS3CacheBucketName', () => {
+    it('should return the bucket name of the layer s3 cache', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName: LayerName = 'test-Orthophoto';
+      const bucketName = 'raster-tiles-bucket';
+
+      nock(baseUrl)
+        .get(`/layer/${layerName}/${LayerCacheType.S3}`)
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        .reply(200, { cacheName: 'cacheName', cache: { type: LayerCacheType.S3, bucket_name: bucketName } });
+
+      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+
+      await expect(action).resolves.toBe(bucketName);
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it('should return undefined when the cache has no bucket_name (global default bucket)', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName: LayerName = 'test-Orthophoto';
+
+      nock(baseUrl)
+        .get(`/layer/${layerName}/${LayerCacheType.S3}`)
+        .reply(200, { cacheName: 'cacheName', cache: { type: LayerCacheType.S3 } });
+
+      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+
+      await expect(action).resolves.toBeUndefined();
+    });
+
+    it('should return undefined when the layer s3 cache is not found (layer already removed)', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName: LayerName = 'not_found-Orthophoto';
+
+      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.S3}`).reply(404);
+
+      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+
+      await expect(action).resolves.toBeUndefined();
+    });
+
+    it('should rethrow on a server error', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
+      const layerName: LayerName = 'error-Orthophoto';
+
+      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.S3}`).reply(500);
+
+      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+
+      await expect(action).rejects.toThrow();
+    });
+  });
+
   describe('removeLayer', () => {
     it('should remove a layer from mapproxy', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');

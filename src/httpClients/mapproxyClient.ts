@@ -1,5 +1,5 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { TileOutputFormat } from '@map-colonies/raster-shared';
+import type { LayerName, TileOutputFormat } from '@map-colonies/raster-shared';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
@@ -124,6 +124,21 @@ export class MapproxyApiClient extends HttpClient {
         activeSpan?.end();
       }
     });
+  }
+
+  public async getS3CacheBucketName(layerName: LayerName): Promise<string | undefined> {
+    const url = `layer/${layerName}/${LayerCacheType.S3}`;
+    try {
+      const res = await this.get<GetMapproxyCacheResponse>(url);
+      // bucket_name is absent when the layer cache relies on mapproxy's global default s3 bucket
+      return res.cache.bucket_name;
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        this.logger.warn({ msg: 's3 cache not found in mapproxy for layer', layerName });
+        return undefined;
+      }
+      throw err;
+    }
   }
 
   public async getCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
