@@ -74,16 +74,16 @@ describe('CatalogClient', () => {
       const baseUrl = configMock.get<string>('servicesUrl.catalogManager');
       polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue(createFakeAggregatedPartData());
 
-      let requestBody: Record<string, unknown> | undefined;
+      let requestBody: unknown;
       nock(baseUrl)
         .post('/records')
         .reply(201, (_, reqBody) => {
-          requestBody = reqBody as Record<string, unknown>;
+          requestBody = reqBody;
         });
 
       await catalogClient.publish(ingestionNewJobExtended, layerNameFormats);
 
-      expect((requestBody?.['metadata'] as Record<string, unknown>)?.['keywords']).toBeUndefined();
+      expect(requestBody).not.toHaveProperty('metadata.keywords');
     });
 
     it('should throw an PublishLayerError when the catalog returns an error', async () => {
