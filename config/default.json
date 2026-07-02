@@ -48,7 +48,8 @@
     "accessKeyId": "minioadmin",
     "secretAccessKey": "minioadmin",
     "endpointUrl": "http://localhost:9000",
-    "bucket": "",
+    "artifactsBucket": "",
+    "tilesBucket": "",
     "sslEnabled": false
   },
   "disableHttpClientLogs": true,

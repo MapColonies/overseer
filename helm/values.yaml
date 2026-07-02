@@ -87,6 +87,7 @@ storage:
   s3:
     endpointUrl: ""
     artifactsBucket: ""
+    tilesBucket: ""
     sslEnabled: false
     secretName: ""
   fs:
