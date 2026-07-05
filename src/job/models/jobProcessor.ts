@@ -94,10 +94,16 @@ export class JobProcessor {
         switch (task.type) {
           case taskTypes.createTasks:
           case taskTypes.init: // when export domain will have validation we will remove init and move to createTasks
+            this.assertHandlerSupportsTask(jobHandler.handleJobInit, job.type, task.type);
             await jobHandler.handleJobInit(job, task);
             break;
           case taskTypes.finalize:
+            this.assertHandlerSupportsTask(jobHandler.handleJobFinalize, job.type, task.type);
             await jobHandler.handleJobFinalize(job, task);
+            break;
+          case taskTypes.delete:
+            this.assertHandlerSupportsTask(jobHandler.handleJobDelete, job.type, task.type);
+            await jobHandler.handleJobDelete(job, task);
             break;
         }
       } catch (err) {
@@ -174,6 +180,12 @@ export class JobProcessor {
     }
     logger.info({ msg: `dequeued task ${task.id} successfully` });
     return { task, shouldSkipTask: false };
+  }
+
+  private assertHandlerSupportsTask<F>(handlerMethod: F | undefined, jobType: string, taskType: string): asserts handlerMethod is F {
+    if (handlerMethod === undefined) {
+      throw new Error(`Job handler for job type "${jobType}" does not support task type "${taskType}"`);
+    }
   }
 
   private validateTaskAndJob(jobAndTask: JobAndTaskResponse): void {

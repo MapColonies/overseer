@@ -18,6 +18,7 @@ import { ExportJobHandler } from './job/models/export/exportJobHandler';
 import { NewJobHandler } from './job/models/ingestion/newJobHandler';
 import { SwapJobHandler } from './job/models/ingestion/swapJobHandler';
 import { UpdateJobHandler } from './job/models/ingestion/updateJobHandler';
+import { DeleteLayerHandler } from './job/models/deletion/deleteLayerHandler';
 import { JOB_HANDLER_FACTORY_SYMBOL, jobHandlerFactory } from './job/models/jobHandlerFactory';
 import { getPollingJobs, parseInstanceType, validateAndGetHandlersTokens } from './utils/configUtil';
 import { productReaderFactory } from './utils/storage/productReader';
@@ -71,6 +72,8 @@ const registerInstanceHandlers = (instanceType: InstanceType, handlersTokens: Re
         { token: handlersTokens['Ingestion_Update']!, provider: { useClass: UpdateJobHandler } },
 
         { token: handlersTokens['Ingestion_Swap_Update']!, provider: { useClass: SwapJobHandler } },
+
+        { token: handlersTokens['Delete_Layer']!, provider: { useClass: DeleteLayerHandler } },
       ];
     case 'export':
       return [{ token: handlersTokens['Export']!, provider: { useClass: ExportJobHandler } }];
