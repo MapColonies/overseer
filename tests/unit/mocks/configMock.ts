@@ -132,6 +132,7 @@ const registerDefaultConfig = (): void => {
           createTasks: 'create-tasks',
           init: 'init',
           finalize: 'finalize',
+          delete: 'delete',
         },
       },
       ingestion: {
@@ -144,6 +145,9 @@ const registerDefaultConfig = (): void => {
           },
           swapUpdate: {
             type: 'Ingestion_Swap_Update',
+          },
+          deleteLayer: {
+            type: 'Delete_Layer',
           },
         },
         jobs: {
@@ -164,6 +168,11 @@ const registerDefaultConfig = (): void => {
             skipUncached: true,
             zoomThreshold: 16,
             maxTilesPerSeedTask: 500000,
+          },
+          tilesDeletion: {
+            type: 'tiles-deletion',
+            tileBatchSize: 10000,
+            taskBatchSize: 5,
           },
         },
       },
