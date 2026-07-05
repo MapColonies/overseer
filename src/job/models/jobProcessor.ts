@@ -6,7 +6,7 @@ import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import type { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, JobManagementConfig } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
-import { getAvailableJobTypes, getPollingJobs } from '../../utils/configUtil';
+import { getAvailableJobTypes, getPollingJobs, getPollingTaskTypes } from '../../utils/configUtil';
 import type { InstanceType } from '../../utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { JOB_HANDLER_FACTORY_SYMBOL, type JobHandlerFactory } from './jobHandlerFactory';
@@ -29,11 +29,10 @@ export class JobProcessor {
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
     this.pollingConfig = this.config.get<PollingConfig>('jobManagement.polling');
-    const { tasks } = this.pollingConfig;
     const jobManagementConfig = this.config.get<JobManagementConfig>('jobManagement');
     const jobs = getPollingJobs(jobManagementConfig, this.instanceType);
     this.pollingJobTypes = getAvailableJobTypes(jobs);
-    this.pollingTaskTypes = [tasks.createTasks, tasks.init, tasks.finalize];
+    this.pollingTaskTypes = getPollingTaskTypes(this.pollingConfig.tasks, this.instanceType);
   }
 
   public async start(): Promise<void> {

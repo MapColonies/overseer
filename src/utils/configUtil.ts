@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import { INSTANCE_TYPES } from '../common/constants';
 import { InvalidConfigError, MissingConfigError } from '../common/errors';
-import type { JobManagementConfig, PollingJobs } from '../common/interfaces';
+import type { JobManagementConfig, PollingJobs, PollingTasks } from '../common/interfaces';
 import { instanceTypeSchema, type InstanceType } from './zod/schemas/instance.schema';
 
 function isStringEmpty(str: string): boolean {
@@ -23,7 +23,7 @@ export const getAvailableJobTypes = (ingestionConfig: PollingJobs): string[] => 
 };
 
 export const validateAndGetHandlersTokens = (pollingConfig: PollingJobs, instanceType: InstanceType): Record<string, string> => {
-  const { new: newJob, update: updateJob, swapUpdate: swapUpdateJob, export: exportJob } = pollingConfig;
+  const { new: newJob, update: updateJob, swapUpdate: swapUpdateJob, export: exportJob, deleteLayer: deleteLayerJob } = pollingConfig;
 
   switch (instanceType) {
     case 'ingestion': {
@@ -36,8 +36,16 @@ export const validateAndGetHandlersTokens = (pollingConfig: PollingJobs, instanc
       if (swapUpdateJob?.type === undefined || isStringEmpty(swapUpdateJob.type)) {
         throw new MissingConfigError('Missing "swap-update-job" type configuration');
       }
+      if (deleteLayerJob?.type === undefined || isStringEmpty(deleteLayerJob.type)) {
+        throw new MissingConfigError('Missing "delete-layer-job" type configuration');
+      }
 
-      return { Ingestion_New: newJob.type, Ingestion_Update: updateJob.type, Ingestion_Swap_Update: swapUpdateJob.type };
+      return {
+        Ingestion_New: newJob.type,
+        Ingestion_Update: updateJob.type,
+        Ingestion_Swap_Update: swapUpdateJob.type,
+        Delete_Layer: deleteLayerJob.type,
+      };
     }
     case 'export': {
       if (exportJob?.type === undefined || isStringEmpty(exportJob.type)) {
@@ -57,6 +65,16 @@ export const getPollingJobs = (jobManagementConfig: JobManagementConfig, instanc
       return jobManagementConfig.ingestion.pollingJobs;
     case 'export':
       return jobManagementConfig.export.pollingJobs;
+  }
+};
+
+export const getPollingTaskTypes = (pollingTasks: PollingTasks, instanceType: InstanceType): string[] => {
+  const { createTasks, init, finalize, delete: deleteTask } = pollingTasks;
+  switch (instanceType) {
+    case 'ingestion':
+      return [createTasks, init, finalize, deleteTask];
+    case 'export':
+      return [createTasks, init, finalize];
   }
 };
 
