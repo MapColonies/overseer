@@ -67,6 +67,7 @@ export interface IngestionPollingJobsConfig {
   new: JobConfig | undefined;
   update: JobConfig | undefined;
   swapUpdate: JobConfig | undefined;
+  deleteLayer: JobConfig | undefined;
 }
 
 export interface ExportPollingJobsConfig {
@@ -90,6 +91,7 @@ export interface PollingTasks {
   createTasks: string;
   init: string;
   finalize: string;
+  delete: string;
 }
 
 export interface PollingConfig {
@@ -137,9 +139,17 @@ export interface JobManagementConfig {
 //#endregion config
 
 //#region job/task interfaces
-export interface IJobHandler<TInitJob = unknown, TInitTask = unknown, TFinalizeJob = unknown, TFinalizeTask = unknown> {
-  handleJobInit: (job: TInitJob, task: TInitTask) => Promise<void>;
-  handleJobFinalize: (job: TFinalizeJob, task: TFinalizeTask) => Promise<void>;
+export interface IJobHandler<
+  TInitJob = unknown,
+  TInitTask = unknown,
+  TFinalizeJob = unknown,
+  TFinalizeTask = unknown,
+  TDeleteJob = unknown,
+  TDeleteTask = unknown,
+> {
+  handleJobInit?: (job: TInitJob, task: TInitTask) => Promise<void>;
+  handleJobFinalize?: (job: TFinalizeJob, task: TFinalizeTask) => Promise<void>;
+  handleJobDelete?: (job: TDeleteJob, task: TDeleteTask) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {

@@ -14,6 +14,8 @@ import {
   taskBlockDuplicationParamSchema,
   exportFinalizeTaskParamsSchema,
   rasterProductTypeSchema,
+  deleteLayerJobParamsSchema,
+  deleteTaskParamsSchema,
 } from '@map-colonies/raster-shared';
 import {
   ingestionNewExtendedJobParamsSchema,
@@ -101,6 +103,17 @@ export type ExportFinalizeTask = z.infer<typeof exportFinalizeTaskSchema>;
 export type ExportFinalizeTaskParams = z.infer<typeof exportFinalizeTaskParamsSchema>;
 //#endregion
 
+//#region Deletion
+export const deleteLayerJobSchema = createJobResponseSchema(deleteLayerJobParamsSchema)
+  .and(internalIdSchema)
+  .and(z.object({ productType: rasterProductTypeSchema }))
+  .describe('DeleteLayerJobSchema');
+export type DeleteLayerJob = z.infer<typeof deleteLayerJobSchema>;
+
+export const deleteTaskSchema = createTaskResponseSchema(deleteTaskParamsSchema).describe('DeleteTaskSchema');
+export type DeleteTask = z.infer<typeof deleteTaskSchema>;
+//#endregion
+
 // Ingestion domain types
 type IngestionJobType = 'Ingestion_New' | 'Ingestion_Update' | 'Ingestion_Swap_Update';
 type IngestionTaskType = 'create-tasks' | 'finalize';
@@ -109,8 +122,15 @@ type IngestionTaskType = 'create-tasks' | 'finalize';
 type ExportJobType = 'Export';
 type ExportTaskType = 'init' | 'finalize';
 
+// Deletion domain types
+type DeletionJobType = 'Delete_Layer';
+type DeletionTaskType = 'delete';
+
 // Operation validation key allows only valid job-task combinations
-export type OperationValidationKey = `${IngestionJobType}_${IngestionTaskType}` | `${ExportJobType}_${ExportTaskType}`;
+export type OperationValidationKey =
+  | `${IngestionJobType}_${IngestionTaskType}`
+  | `${ExportJobType}_${ExportTaskType}`
+  | `${DeletionJobType}_${DeletionTaskType}`;
 
 export interface JobTaskSchema {
   jobSchema: z.ZodTypeAny;
@@ -151,5 +171,9 @@ export const jobTaskSchemaMap: JobTaskSchemasMap = {
   Export_finalize: {
     jobSchema: exportJobSchema,
     taskSchema: exportFinalizeTaskSchema,
+  },
+  Delete_Layer_delete: {
+    jobSchema: deleteLayerJobSchema,
+    taskSchema: deleteTaskSchema,
   },
 };
