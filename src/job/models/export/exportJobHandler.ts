@@ -7,7 +7,7 @@ import {
   callbackExportResponseSchema,
   CallbacksStatus,
   CleanupData,
-  convertKeysToExportColumns,
+  convertKeysToGpkgColumns,
   ExportFinalizeFullProcessingParams,
   ExportFinalizeType,
   RasterLayerMetadata,
@@ -348,7 +348,7 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
   }
 
   private createGpkgMetadata(feature: Feature<Polygon | MultiPolygon, GpkgArtifactProperties>): Feature<Polygon | MultiPolygon> {
-    const snakeCaseProps = convertKeysToExportColumns(feature.properties);
+    const snakeCaseProps = convertKeysToGpkgColumns(feature.properties);
     return {
       ...feature,
       properties: snakeCaseProps,
