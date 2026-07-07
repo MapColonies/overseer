@@ -1,8 +1,7 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
-import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
-import { LayerMetadata, Link, PycswLayerCatalogRecord } from '@map-colonies/mc-model-types';
+import { type IRasterCatalogUpsertRequestBody, LayerMetadata, Link, PycswLayerCatalogRecord } from '@map-colonies/mc-model-types';
 import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
