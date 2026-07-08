@@ -113,3 +113,12 @@ dist
 #helm
 Chart.lock
 
+.claude
+.claude-flow
+.swarm
+.mcp.json
+CLAUDE.md
+/ai-docs
+# ruflo / claude-flow vector memory store
+ruvector.db
+/docs

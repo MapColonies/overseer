@@ -100,8 +100,8 @@ describe('DeleteLayerHandler', () => {
 
   describe('tiles bucket resolution', () => {
     it('should not resolve a bucket for the FS provider', async () => {
-      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       setValue('tilesStorageProvider', 'FS');
+      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       const job = structuredClone(deleteLayerJob);
       const task = structuredClone(deleteTaskForDeleteLayer);
 
@@ -114,13 +114,13 @@ describe('DeleteLayerHandler', () => {
       expect(mapproxyClientMock.getS3CacheBucketName).not.toHaveBeenCalled();
       expect(jobManagerClientMock.createTaskForJob).toHaveBeenCalledWith(
         job.id,
-        expect.objectContaining({ parameters: expect.objectContaining({ sourceProvider: 'FS', bucket: undefined }) })
+        expect.objectContaining({ parameters: { paths: [job.internalId], storageProvider: 'FS' } })
       );
     });
 
     it('should resolve the bucket from the mapproxy cache before the layer is removed (S3)', async () => {
-      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       setValue('tilesStorageProvider', 'S3');
+      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       const job = structuredClone(deleteLayerJob);
       const task = structuredClone(deleteTaskForDeleteLayer);
 
@@ -131,22 +131,24 @@ describe('DeleteLayerHandler', () => {
 
       await deleteLayerHandler.handleJobDelete(job, task);
 
-      // key design point: the cache must be read BEFORE removeLayer, after which getCache 404s
+      // key design point: the cache must be read BEFORE removeLayer
       expect(mapproxyClientMock.getS3CacheBucketName).toHaveBeenCalledTimes(1);
       expect(mapproxyClientMock.removeLayer).toHaveBeenCalledTimes(1);
+
       const cacheOrder = mapproxyClientMock.getS3CacheBucketName.mock.invocationCallOrder[0] ?? 0;
       const removeOrder = mapproxyClientMock.removeLayer.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER;
+
       expect(cacheOrder).toBeLessThan(removeOrder);
       expect(jobManagerClientMock.createTaskForJob).toHaveBeenCalledWith(
         job.id,
-        expect.objectContaining({ parameters: expect.objectContaining({ sourceProvider: 'S3', bucket: 'mapproxy-cache-bucket' }) })
+        expect.objectContaining({ parameters: { paths: [job.internalId], storageProvider: 'S3', bucket: 'mapproxy-cache-bucket' } })
       );
     });
 
     it('should fall back to the configured tiles bucket when mapproxy cannot resolve it (S3)', async () => {
-      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       setValue('tilesStorageProvider', 'S3');
       setValue('S3.tilesBucket', 'config-fallback-bucket');
+      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       const job = structuredClone(deleteLayerJob);
       const task = structuredClone(deleteTaskForDeleteLayer);
 
@@ -159,7 +161,7 @@ describe('DeleteLayerHandler', () => {
 
       expect(jobManagerClientMock.createTaskForJob).toHaveBeenCalledWith(
         job.id,
-        expect.objectContaining({ parameters: expect.objectContaining({ sourceProvider: 'S3', bucket: 'config-fallback-bucket' }) })
+        expect.objectContaining({ parameters: { paths: [job.internalId], storageProvider: 'S3', bucket: 'config-fallback-bucket' } })
       );
     });
   });

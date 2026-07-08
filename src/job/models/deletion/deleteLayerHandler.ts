@@ -6,8 +6,8 @@ import {
   deleteTaskParamsSchema,
   SourceType,
   type DeleteTaskParams,
+  type DeleteStoredResourcesParams,
   type LayerName,
-  type LayerTilesDeletionParams,
 } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import type { IConfig, IJobHandler } from '../../../common/interfaces';
@@ -24,6 +24,8 @@ import { JobHandler } from '../jobHandler';
 @injectable()
 export class DeleteLayerHandler extends JobHandler implements IJobHandler<never, never, never, never, DeleteLayerJob, DeleteTask> {
   private readonly tilesDeletionType: string;
+  private readonly tilesStorageProvider: StorageProvider;
+  private readonly tilesBucketConfig: string;
 
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
@@ -40,6 +42,8 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
     super(logger, config, queueClient, jobTrackerClient);
     // whole-layer tiles deletion shares the 'tiles-deletion' task type with the range-based ingestion flow (raster-shared DeletionTaskTypes.LayerTilesDeletion); the Cleaner distinguishes them by params shape
     this.tilesDeletionType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
+    this.tilesStorageProvider = this.config.get<StorageProvider>('tilesStorageProvider');
+    this.tilesBucketConfig = this.config.get<string>('S3.tilesBucket');
   }
 
   public async handleJobDelete(job: DeleteLayerJob, task: DeleteTask): Promise<void> {
@@ -53,8 +57,6 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
         try {
           const catalogId = job.internalId;
           const { layerName, polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
-          // resolved before the deleteFromMapproxy step — once the layer is removed from mapproxy, getCache
-          // returns 404 and only the S3.tilesBucket config fallback remains (relevant for redelivered tasks)
           const tilesBucket = await this.resolveTilesBucket(layerName);
           // parse to apply the schema defaults (undefined → false) and narrow to the required-boolean output type
           let params: DeleteTaskParams = deleteTaskParamsSchema.parse(task.parameters);
@@ -102,8 +104,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
   }
 
   private async resolveTilesBucket(layerName: LayerName): Promise<string | undefined> {
-    const sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider');
-    if (sourceProvider !== SourceType.S3) {
+    if (this.tilesStorageProvider !== SourceType.S3) {
       return undefined;
     }
 
@@ -112,17 +113,19 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
       return mapproxyBucket;
     }
 
-    const configBucket = this.config.get<string>('S3.tilesBucket');
-    this.logger.warn({ msg: 'tiles bucket could not be resolved from mapproxy cache, falling back to configuration', layerName, configBucket });
-    return configBucket;
+    this.logger.warn({
+      msg: 'tiles bucket could not be resolved from mapproxy cache, falling back to configuration',
+      layerName,
+      bucket: this.tilesBucketConfig,
+    });
+    return this.tilesBucketConfig;
   }
 
   private async createCleanerTasks(job: DeleteLayerJob, catalogId: string, bucket: string | undefined): Promise<void> {
-    const sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     const logger = this.logger.child({ jobId: job.id, catalogId });
 
     // idempotency guard (§6): a redelivered task must not create duplicate cleaner tasks
-    const existingTilesTasks = await this.queueClient.jobManagerClient.findTasks<LayerTilesDeletionParams>({
+    const existingTilesTasks = await this.queueClient.jobManagerClient.findTasks<DeleteStoredResourcesParams>({
       jobId: job.id,
       type: this.tilesDeletionType,
     });
@@ -132,13 +135,17 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
       return;
     }
 
-    const tilesDeletionTask: ICreateTaskBody<LayerTilesDeletionParams> = {
+    const storage =
+      this.tilesStorageProvider === SourceType.S3
+        ? { storageProvider: this.tilesStorageProvider, bucket: bucket ?? '' }
+        : { storageProvider: this.tilesStorageProvider };
+    const tilesDeletionTask: ICreateTaskBody<DeleteStoredResourcesParams> = {
       type: this.tilesDeletionType,
       description: 'full layer tiles deletion',
-      parameters: { catalogId, sourceProvider, bucket },
+      parameters: { paths: [catalogId], ...storage },
     };
 
-    logger.info({ msg: 'creating layer tiles deletion task', sourceProvider, bucket });
+    logger.info({ msg: 'creating layer tiles deletion task', storageProvider: this.tilesStorageProvider, bucket });
     await this.queueClient.jobManagerClient.createTaskForJob(job.id, tilesDeletionTask);
 
     // TODO(§11 open questions): artifacts-deletion task creation is deferred — the existence source of truth
