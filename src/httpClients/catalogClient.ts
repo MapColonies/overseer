@@ -1,8 +1,7 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
-import type { IRasterCatalogUpsertRequestBody } from '@map-colonies/mc-model-types';
-import { LayerMetadata, Link } from '@map-colonies/mc-model-types';
+import { type IRasterCatalogUpsertRequestBody, LayerMetadata, Link, PycswLayerCatalogRecord } from '@map-colonies/mc-model-types';
 import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
@@ -156,7 +155,10 @@ export class CatalogClient extends HttpClient {
     };
   }
 
-  private async mapToPublishCatalogRecordMetadata(job: IngestionNewFinalizeJob, entityName: PolygonPartsEntityName): Promise<LayerMetadata> {
+  private async mapToPublishCatalogRecordMetadata(
+    job: IngestionNewFinalizeJob,
+    entityName: PolygonPartsEntityName
+  ): Promise<LayerMetadata & Pick<PycswLayerCatalogRecord, 'keywords'>> {
     const { parameters, version } = job;
     const { metadata } = parameters;
 
@@ -182,6 +184,7 @@ export class CatalogClient extends HttpClient {
       tileOutputFormat: metadata.tileOutputFormat,
       productVersion: version,
       rms: undefined,
+      keywords: metadata.keywords,
       ...aggregatedLayerMetadata,
     };
   }
@@ -223,6 +226,7 @@ export class CatalogClient extends HttpClient {
               classification: metadata.classification,
               ingestionDate: new Date(),
               ...(displayPath != undefined && { displayPath }),
+              ...(metadata.keywords !== undefined && { keywords: metadata.keywords }),
               ...aggregatedLayerMetadata,
             },
           };
