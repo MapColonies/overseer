@@ -127,7 +127,22 @@ export class MapproxyApiClient extends HttpClient {
   }
 
   public async getLayerCache(layerName: LayerName): Promise<GetMapproxyCacheResponse | undefined> {
-    const cacheType = this.layerCacheType;
+    return this.fetchLayerCache(layerName, this.layerCacheType);
+  }
+
+  public async getCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
+    const { layerName, cacheType } = getCacheReq;
+    const res = await this.fetchLayerCache(layerName, cacheType);
+    if (res === undefined) {
+      throw new LayerCacheNotFoundError(layerName, cacheType);
+    }
+    if (res.cache.type !== LayerCacheType.REDIS) {
+      throw new UnsupportedLayerCacheError(layerName, cacheType);
+    }
+    return res.cacheName;
+  }
+
+  private async fetchLayerCache(layerName: LayerName, cacheType: LayerCacheType): Promise<GetMapproxyCacheResponse | undefined> {
     const url = `layer/${layerName}/${cacheType}`;
     try {
       return await this.get<GetMapproxyCacheResponse>(url);
@@ -135,24 +150,6 @@ export class MapproxyApiClient extends HttpClient {
       if (err instanceof NotFoundError) {
         this.logger.warn({ msg: 'layer cache not found in mapproxy', layerName, cacheType });
         return undefined;
-      }
-      throw err;
-    }
-  }
-
-  public async getCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
-    const url = `layer/${getCacheReq.layerName}/${getCacheReq.cacheType}`;
-    try {
-      const res = await this.get<GetMapproxyCacheResponse>(url);
-      const { cache, cacheName } = res;
-      if (cache.type !== LayerCacheType.REDIS) {
-        throw new UnsupportedLayerCacheError(getCacheReq.layerName, getCacheReq.cacheType);
-      }
-      return cacheName;
-    } catch (err) {
-      if (err instanceof NotFoundError) {
-        this.logger.warn({ msg: 'Cache not found', layerName: getCacheReq.layerName, cacheType: getCacheReq.cacheType });
-        throw new LayerCacheNotFoundError(getCacheReq.layerName, getCacheReq.cacheType);
       }
       throw err;
     }
