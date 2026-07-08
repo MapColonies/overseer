@@ -126,15 +126,14 @@ export class MapproxyApiClient extends HttpClient {
     });
   }
 
-  public async getS3CacheBucketName(layerName: LayerName): Promise<string | undefined> {
-    const url = `layer/${layerName}/${LayerCacheType.S3}`;
+  public async getLayerCache(layerName: LayerName): Promise<GetMapproxyCacheResponse | undefined> {
+    const cacheType = this.layerCacheType;
+    const url = `layer/${layerName}/${cacheType}`;
     try {
-      const res = await this.get<GetMapproxyCacheResponse>(url);
-      // bucket_name is absent when the layer cache relies on mapproxy's global default s3 bucket
-      return res.cache.bucket_name;
+      return await this.get<GetMapproxyCacheResponse>(url);
     } catch (err) {
       if (err instanceof NotFoundError) {
-        this.logger.warn({ msg: 's3 cache not found in mapproxy for layer', layerName });
+        this.logger.warn({ msg: 'layer cache not found in mapproxy', layerName, cacheType });
         return undefined;
       }
       throw err;

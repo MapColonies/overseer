@@ -110,7 +110,18 @@ export const deleteLayerJobSchema = createJobResponseSchema(deleteLayerJobParams
   .describe('DeleteLayerJobSchema');
 export type DeleteLayerJob = z.infer<typeof deleteLayerJobSchema>;
 
-export const deleteTaskSchema = createTaskResponseSchema(deleteTaskParamsSchema).describe('DeleteTaskSchema');
+export const tilesLocationSchema = z.object({
+  path: z.string().min(1),
+  bucket: z.string().optional(),
+});
+export type TilesLocation = z.infer<typeof tilesLocationSchema>;
+
+export const extendedDeleteTaskParamsSchema = deleteTaskParamsSchema.extend({
+  tilesLocation: tilesLocationSchema.optional(),
+});
+export type ExtendedDeleteTaskParams = z.infer<typeof extendedDeleteTaskParamsSchema>;
+
+export const deleteTaskSchema = createTaskResponseSchema(extendedDeleteTaskParamsSchema).describe('DeleteTaskSchema');
 export type DeleteTask = z.infer<typeof deleteTaskSchema>;
 //#endregion
 

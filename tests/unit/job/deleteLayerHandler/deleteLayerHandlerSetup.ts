@@ -27,7 +27,7 @@ export interface DeleteLayerHandlerTestContext {
 export const setupDeleteLayerHandlerTest = async (): Promise<DeleteLayerHandlerTestContext> => {
   const catalogClientMock = { deleteRecord: vi.fn() } as unknown as Mocked<CatalogClient>;
   const geoserverClientMock = { unpublishLayer: vi.fn() } as unknown as Mocked<GeoserverClient>;
-  const mapproxyClientMock = { removeLayer: vi.fn(), getS3CacheBucketName: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const mapproxyClientMock = { removeLayer: vi.fn(), getLayerCache: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
 
   const deleteLayerHandler = new DeleteLayerHandler(
     await getTestLogger(),

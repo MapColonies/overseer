@@ -162,44 +162,50 @@ describe('mapproxyClient', () => {
     });
   });
 
-  describe('getS3CacheBucketName', () => {
-    it('should return the bucket name of the layer s3 cache', async () => {
+  describe('getLayerCache', () => {
+    it('should return the layer cache for the configured storage provider (FS → file cache)', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'test-Orthophoto';
-      const bucketName = 'raster-tiles-bucket';
-
-      nock(baseUrl)
-        .get(`/layer/${layerName}/${LayerCacheType.S3}`)
+      const cacheResponse = {
+        cacheName: layerName,
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        .reply(200, { cacheName: 'cacheName', cache: { type: LayerCacheType.S3, bucket_name: bucketName } });
+        cache: { type: LayerCacheType.FS, directory: '/outputs/catalog-id/display-path/', directory_layout: 'tms' },
+      };
 
-      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.FS}`).reply(200, cacheResponse);
 
-      await expect(action).resolves.toBe(bucketName);
+      const action = mapproxyApiClient.getLayerCache(layerName);
+
+      await expect(action).resolves.toEqual(cacheResponse);
       // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
     });
 
-    it('should return undefined when the cache has no bucket_name (global default bucket)', async () => {
+    it('should return the s3 cache including bucket_name when the provider is S3', async () => {
+      setValue('tilesStorageProvider', 'S3');
+      mapproxyApiClient = new MapproxyApiClient(configMock, await getTestLogger(), tracerMock);
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'test-Orthophoto';
+      const cacheResponse = {
+        cacheName: layerName,
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        cache: { type: LayerCacheType.S3, directory: '/catalog-id/display-path/', directory_layout: 'tms', bucket_name: 'raster-tiles-bucket' },
+      };
 
-      nock(baseUrl)
-        .get(`/layer/${layerName}/${LayerCacheType.S3}`)
-        .reply(200, { cacheName: 'cacheName', cache: { type: LayerCacheType.S3 } });
+      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.S3}`).reply(200, cacheResponse);
 
-      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+      const action = mapproxyApiClient.getLayerCache(layerName);
 
-      await expect(action).resolves.toBeUndefined();
+      await expect(action).resolves.toEqual(cacheResponse);
     });
 
-    it('should return undefined when the layer s3 cache is not found (layer already removed)', async () => {
+    it('should return undefined when the layer cache is not found (layer already removed)', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'not_found-Orthophoto';
 
-      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.S3}`).reply(404);
+      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.FS}`).reply(404);
 
-      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+      const action = mapproxyApiClient.getLayerCache(layerName);
 
       await expect(action).resolves.toBeUndefined();
     });
@@ -208,9 +214,9 @@ describe('mapproxyClient', () => {
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'error-Orthophoto';
 
-      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.S3}`).reply(500);
+      nock(baseUrl).get(`/layer/${layerName}/${LayerCacheType.FS}`).reply(500);
 
-      const action = mapproxyApiClient.getS3CacheBucketName(layerName);
+      const action = mapproxyApiClient.getLayerCache(layerName);
 
       await expect(action).rejects.toThrow();
     });

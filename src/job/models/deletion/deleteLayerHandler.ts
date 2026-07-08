@@ -1,25 +1,31 @@
-/* eslint-disable @typescript-eslint/naming-convention */
 import type { Logger } from '@map-colonies/js-logger';
 import { context, trace, type Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient, type ICreateTaskBody } from '@map-colonies/mc-priority-queue';
-import {
-  deleteTaskParamsSchema,
-  SourceType,
-  type DeleteTaskParams,
-  type DeleteStoredResourcesParams,
-  type LayerName,
-} from '@map-colonies/raster-shared';
+import { SourceType, type DeleteTaskParams, type DeleteStoredResourcesParams, type LayerName } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
-import type { IConfig, IJobHandler } from '../../../common/interfaces';
+import type { IConfig, IJobHandler, JobAndTaskTelemetry, StepKey } from '../../../common/interfaces';
 import { SERVICES, type StorageProvider } from '../../../common/constants';
+import { LayerCacheNotFoundError } from '../../../common/errors';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { GeoserverClient } from '../../../httpClients/geoserverClient';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
-import type { DeleteLayerJob, DeleteTask } from '../../../utils/zod/schemas/job.schema';
+import {
+  extendedDeleteTaskParamsSchema,
+  type DeleteLayerJob,
+  type DeleteTask,
+  type ExtendedDeleteTaskParams,
+  type TilesLocation,
+} from '../../../utils/zod/schemas/job.schema';
 import { JobHandler } from '../jobHandler';
+
+/** An ordered metadata-deletion step: the params flag that records its completion and the deletion it performs. */
+interface DeletionStep {
+  step: StepKey<ExtendedDeleteTaskParams>;
+  run: () => Promise<unknown>;
+}
 
 @injectable()
 export class DeleteLayerHandler extends JobHandler implements IJobHandler<never, never, never, never, DeleteLayerJob, DeleteTask> {
@@ -51,51 +57,11 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
       trace.setSpan(context.active(), this.tracer.startSpan(`${DeleteLayerHandler.name}.${this.handleJobDelete.name}`)),
       async () => {
         const activeSpan = trace.getActiveSpan();
-        const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
-        const taskProcessTracking = this.taskMetrics.trackTaskProcessing(job.type, task.type);
-
+        const telemetry: JobAndTaskTelemetry = { taskTracker: this.taskMetrics.trackTaskProcessing(job.type, task.type), tracingSpan: activeSpan };
         try {
-          const catalogId = job.internalId;
-          const { layerName, polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
-          const tilesBucket = await this.resolveTilesBucket(layerName);
-          // parse to apply the schema defaults (undefined → false) and narrow to the required-boolean output type
-          let params: DeleteTaskParams = deleteTaskParamsSchema.parse(task.parameters);
-          activeSpan?.setAttributes({ catalogId, layerName, polygonPartsEntityName });
-          activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...params });
-          logger.info({ msg: `handling ${job.type} job with ${task.type} task`, catalogId });
-
-          // ordered metadata deletion — persist each boolean immediately so a redelivered task resumes from the failed step (§4.2, §6)
-          if (!params.deleteFromCatalog) {
-            await this.catalogClient.deleteRecord(catalogId);
-            params = await this.markFinalizeStepAsCompleted(job.id, task.id, params, 'deleteFromCatalog');
-            activeSpan?.addEvent('deleteFromCatalog.success', { ...params });
-          }
-
-          if (!params.deleteFromGeoserver) {
-            await this.geoserverClient.unpublishLayer(layerName);
-            params = await this.markFinalizeStepAsCompleted(job.id, task.id, params, 'deleteFromGeoserver');
-            activeSpan?.addEvent('deleteFromGeoserver.success', { ...params });
-          }
-
-          if (!params.deletePolygonParts) {
-            await this.polygonPartsMangerClient.deleteEntities(polygonPartsEntityName);
-            params = await this.markFinalizeStepAsCompleted(job.id, task.id, params, 'deletePolygonParts');
-            activeSpan?.addEvent('deletePolygonParts.success', { ...params });
-          }
-
-          if (!params.deleteFromMapproxy) {
-            await this.mapproxyClient.removeLayer(layerName);
-            params = await this.markFinalizeStepAsCompleted(job.id, task.id, params, 'deleteFromMapproxy');
-            activeSpan?.addEvent('deleteFromMapproxy.success', { ...params });
-          }
-
-          if (this.isAllStepsCompleted(params)) {
-            logger.info({ msg: 'all metadata deletion steps completed, creating downstream cleaner tasks', ...params });
-            await this.createCleanerTasks(job, catalogId, tilesBucket);
-            await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
-          }
+          await this.runDeletionFlow(job, task, telemetry);
         } catch (err) {
-          await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
+          await this.handleError(err, job, task, telemetry);
         } finally {
           activeSpan?.end();
         }
@@ -103,53 +69,122 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
     );
   }
 
-  private async resolveTilesBucket(layerName: LayerName): Promise<string | undefined> {
+  private async runDeletionFlow(job: DeleteLayerJob, task: DeleteTask, telemetry: JobAndTaskTelemetry): Promise<void> {
+    const activeSpan = telemetry.tracingSpan;
+    const logger = this.logger.child({ jobId: job.id, taskId: task.id, jobType: job.type, taskType: task.type });
+    const catalogId = job.internalId;
+    const { layerName, polygonPartsEntityName } = this.validateAndGenerateLayerNameFormats(job);
+
+    // parse to apply the schema defaults (undefined → false) and narrow to the required-boolean output type
+    let params = extendedDeleteTaskParamsSchema.parse(task.parameters);
+    activeSpan?.setAttributes({ catalogId, layerName, polygonPartsEntityName });
+    activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...this.getSteps(params) });
+    logger.info({ msg: `handling ${job.type} job with ${task.type} task`, catalogId });
+
+    // the mapproxy cache is the only source of the tiles directory and the deleteFromMapproxy step destroys it,
+    // resolve and persist the location before any deletion step — a redelivered task reads it from its own params
+    let tilesLocation = params.tilesLocation;
+    if (tilesLocation === undefined) {
+      tilesLocation = await this.resolveTilesLocation(layerName);
+      params = { ...params, tilesLocation };
+      await this.queueClient.jobManagerClient.updateTask(job.id, task.id, { parameters: params });
+      logger.info({ msg: 'tiles location resolved from mapproxy cache and persisted', ...tilesLocation });
+      activeSpan?.addEvent('tilesLocation.resolved', { ...tilesLocation });
+    }
+
+    // ordered metadata deletion — persist each step immediately so a redelivered task resumes from where it failed (§4.2, §6)
+    const deletionSteps: DeletionStep[] = [
+      { step: 'deleteFromCatalog', run: async () => this.catalogClient.deleteRecord(catalogId) },
+      { step: 'deleteFromGeoserver', run: async () => this.geoserverClient.unpublishLayer(layerName) },
+      { step: 'deletePolygonParts', run: async () => this.polygonPartsMangerClient.deleteEntities(polygonPartsEntityName) },
+      { step: 'deleteFromMapproxy', run: async () => this.mapproxyClient.removeLayer(layerName) },
+    ];
+    for (const { step, run } of deletionSteps) {
+      if (params[step]) {
+        continue;
+      }
+      await run();
+      params = await this.markFinalizeStepAsCompleted(job.id, task.id, params, step);
+      activeSpan?.addEvent(`${step}.success`, { ...this.getSteps(params) });
+    }
+
+    const steps = this.getSteps(params);
+    if (this.isAllStepsCompleted(steps)) {
+      logger.info({ msg: 'all metadata deletion steps completed, creating downstream cleaner tasks', ...steps });
+      await this.createCleanerTasks(job, tilesLocation);
+      await this.completeTask(job, task, telemetry);
+    }
+  }
+
+  // the persisted tilesLocation is not a completion step — strip it so step checks and span events see only the booleans
+  private getSteps(params: ExtendedDeleteTaskParams): DeleteTaskParams {
+    const { deleteFromCatalog, deleteFromGeoserver, deletePolygonParts, deleteFromMapproxy } = params;
+    return { deleteFromCatalog, deleteFromGeoserver, deletePolygonParts, deleteFromMapproxy };
+  }
+
+  private async resolveTilesLocation(layerName: LayerName): Promise<TilesLocation> {
+    const cache = await this.mapproxyClient.getLayerCache(layerName);
+    const directory = cache?.cache.directory;
+    if (directory === undefined) {
+      throw new LayerCacheNotFoundError(layerName, this.tilesStorageProvider);
+    }
+
+    const path = this.toRelativeTilesPath(directory);
+    if (path === '') {
+      throw new LayerCacheNotFoundError(layerName, this.tilesStorageProvider);
+    }
+
     if (this.tilesStorageProvider !== SourceType.S3) {
-      return undefined;
+      return { path };
     }
+    return { path, bucket: this.resolveTilesBucket(cache?.cache.bucket_name, layerName) };
+  }
 
-    const mapproxyBucket = await this.mapproxyClient.getS3CacheBucketName(layerName);
-    if (mapproxyBucket !== undefined) {
-      return mapproxyBucket;
+  /**
+   * Normalizes the mapproxy cache directory into the relative path the Cleaner expects.
+   * - S3: object keys carry no leading slash (mapproxy strips it when writing tiles), so only the leading slash is dropped.
+   * - FS: the first segment is mapproxy's tiles-PVC mount path; the Cleaner remounts the same PVC at its own base, so it is dropped.
+   */
+  private toRelativeTilesPath(directory: string): string {
+    return this.tilesStorageProvider === SourceType.S3 ? directory.replace(/^\/+/, '') : directory.replace(/^\/?[^/]+\//, '');
+  }
+
+  private resolveTilesBucket(cacheBucket: string | undefined, layerName: LayerName): string {
+    if (cacheBucket !== undefined) {
+      return cacheBucket;
     }
-
-    this.logger.warn({
-      msg: 'tiles bucket could not be resolved from mapproxy cache, falling back to configuration',
-      layerName,
-      bucket: this.tilesBucketConfig,
-    });
+    this.logger.warn({ msg: 'tiles bucket not present on mapproxy cache, falling back to configuration', layerName, bucket: this.tilesBucketConfig });
     return this.tilesBucketConfig;
   }
 
-  private async createCleanerTasks(job: DeleteLayerJob, catalogId: string, bucket: string | undefined): Promise<void> {
-    const logger = this.logger.child({ jobId: job.id, catalogId });
+  private async createCleanerTasks(job: DeleteLayerJob, tilesLocation: TilesLocation): Promise<void> {
+    const logger = this.logger.child({ jobId: job.id });
 
     // idempotency guard (§6): a redelivered task must not create duplicate cleaner tasks
     const existingTilesTasks = await this.queueClient.jobManagerClient.findTasks<DeleteStoredResourcesParams>({
       jobId: job.id,
       type: this.tilesDeletionType,
     });
-
     if (existingTilesTasks && existingTilesTasks.length > 0) {
       logger.info({ msg: 'layer tiles deletion task already exists, skipping creation', type: this.tilesDeletionType });
       return;
     }
 
+    // bucket is always resolved for S3 in resolveTilesLocation; the fallback only satisfies the optional TilesLocation.bucket type
     const storage =
       this.tilesStorageProvider === SourceType.S3
-        ? { storageProvider: this.tilesStorageProvider, bucket: bucket ?? '' }
+        ? { storageProvider: this.tilesStorageProvider, bucket: tilesLocation.bucket ?? this.tilesBucketConfig }
         : { storageProvider: this.tilesStorageProvider };
+
     const tilesDeletionTask: ICreateTaskBody<DeleteStoredResourcesParams> = {
       type: this.tilesDeletionType,
       description: 'full layer tiles deletion',
-      parameters: { paths: [catalogId], ...storage },
+      parameters: { paths: [tilesLocation.path], ...storage },
     };
 
-    logger.info({ msg: 'creating layer tiles deletion task', storageProvider: this.tilesStorageProvider, bucket });
+    logger.info({ msg: 'creating layer tiles deletion task', storageProvider: this.tilesStorageProvider, ...tilesLocation });
     await this.queueClient.jobManagerClient.createTaskForJob(job.id, tilesDeletionTask);
 
-    // TODO(§11 open questions): artifacts-deletion task creation is deferred — the existence source of truth
-    // (mapproxy GET /layer does not expose artifacts) and the params shape (catalogId-derived vs explicit paths)
-    // are unresolved. Surface in the PR description.
+    // TODO: create cleaner tasks for artifacts deletion
   }
 }
