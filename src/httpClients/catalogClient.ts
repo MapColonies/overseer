@@ -2,6 +2,7 @@ import type { Logger } from '@map-colonies/js-logger';
 import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { type IRasterCatalogUpsertRequestBody, LayerMetadata, Link, PycswLayerCatalogRecord } from '@map-colonies/mc-model-types';
+import { NotFoundError } from '@map-colonies/error-types';
 import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
@@ -9,7 +10,6 @@ import type { IConfig, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBod
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { SERVICES } from '../common/constants';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
-import { NotFoundError } from '@map-colonies/error-types';
 import { DeleteLayerError, LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
