@@ -28,7 +28,7 @@ data:
   {{ end }}
   TELEMETRY_METRICS_BUCKETS: {{ .Values.mclabels.prometheus.buckets | toJson | quote }}
   {{- if eq (upper $storage.gpkgProvider) "S3" }}
-  {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled -}}
+  {{- $s3HttpProtocol := ternary "https://" "http://" $storage.s3.sslEnabled }}
   S3_ENDPOINT_URL: {{ printf "%s%s" $s3HttpProtocol $storage.s3.endpointUrl | quote }}
   S3_ARTIFACTS_BUCKET: {{ $storage.s3.artifactsBucket | quote }}
   S3_SSL_ENABLED: {{ $storage.s3.sslEnabled | quote }}
