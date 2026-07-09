@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.9.0](https://github.com/MapColonies/overseer/compare/v2.8.0...v2.9.0) (2026-07-07)
+
+
+### Features
+
+* pass keywords through catalogClient for all ingestion modes (MAPCO-8284) ([#105](https://github.com/MapColonies/overseer/issues/105)) ([f9c5994](https://github.com/MapColonies/overseer/commit/f9c5994f5058b30a223857f9a650a8056f1c8a81))
+
 ## [2.8.0](https://github.com/MapColonies/overseer/compare/v2.7.1...v2.8.0) (2026-06-22)
 
 
