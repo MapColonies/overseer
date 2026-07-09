@@ -123,7 +123,7 @@ tracing:
   url: ""
 
 configManagement:
-  offlineMode: false
+  offlineMode: true
   name: 'overseer'
   version: 'latest'
   serverUrl: 'http://localhost:8080/api'
