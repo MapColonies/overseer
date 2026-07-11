@@ -61,7 +61,7 @@ export class GeoserverClient extends HttpClient {
 
       try {
         const url = `/featureTypes/${this.workspace}/${this.dataStore}/${layerName}`;
-        await this.delete(url);
+        await this.delete(url, { isRecursive: true });
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer unpublished successfully from geoserver' });
       } catch (err) {
         if (err instanceof NotFoundError) {

@@ -63,7 +63,7 @@ describe('GeoserverClient', () => {
       const dataStore = configMock.get<string>('geoserver.dataStore');
       const layerName = 'test-Orthophoto';
 
-      nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).reply(204);
+      nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).query({ isRecursive: true }).reply(204);
 
       const action = geoServerClient.unpublishLayer(layerName);
 
@@ -78,7 +78,7 @@ describe('GeoserverClient', () => {
       const dataStore = configMock.get<string>('geoserver.dataStore');
       const layerName = 'already-gone-Orthophoto';
 
-      nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).reply(404);
+      nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).query({ isRecursive: true }).reply(404);
 
       const action = geoServerClient.unpublishLayer(layerName);
 
@@ -91,7 +91,7 @@ describe('GeoserverClient', () => {
       const dataStore = configMock.get<string>('geoserver.dataStore');
       const layerName = 'error_test-Orthophoto';
 
-      nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).reply(500);
+      nock(baseUrl).delete(`/featureTypes/${workspace}/${dataStore}/${layerName}`).query({ isRecursive: true }).reply(500);
 
       const action = geoServerClient.unpublishLayer(layerName);
 
