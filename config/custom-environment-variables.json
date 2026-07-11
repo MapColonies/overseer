@@ -125,7 +125,8 @@
       "tasks": {
         "createTasks": "POLLING_CREATE_TASKS_TASK",
         "finalize": "POLLING_FINALIZE_TASK",
-        "init": "POLLING_INIT_TASK"
+        "init": "POLLING_INIT_TASK",
+        "delete": "POLLING_DELETE_TASK"
       }
     },
     "ingestion": {
@@ -138,6 +139,9 @@
         },
         "swapUpdate": {
           "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
+        },
+        "deleteLayer": {
+          "type": "INGESTION_DELETE_LAYER_JOB_TYPE"
         }
       },
       "jobs": {

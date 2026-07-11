@@ -138,6 +138,8 @@ jobDefinitions:
       type: ""
     swapUpdate:
       type: ""
+    deleteLayer:
+      type: ""
     seed:
       type: ""
     export:
@@ -150,6 +152,8 @@ jobDefinitions:
     init:
       type: ""
     finalize:
+      type: ""
+    delete:
       type: ""
     merge:
       type: ""
