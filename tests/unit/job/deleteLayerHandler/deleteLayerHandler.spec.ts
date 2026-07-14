@@ -54,7 +54,6 @@ describe('DeleteLayerHandler', () => {
 
       mapproxyClientMock.getLayerCache.mockResolvedValue(fsCacheResponse);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
 
@@ -97,7 +96,6 @@ describe('DeleteLayerHandler', () => {
       };
 
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
@@ -147,7 +145,6 @@ describe('DeleteLayerHandler', () => {
 
       mapproxyClientMock.getLayerCache.mockResolvedValue(s3CacheResponse);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
@@ -170,7 +167,6 @@ describe('DeleteLayerHandler', () => {
 
       mapproxyClientMock.getLayerCache.mockResolvedValue(fsCacheResponse);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
@@ -192,7 +188,6 @@ describe('DeleteLayerHandler', () => {
         cache: { ...s3CacheResponse.cache, bucket_name: 'mapproxy-cache-bucket' },
       });
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
@@ -212,7 +207,6 @@ describe('DeleteLayerHandler', () => {
 
       mapproxyClientMock.getLayerCache.mockResolvedValue(s3CacheResponse);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
@@ -237,7 +231,6 @@ describe('DeleteLayerHandler', () => {
         tilesLocation: { path: s3KeyPrefix, bucket: 'persisted-bucket' },
       };
 
-      jobManagerClientMock.findTasks.mockResolvedValue([]);
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
@@ -268,19 +261,21 @@ describe('DeleteLayerHandler', () => {
   });
 
   describe('cleaner task idempotency', () => {
-    it('should not create a duplicate tiles-deletion task when one already exists', async () => {
+    it('should prevent duplicate tasks from being created', async () => {
       const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       const job = structuredClone(deleteLayerJob);
       const task = structuredClone(deleteTaskForDeleteLayer);
 
       mapproxyClientMock.getLayerCache.mockResolvedValue(fsCacheResponse);
       jobManagerClientMock.updateTask.mockResolvedValue(undefined);
-      jobManagerClientMock.findTasks.mockResolvedValue([{ id: 'existing-tiles-task' }] as never);
+      jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
       await deleteLayerHandler.handleJobDelete(job, task);
 
-      expect(jobManagerClientMock.findTasks).toHaveBeenCalledWith({ jobId: job.id, type: tilesDeletionType });
-      expect(jobManagerClientMock.createTaskForJob).not.toHaveBeenCalled();
+      expect(jobManagerClientMock.createTaskForJob).toHaveBeenCalledWith(
+        job.id,
+        expect.objectContaining({ type: tilesDeletionType, blockDuplication: true })
+      );
     });
   });
 });

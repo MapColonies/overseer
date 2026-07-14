@@ -109,8 +109,8 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
       activeSpan?.addEvent(`${step}.success`, { ...steps });
     }
 
-    if (this.isAllStepsCompleted(steps)) {
-      logger.info({ msg: 'all metadata deletion steps completed, creating downstream cleaner tasks', ...steps });
+    if (this.isAllStepsCompleted(this.getSteps(params))) {
+      logger.info({ msg: 'all metadata deletion steps completed, creating downstream cleaner tasks', ...this.getSteps(params) });
       await this.createCleanerTasks(job, tilesLocation);
       await this.completeTask(job, task, telemetry);
     }
@@ -160,16 +160,6 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
   private async createCleanerTasks(job: DeleteLayerJob, tilesLocation: TilesLocation): Promise<void> {
     const logger = this.logger.child({ jobId: job.id });
 
-    // idempotency guard (§6): a redelivered task must not create duplicate cleaner tasks
-    const existingTilesTasks = await this.queueClient.jobManagerClient.findTasks<DeleteStoredResourcesParams>({
-      jobId: job.id,
-      type: this.tilesDeletionType,
-    });
-    if (existingTilesTasks && existingTilesTasks.length > 0) {
-      logger.info({ msg: 'layer tiles deletion task already exists, skipping creation', type: this.tilesDeletionType });
-      return;
-    }
-
     // bucket is always resolved for S3 in resolveTilesLocation; the fallback only satisfies the optional TilesLocation.bucket type
     const storage =
       this.tilesStorageProvider === SourceType.S3
@@ -179,6 +169,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
     const tilesDeletionTask: ICreateTaskBody<DeleteStoredResourcesParams> = {
       type: this.tilesDeletionType,
       description: 'full layer tiles deletion',
+      blockDuplication: true,
       parameters: { paths: [tilesLocation.path], ...storage },
     };
 
