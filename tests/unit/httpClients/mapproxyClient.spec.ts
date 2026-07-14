@@ -115,7 +115,7 @@ describe('mapproxyClient', () => {
     });
   });
 
-  describe('getCacheName', () => {
+  describe('getRedisCacheName', () => {
     it('should get cache name from mapproxy', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'test-Orthophoto';
@@ -126,7 +126,7 @@ describe('mapproxyClient', () => {
         .get(`/layer/${layerName}/${cacheType}`)
         .reply(200, { cacheName, cache: { type: cacheType } });
 
-      const action = mapproxyApiClient.getCacheName({ layerName, cacheType });
+      const action = mapproxyApiClient.getRedisCacheName({ layerName, cacheType });
 
       await expect(action).resolves.not.toThrow();
       // eslint-disable-next-line import-x/no-named-as-default-member
@@ -144,7 +144,7 @@ describe('mapproxyClient', () => {
         .get(`/layer/${layerName}/${cacheType}`)
         .reply(200, { cacheName, cache: { type: cacheType } });
 
-      const action = mapproxyApiClient.getCacheName({ layerName, cacheType });
+      const action = mapproxyApiClient.getRedisCacheName({ layerName, cacheType });
 
       await expect(action).rejects.toThrow(UnsupportedLayerCacheError);
     });
@@ -156,7 +156,7 @@ describe('mapproxyClient', () => {
 
       nock(baseUrl).get(`/layer/${layerName}/${cacheType}`).reply(404);
 
-      const action = mapproxyApiClient.getCacheName({ layerName, cacheType });
+      const action = mapproxyApiClient.getRedisCacheName({ layerName, cacheType });
 
       await expect(action).rejects.toThrow(LayerCacheNotFoundError);
     });

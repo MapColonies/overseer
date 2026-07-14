@@ -62,8 +62,8 @@ export class SeedingJobCreator {
 
         logger.debug({ msg: 'Getting cache name for layer', layerName });
 
-        const cacheName = await this.mapproxyClient.getCacheName({ layerName, cacheType: LayerCacheType.REDIS });
-        activeSpan?.addEvent('getCacheName.success', { cacheName });
+        const cacheName = await this.mapproxyClient.getRedisCacheName({ layerName, cacheType: LayerCacheType.REDIS });
+        activeSpan?.addEvent('getRedisCacheName.success', { cacheName });
 
         const validCatalogId = internalIdSchema.parse(ingestionJob).internalId;
 

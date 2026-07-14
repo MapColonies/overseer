@@ -29,7 +29,7 @@ export const setupSeedingJobCreatorTest = async (): Promise<SeedingJobCreatorTes
     jobManagerClient: jobManagerClientMock,
   } as unknown as Mocked<QueueClient>;
 
-  const mapproxyClientMock = { getCacheName: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const mapproxyClientMock = { getRedisCacheName: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
   const catalogClientMock = { update: vi.fn(), findLayer: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const seedingJobCreator = new SeedingJobCreator(
