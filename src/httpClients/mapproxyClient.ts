@@ -110,15 +110,10 @@ export class MapproxyApiClient extends HttpClient {
           activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'layer not found in mapproxy, skipping' });
           return;
         }
-        if (err instanceof DeleteLayerError) {
-          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
-          activeSpan?.recordException(err);
-          throw err;
-        }
         if (err instanceof Error) {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
           activeSpan?.recordException(err);
-          throw new DeleteLayerError(this.targetService, layerName, err);
+          throw err instanceof DeleteLayerError ? err : new DeleteLayerError(this.targetService, layerName, err);
         }
       } finally {
         activeSpan?.end();
