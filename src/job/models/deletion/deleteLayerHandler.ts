@@ -77,8 +77,9 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
 
     // parse to apply the schema defaults (undefined → false) and narrow to the required-boolean output type
     let params = extendedDeleteTaskParamsSchema.parse(task.parameters);
+    const steps = this.getSteps(params);
     activeSpan?.setAttributes({ catalogId, layerName, polygonPartsEntityName });
-    activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...this.getSteps(params) });
+    activeSpan?.addEvent(`${job.type}.${task.type}.start`, { ...steps });
     logger.info({ msg: `handling ${job.type} job with ${task.type} task`, catalogId });
 
     // the mapproxy cache is the only source of the tiles directory and the deleteFromMapproxy step destroys it,
@@ -105,10 +106,9 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
       }
       await run();
       params = await this.markFinalizeStepAsCompleted(job.id, task.id, params, step);
-      activeSpan?.addEvent(`${step}.success`, { ...this.getSteps(params) });
+      activeSpan?.addEvent(`${step}.success`, { ...steps });
     }
 
-    const steps = this.getSteps(params);
     if (this.isAllStepsCompleted(steps)) {
       logger.info({ msg: 'all metadata deletion steps completed, creating downstream cleaner tasks', ...steps });
       await this.createCleanerTasks(job, tilesLocation);
