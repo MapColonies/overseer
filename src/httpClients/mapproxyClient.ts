@@ -106,8 +106,8 @@ export class MapproxyApiClient extends HttpClient {
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer removed successfully from mapproxy' });
       } catch (err) {
         if (err instanceof NotFoundError) {
-          this.logger.warn({ msg: 'layer not found in mapproxy, treating as already removed', layerName });
-          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer already absent in mapproxy' });
+          this.logger.warn({ msg: 'layer not found in mapproxy, skipping', layerName });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'layer not found in mapproxy, skipping' });
           return;
         }
         if (err instanceof DeleteLayerError) {
@@ -130,7 +130,7 @@ export class MapproxyApiClient extends HttpClient {
     return this.fetchLayerCache(layerName, this.layerCacheType);
   }
 
-  public async getCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
+  public async getRedisCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
     const { layerName, cacheType } = getCacheReq;
     const res = await this.fetchLayerCache(layerName, cacheType);
     if (res === undefined) {

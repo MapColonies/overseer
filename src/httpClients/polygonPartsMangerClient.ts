@@ -79,7 +79,7 @@ export class PolygonPartsMangerClient extends HttpClient {
       await this.delete(`/polygonParts/${polygonPartsEntityName}`);
     } catch (err) {
       if (err instanceof NotFoundError) {
-        this.logger.warn({ msg: 'polygon parts entity not found, treating as already deleted', polygonPartsEntityName });
+        this.logger.warn({ msg: 'polygon parts entity not found, skipping', polygonPartsEntityName });
         return;
       }
       throw new DeleteLayerError(this.targetService, polygonPartsEntityName, err instanceof Error ? err : new Error(String(err)));

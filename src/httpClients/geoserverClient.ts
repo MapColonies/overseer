@@ -66,8 +66,8 @@ export class GeoserverClient extends HttpClient {
       } catch (err) {
         if (err instanceof NotFoundError) {
           // already gone — unpublish is idempotent, a 404 on (re)run is success (§6)
-          this.logger.warn({ msg: 'Layer feature type not found in geoserver, treating as already unpublished', layerName });
-          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer already absent in geoserver' });
+          this.logger.warn({ msg: 'Layer feature type not found in geoserver, skipping', layerName });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer feature type not found in geoserver, skipping' });
           return;
         }
         if (err instanceof Error) {

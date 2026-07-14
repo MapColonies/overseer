@@ -98,8 +98,8 @@ export class CatalogClient extends HttpClient {
         activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Catalog record deleted successfully' });
       } catch (err) {
         if (err instanceof NotFoundError) {
-          this.logger.warn({ msg: 'catalog record not found, treating as already deleted', catalogId });
-          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Catalog record already absent' });
+          this.logger.warn({ msg: 'catalog record not found, skipping', catalogId });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'catalog record not found, skipping' });
           return;
         }
         if (err instanceof Error) {
