@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.10.1](https://github.com/MapColonies/overseer/compare/v2.10.0...v2.10.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* update ConfigMap template to handle S3 HTTP protocol format correctly ([#111](https://github.com/MapColonies/overseer/issues/111)) ([7c4c687](https://github.com/MapColonies/overseer/commit/7c4c687040ddc982e798958280f4e8eab541c5a7))
+
 ## [2.10.0](https://github.com/MapColonies/overseer/compare/v2.9.0...v2.10.0) (2026-07-19)
 
 
