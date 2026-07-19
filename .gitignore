@@ -112,6 +112,7 @@ dist
 
 #helm
 Chart.lock
+local.yaml
 
 .claude
 .claude-flow
