@@ -48,7 +48,7 @@
     "@map-colonies/mc-priority-queue": "^9.1.2",
     "@map-colonies/mc-utils": "^6.0.1",
     "@map-colonies/prometheus": "^1.0.0",
-    "@map-colonies/raster-shared": "8.3.0-alpha.0",
+    "@map-colonies/raster-shared": "^8.3.0-alpha.1",
     "@map-colonies/read-pkg": "^1.0.0",
     "@map-colonies/schemas": "^1.18.0",
     "@map-colonies/shapefile-reader": "^1.0.1",

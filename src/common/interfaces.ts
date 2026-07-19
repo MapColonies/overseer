@@ -67,6 +67,7 @@ export interface IngestionPollingJobsConfig {
   new: JobConfig | undefined;
   update: JobConfig | undefined;
   swapUpdate: JobConfig | undefined;
+  deleteLayer: JobConfig | undefined;
 }
 
 export interface ExportPollingJobsConfig {
@@ -90,6 +91,7 @@ export interface PollingTasks {
   createTasks: string;
   init: string;
   finalize: string;
+  delete: string;
 }
 
 export interface PollingConfig {
@@ -137,9 +139,17 @@ export interface JobManagementConfig {
 //#endregion config
 
 //#region job/task interfaces
-export interface IJobHandler<TInitJob = unknown, TInitTask = unknown, TFinalizeJob = unknown, TFinalizeTask = unknown> {
-  handleJobInit: (job: TInitJob, task: TInitTask) => Promise<void>;
-  handleJobFinalize: (job: TFinalizeJob, task: TFinalizeTask) => Promise<void>;
+export interface IJobHandler<
+  TInitJob = unknown,
+  TInitTask = unknown,
+  TFinalizeJob = unknown,
+  TFinalizeTask = unknown,
+  TDeleteJob = unknown,
+  TDeleteTask = unknown,
+> {
+  handleJobInit?: (job: TInitJob, task: TInitTask) => Promise<void>;
+  handleJobFinalize?: (job: TFinalizeJob, task: TFinalizeTask) => Promise<void>;
+  handleJobDelete?: (job: TDeleteJob, task: TDeleteTask) => Promise<void>;
 }
 
 export interface JobAndTaskResponse {
@@ -327,7 +337,8 @@ export interface GetMapproxyCacheRequest {
 
 export interface GetMapproxyCacheResponse {
   cacheName: string;
-  cache: { type: LayerCacheType };
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  cache: { type: LayerCacheType; directory?: string; directory_layout?: string; bucket_name?: string };
 }
 //#endregion mapproxyApi
 
@@ -412,7 +423,8 @@ export interface IS3Config {
   accessKeyId: string;
   secretAccessKey: string;
   endpointUrl: string;
-  bucket: string;
+  artifactsBucket: string;
+  tilesBucket: string;
   objectKey: string;
   sslEnabled: boolean;
 }

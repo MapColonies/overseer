@@ -96,7 +96,7 @@ describe('SeedingJobCreator', () => {
       readProductGeometryMock.mockResolvedValue(productGeometry);
       catalogClientMock.findLayer.mockResolvedValue(layer);
       vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
-      mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
+      mapproxyClientMock.getRedisCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
       nock(baseUrl)
@@ -105,7 +105,7 @@ describe('SeedingJobCreator', () => {
 
       const res = await seedingJobCreator.create(seedJobParams);
 
-      expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
+      expect(mapproxyClientMock.getRedisCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
       expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
       expect(res).toBeUndefined();
     });
@@ -183,7 +183,7 @@ describe('SeedingJobCreator', () => {
       readProductGeometryMock.mockResolvedValue(productGeometry);
       catalogClientMock.findLayer.mockResolvedValue(layer);
       vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
-      mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
+      mapproxyClientMock.getRedisCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
       nock(baseUrl)
@@ -192,7 +192,7 @@ describe('SeedingJobCreator', () => {
 
       const res = await seedingJobCreator.create(seedJobParams);
 
-      expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
+      expect(mapproxyClientMock.getRedisCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
       expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
       expect(res).toBeUndefined();
     });
@@ -269,7 +269,7 @@ describe('SeedingJobCreator', () => {
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
       vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
-      mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
+      mapproxyClientMock.getRedisCacheName.mockResolvedValue(layerCacheName);
       jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
       nock(baseUrl)
@@ -278,7 +278,7 @@ describe('SeedingJobCreator', () => {
 
       const res = await seedingJobCreator.create(seedJobParams);
 
-      expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
+      expect(mapproxyClientMock.getRedisCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
       expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
       expect(res).toBeUndefined();
     });
@@ -286,7 +286,7 @@ describe('SeedingJobCreator', () => {
     it('should skip creating seeding job - no cache name found', async () => {
       const { seedingJobCreator, mapproxyClientMock, jobManagerClientMock } = seedingJobCreatorContext;
       const layerCacheName = 'not-exist-s3';
-      mapproxyClientMock.getCacheName.mockRejectedValue(new LayerCacheNotFoundError(layerCacheName, LayerCacheType.REDIS));
+      mapproxyClientMock.getRedisCacheName.mockRejectedValue(new LayerCacheNotFoundError(layerCacheName, LayerCacheType.REDIS));
 
       const seedJobParams: SeedJobParams = {
         ...seedJobParameters,
@@ -300,7 +300,7 @@ describe('SeedingJobCreator', () => {
     it('should skip creating seeding job - no footprint found', async () => {
       const { seedingJobCreator, mapproxyClientMock, jobManagerClientMock } = seedingJobCreatorContext;
       const layerCacheName = 'layer-name';
-      mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
+      mapproxyClientMock.getRedisCacheName.mockResolvedValue(layerCacheName);
 
       const seedJobParams: SeedJobParams = {
         ...seedJobParameters,
@@ -375,7 +375,7 @@ describe('SeedingJobCreator', () => {
 
         readProductGeometryMock.mockResolvedValue(productGeometry);
         vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
-        mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
+        mapproxyClientMock.getRedisCacheName.mockResolvedValue(layerCacheName);
         jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
         nock(baseUrl)
@@ -387,7 +387,7 @@ describe('SeedingJobCreator', () => {
         };
 
         await expect(action()).resolves.not.toThrow();
-        expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
+        expect(mapproxyClientMock.getRedisCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
         expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
       });
 
@@ -433,7 +433,7 @@ describe('SeedingJobCreator', () => {
 
         readProductGeometryMock.mockResolvedValue(productGeometry);
         vi.useFakeTimers().setSystemTime(new Date('2024-11-05T13:50:27Z'));
-        mapproxyClientMock.getCacheName.mockResolvedValue(layerCacheName);
+        mapproxyClientMock.getRedisCacheName.mockResolvedValue(layerCacheName);
         jobManagerClientMock.createJob.mockResolvedValue({ id: seedJobId, taskIds: [taskId] });
 
         nock(baseUrl)
@@ -445,7 +445,7 @@ describe('SeedingJobCreator', () => {
         };
 
         await expect(action()).resolves.not.toThrow();
-        expect(mapproxyClientMock.getCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
+        expect(mapproxyClientMock.getRedisCacheName).toHaveBeenCalledWith({ layerName: seedJobParams.layerName, cacheType: LayerCacheType.REDIS });
         expect(queueClientMock.jobManagerClient.createJob).toHaveBeenCalledWith(seedJob);
       });
     });

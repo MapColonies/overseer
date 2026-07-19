@@ -1,5 +1,5 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { TileOutputFormat } from '@map-colonies/raster-shared';
+import type { LayerName, TileOutputFormat } from '@map-colonies/raster-shared';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
@@ -7,6 +7,7 @@ import { NotFoundError } from '@map-colonies/error-types';
 import type { IConfig, GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
 import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, StorageProvider } from '../common/constants';
 import {
+  DeleteLayerError,
   LayerCacheNotFoundError,
   PublishLayerError,
   UnsupportedLayerCacheError,
@@ -92,19 +93,58 @@ export class MapproxyApiClient extends HttpClient {
     });
   }
 
-  public async getCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
-    const url = `layer/${getCacheReq.layerName}/${getCacheReq.cacheType}`;
-    try {
-      const res = await this.get<GetMapproxyCacheResponse>(url);
-      const { cache, cacheName } = res;
-      if (cache.type !== LayerCacheType.REDIS) {
-        throw new UnsupportedLayerCacheError(getCacheReq.layerName, getCacheReq.cacheType);
+  public async removeLayer(layerName: string): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${MapproxyApiClient.name}.${this.removeLayer.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttribute('layerName', layerName);
+
+      try {
+        const failed = await this.delete<string[]>('/layer', { layerNames: [layerName] });
+        if (failed.includes(layerName)) {
+          throw new DeleteLayerError(this.targetService, layerName, new Error(`mapproxy reported layer as failed to remove`));
+        }
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Layer removed successfully from mapproxy' });
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          this.logger.warn({ msg: 'layer not found in mapproxy, skipping', layerName });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'layer not found in mapproxy, skipping' });
+          return;
+        }
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw err instanceof DeleteLayerError ? err : new DeleteLayerError(this.targetService, layerName, err);
+        }
+      } finally {
+        activeSpan?.end();
       }
-      return cacheName;
+    });
+  }
+
+  public async getLayerCache(layerName: LayerName): Promise<GetMapproxyCacheResponse | undefined> {
+    return this.fetchLayerCache(layerName, this.layerCacheType);
+  }
+
+  public async getRedisCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
+    const { layerName, cacheType } = getCacheReq;
+    const res = await this.fetchLayerCache(layerName, cacheType);
+    if (res === undefined) {
+      throw new LayerCacheNotFoundError(layerName, cacheType);
+    }
+    if (res.cache.type !== LayerCacheType.REDIS) {
+      throw new UnsupportedLayerCacheError(layerName, cacheType);
+    }
+    return res.cacheName;
+  }
+
+  private async fetchLayerCache(layerName: LayerName, cacheType: LayerCacheType): Promise<GetMapproxyCacheResponse | undefined> {
+    const url = `layer/${layerName}/${cacheType}`;
+    try {
+      return await this.get<GetMapproxyCacheResponse>(url);
     } catch (err) {
       if (err instanceof NotFoundError) {
-        this.logger.warn({ msg: 'Cache not found', layerName: getCacheReq.layerName, cacheType: getCacheReq.cacheType });
-        throw new LayerCacheNotFoundError(getCacheReq.layerName, getCacheReq.cacheType);
+        this.logger.warn({ msg: 'layer cache not found in mapproxy', layerName, cacheType });
+        return undefined;
       }
       throw err;
     }

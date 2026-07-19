@@ -3,6 +3,7 @@ import { zoomLevelToResolutionDeg } from '@map-colonies/mc-utils';
 import type { ICreateJobBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import type {
+  DeleteLayerJob,
   ExportJob,
   IngestionNewCreateTasksJob,
   IngestionNewFinalizeJob,
@@ -327,6 +328,38 @@ export const ingestionSwapUpdateFinalizeJob: IngestionSwapUpdateFinalizeJob = {
       displayPath: '391cf779-dfe0-42bd-9357-aaede47e4d37',
     },
   },
+};
+
+export const deleteLayerJob: DeleteLayerJob = {
+  id: 'a3e2c1d4-5b6f-4a7e-9c8d-1f2e3a4b5c6d',
+  resourceId: 'some_product',
+  version: '1.0',
+  type: 'Delete_Layer',
+  description: 'delete layer job',
+  parameters: {
+    approver: 'test-approver',
+  },
+  status: OperationStatus.IN_PROGRESS,
+  percentage: 0,
+  reason: '',
+  domain: RASTER_DOMAIN,
+  isCleaned: false,
+  priority: 1000,
+  expirationDate: new Date('2024-07-21T10:59:23.510Z'),
+  internalId: '89bc4f63-8608-40bf-b845-3cbd4c0c4e03',
+  producerName: 'string',
+  productName: 'test',
+  productType: RasterProductTypes.ORTHOPHOTO,
+  additionalIdentifiers: 'some-additional-identifiers',
+  taskCount: 1,
+  completedTasks: 0,
+  failedTasks: 0,
+  expiredTasks: 0,
+  pendingTasks: 0,
+  inProgressTasks: 1,
+  abortedTasks: 0,
+  created: '2024-07-21T10:59:23.510Z',
+  updated: '2024-07-21T10:59:23.510Z',
 };
 
 // Seed Task Options Mock Functions

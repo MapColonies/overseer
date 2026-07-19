@@ -51,6 +51,14 @@ export class UpdateLayerError extends Error {
   }
 }
 
+export class DeleteLayerError extends Error {
+  public constructor(targetClient: string, layerIdentifier: string, err: Error) {
+    super(`Failed to delete layer ${layerIdentifier} from ${targetClient} client: ${err.message}`);
+    this.name = DeleteLayerError.name;
+    this.stack = err.stack;
+  }
+}
+
 export class LayerNotFoundError extends Error {
   public constructor(id: string) {
     super(`Record with id ${id} not found`);

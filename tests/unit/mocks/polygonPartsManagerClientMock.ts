@@ -4,4 +4,5 @@ import type { PolygonPartsMangerClient } from '../../../src/httpClients/polygonP
 export const polygonPartsManagerClientMock = {
   process: vi.fn(),
   getAggregatedLayerMetadata: vi.fn(),
+  deleteEntities: vi.fn(),
 } as unknown as Mocked<PolygonPartsMangerClient>;

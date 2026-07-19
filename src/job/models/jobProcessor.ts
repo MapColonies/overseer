@@ -6,7 +6,7 @@ import { inject, injectable } from 'tsyringe';
 import { SERVICES } from '../../common/constants';
 import type { IConfig, JobAndTaskResponse, PollingConfig, TaskResponse, JobManagementConfig } from '../../common/interfaces';
 import { JobTrackerClient } from '../../httpClients/jobTrackerClient';
-import { getAvailableJobTypes, getPollingJobs } from '../../utils/configUtil';
+import { getAvailableJobTypes, getPollingJobs, getPollingTaskTypes } from '../../utils/configUtil';
 import type { InstanceType } from '../../utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, OperationValidationKey } from '../../utils/zod/schemas/job.schema';
 import { JOB_HANDLER_FACTORY_SYMBOL, type JobHandlerFactory } from './jobHandlerFactory';
@@ -29,11 +29,10 @@ export class JobProcessor {
   ) {
     this.dequeueIntervalMs = this.config.get<number>('jobManagement.config.dequeueIntervalMs');
     this.pollingConfig = this.config.get<PollingConfig>('jobManagement.polling');
-    const { tasks } = this.pollingConfig;
     const jobManagementConfig = this.config.get<JobManagementConfig>('jobManagement');
     const jobs = getPollingJobs(jobManagementConfig, this.instanceType);
     this.pollingJobTypes = getAvailableJobTypes(jobs);
-    this.pollingTaskTypes = [tasks.createTasks, tasks.init, tasks.finalize];
+    this.pollingTaskTypes = getPollingTaskTypes(this.pollingConfig.tasks, this.instanceType);
   }
 
   public async start(): Promise<void> {
@@ -95,10 +94,16 @@ export class JobProcessor {
         switch (task.type) {
           case taskTypes.createTasks:
           case taskTypes.init: // when export domain will have validation we will remove init and move to createTasks
+            this.assertHandlerSupportsTask(jobHandler.handleJobInit, job.type, task.type);
             await jobHandler.handleJobInit(job, task);
             break;
           case taskTypes.finalize:
+            this.assertHandlerSupportsTask(jobHandler.handleJobFinalize, job.type, task.type);
             await jobHandler.handleJobFinalize(job, task);
+            break;
+          case taskTypes.delete:
+            this.assertHandlerSupportsTask(jobHandler.handleJobDelete, job.type, task.type);
+            await jobHandler.handleJobDelete(job, task);
             break;
         }
       } catch (err) {
@@ -146,7 +151,7 @@ export class JobProcessor {
 
     const job = await this.queueClient.jobManagerClient.getJob(jobId);
 
-    if (taskType === this.pollingConfig.tasks.init) {
+    if (taskType === this.pollingConfig.tasks.init || taskType === this.pollingConfig.tasks.delete) {
       // currently only export jobs use the init task to change status to IN_PROGRESS
       await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
     }
@@ -175,6 +180,12 @@ export class JobProcessor {
     }
     logger.info({ msg: `dequeued task ${task.id} successfully` });
     return { task, shouldSkipTask: false };
+  }
+
+  private assertHandlerSupportsTask<F>(handlerMethod: F | undefined, jobType: string, taskType: string): asserts handlerMethod is F {
+    if (handlerMethod === undefined) {
+      throw new Error(`Job handler for job type "${jobType}" does not support task type "${taskType}"`);
+    }
   }
 
   private validateTaskAndJob(jobAndTask: JobAndTaskResponse): void {

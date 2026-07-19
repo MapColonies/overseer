@@ -1,5 +1,6 @@
 import type { IJobResponse, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import {
+  deleteLayerJob,
   exportJob,
   ingestionNewJob,
   ingestionNewJobExtended,
@@ -9,6 +10,7 @@ import {
   ingestionUpdateJob,
 } from '../mocks/jobsMockData';
 import {
+  deleteTaskForDeleteLayer,
   finalizeTaskForExport,
   finalizeTaskForIngestionNew,
   finalizeTaskForIngestionSwapUpdate,
@@ -80,5 +82,15 @@ export const finalizeTestCases: JobProcessingTestCase[] = [
     taskType: finalizeTaskForExport.type,
     task: finalizeTaskForExport,
     instanceType: 'export',
+  },
+];
+
+export const deleteTestCases: JobProcessingTestCase[] = [
+  {
+    jobType: deleteLayerJob.type,
+    taskType: deleteTaskForDeleteLayer.type,
+    job: deleteLayerJob,
+    task: deleteTaskForDeleteLayer,
+    instanceType: 'ingestion',
   },
 ];

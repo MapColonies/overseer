@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 import type {
+  DeleteTaskParams,
   ExportFinalizeTaskParams,
   IngestionNewFinalizeTaskParams,
   IngestionSwapUpdateFinalizeTaskParams,
@@ -10,8 +11,8 @@ import type {
 import { ExportFinalizeType } from '@map-colonies/raster-shared';
 import type { ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import type { ExportFinalizeTask, ExportInitTask } from '../../../src/utils/zod/schemas/job.schema';
-import { exportJob, ingestionNewJob, ingestionSwapUpdateJob, ingestionUpdateJob } from './jobsMockData';
+import type { DeleteTask, ExportFinalizeTask, ExportInitTask } from '../../../src/utils/zod/schemas/job.schema';
+import { deleteLayerJob, exportJob, ingestionNewJob, ingestionSwapUpdateJob, ingestionUpdateJob } from './jobsMockData';
 
 export const createFakeTask = <T>(taskOverride?: Partial<ITaskResponse<T>>, parameters?: T): ITaskResponse<T> => ({
   id: faker.string.uuid(),
@@ -32,6 +33,12 @@ export const createFakeTask = <T>(taskOverride?: Partial<ITaskResponse<T>>, para
 export const createTasksTaskForIngestionNew = createFakeTask<TaskBlockDuplicationParam>(
   { jobId: ingestionNewJob.id, type: 'create-tasks' },
   { blockDuplication: true }
+);
+
+// all metadata-deletion steps pending — the entry state of a fresh delete task
+export const deleteTaskForDeleteLayer: DeleteTask = createFakeTask<DeleteTaskParams>(
+  { jobId: deleteLayerJob.id, type: 'delete', status: OperationStatus.IN_PROGRESS },
+  { deleteFromCatalog: false, deleteFromGeoserver: false, deletePolygonParts: false, deleteFromMapproxy: false }
 );
 
 export const createTasksTaskForIngestionUpdate = createFakeTask<TaskBlockDuplicationParam>(

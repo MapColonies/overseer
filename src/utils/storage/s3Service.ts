@@ -41,12 +41,12 @@ export class S3Service {
   public async uploadFiles(files: UploadFile[]): Promise<string[]> {
     return context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${S3Service.name}.${this.uploadFiles.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
-      const { bucket, endpointUrl } = this.s3Config;
-      const logger = this.logger.child({ bucket, endpointUrl });
+      const { artifactsBucket, endpointUrl } = this.s3Config;
+      const logger = this.logger.child({ bucket: artifactsBucket, endpointUrl });
       try {
         activeSpan?.setAttributes({
           endpointUrl,
-          bucket,
+          bucket: artifactsBucket,
           fileCount: files.length,
         });
 
@@ -68,7 +68,7 @@ export class S3Service {
             client: this.client,
             params: {
               Key: s3Key,
-              Bucket: bucket,
+              Bucket: artifactsBucket,
               ContentType: contentType,
               Body: fs.createReadStream(filePath),
             },

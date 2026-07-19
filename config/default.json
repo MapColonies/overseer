@@ -48,7 +48,8 @@
     "accessKeyId": "minioadmin",
     "secretAccessKey": "minioadmin",
     "endpointUrl": "http://localhost:9000",
-    "bucket": "",
+    "artifactsBucket": "",
+    "tilesBucket": "",
     "sslEnabled": false
   },
   "disableHttpClientLogs": true,
@@ -91,7 +92,8 @@
       "tasks": {
         "createTasks": "create-tasks",
         "init": "init",
-        "finalize": "finalize"
+        "finalize": "finalize",
+        "delete": "delete"
       }
     },
     "ingestion": {
@@ -104,6 +106,9 @@
         },
         "swapUpdate": {
           "type": "Ingestion_Swap_Update"
+        },
+        "deleteLayer": {
+          "type": "Delete_Layer"
         }
       },
       "jobs": {

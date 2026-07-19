@@ -67,7 +67,8 @@
     "accessKeyId": "S3_ACCESS_KEY_ID",
     "secretAccessKey": "S3_SECRET_ACCESS_KEY",
     "endpointUrl": "S3_ENDPOINT_URL",
-    "bucket": "S3_ARTIFACTS_BUCKET",
+    "artifactsBucket": "S3_ARTIFACTS_BUCKET",
+    "tilesBucket": "S3_TILES_BUCKET",
     "sslEnabled": {
       "__name": "S3_SSL_ENABLED",
       "__format": "boolean"
@@ -124,7 +125,8 @@
       "tasks": {
         "createTasks": "POLLING_CREATE_TASKS_TASK",
         "finalize": "POLLING_FINALIZE_TASK",
-        "init": "POLLING_INIT_TASK"
+        "init": "POLLING_INIT_TASK",
+        "delete": "POLLING_DELETE_TASK"
       }
     },
     "ingestion": {
@@ -137,6 +139,9 @@
         },
         "swapUpdate": {
           "type": "INGESTION_SWAP_UPDATE_JOB_TYPE"
+        },
+        "deleteLayer": {
+          "type": "INGESTION_DELETE_LAYER_JOB_TYPE"
         }
       },
       "jobs": {

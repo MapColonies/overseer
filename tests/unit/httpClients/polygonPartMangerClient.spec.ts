@@ -4,7 +4,7 @@ import nock from 'nock';
 import { getTestLogger } from '../../configurations/testLogger';
 import { PolygonPartsMangerClient } from '../../../src/httpClients/polygonPartsMangerClient';
 import { createFakeRoiFeatureCollection } from '../mocks/exportMockData';
-import { LayerMetadataAggregationError, PolygonPartsProcessingError } from '../../../src/common/errors';
+import { DeleteLayerError, LayerMetadataAggregationError, PolygonPartsProcessingError } from '../../../src/common/errors';
 import type { PolygonPartsProcessPayload } from '../../../src/common/interfaces';
 import { configMock, registerDefaultConfig } from '../mocks/configMock';
 import { createFakeAggregatedFeature } from './catalogClientSetup';
@@ -154,6 +154,43 @@ describe('polygonPartsManagerClient', () => {
       const action = polygonPartsManagerClient.getAggregatedLayerMetadata(polygonPartsEntityName, featureCollection);
 
       await expect(action).rejects.toThrow(LayerMetadataAggregationError);
+    });
+  });
+
+  describe('deleteEntities', () => {
+    it('should delete polygon parts entities from polygon parts manager', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const polygonPartsEntityName = 'world_orthophoto';
+
+      nock(baseUrl).delete(`/polygonParts/${polygonPartsEntityName}`).reply(204);
+
+      const action = polygonPartsManagerClient.deleteEntities(polygonPartsEntityName);
+
+      await expect(action).resolves.not.toThrow();
+      // eslint-disable-next-line import-x/no-named-as-default-member
+      expect(nock.isDone()).toBe(true);
+    });
+
+    it('should treat a 404 as success (idempotent re-run)', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const polygonPartsEntityName = 'already_gone_orthophoto';
+
+      nock(baseUrl).delete(`/polygonParts/${polygonPartsEntityName}`).reply(404);
+
+      const action = polygonPartsManagerClient.deleteEntities(polygonPartsEntityName);
+
+      await expect(action).resolves.not.toThrow();
+    });
+
+    it('should throw DeleteLayerError on a server error', async () => {
+      const baseUrl = configMock.get<string>('servicesUrl.polygonPartsManager');
+      const polygonPartsEntityName = 'error_test_orthophoto';
+
+      nock(baseUrl).delete(`/polygonParts/${polygonPartsEntityName}`).reply(500);
+
+      const action = polygonPartsManagerClient.deleteEntities(polygonPartsEntityName);
+
+      await expect(action).rejects.toThrow(DeleteLayerError);
     });
   });
 });

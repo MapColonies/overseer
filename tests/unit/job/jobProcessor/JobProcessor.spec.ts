@@ -1,11 +1,12 @@
 import type { Mocked } from 'vitest';
 import nock, { cleanAll, emitter } from 'nock';
+import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import type { IJobHandler, JobAndTaskResponse, PollingConfig, JobManagementConfig } from '../../../../src/common/interfaces';
 import { getPollingJobs, parseInstanceType } from '../../../../src/utils/configUtil';
 import type { InstanceType } from '../../../../src/utils/zod/schemas/instance.schema';
 import { jobTaskSchemaMap, type OperationValidationKey } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, setValue } from '../../mocks/configMock';
-import { createTasksTestCases, finalizeTestCases } from '../../mocks/testCasesData';
+import { createTasksTestCases, deleteTestCases, finalizeTestCases } from '../../mocks/testCasesData';
 import type { JobProcessorTestContext } from './jobProcessorSetup';
 import { setupJobProcessorTest } from './jobProcessorSetup';
 
@@ -299,6 +300,52 @@ describe('JobProcessor', () => {
 
       await expect(jobProcessor['getJobAndTaskResponse']()).rejects.toThrow('Request failed with status code 500');
       expect(dequeueSpy).toHaveBeenCalledWith(jobType, taskType);
+    });
+  });
+
+  describe('getJob', () => {
+    it('should update job status to IN_PROGRESS when task type is init', async () => {
+      const { jobProcessor, mockGetJob, mockUpdateJob, configMock } = testContext;
+      const { tasks } = configMock.get<PollingConfig>('jobManagement.polling');
+      const job = createTasksTestCases[3]!.job; // export init job
+
+      mockGetJob.mockResolvedValueOnce(job);
+      mockUpdateJob.mockResolvedValueOnce(undefined);
+
+      const result = await jobProcessor['getJob'](job.id, tasks.init);
+
+      expect(mockGetJob).toHaveBeenCalledWith(job.id);
+      expect(mockUpdateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.IN_PROGRESS });
+      expect(result).toEqual(job);
+    });
+
+    it('should update job status to IN_PROGRESS when task type is delete', async () => {
+      const { jobProcessor, mockGetJob, mockUpdateJob, configMock } = testContext;
+      const { tasks } = configMock.get<PollingConfig>('jobManagement.polling');
+      const job = deleteTestCases[0]!.job;
+
+      mockGetJob.mockResolvedValueOnce(job);
+      mockUpdateJob.mockResolvedValueOnce(undefined);
+
+      const result = await jobProcessor['getJob'](job.id, tasks.delete);
+
+      expect(mockGetJob).toHaveBeenCalledWith(job.id);
+      expect(mockUpdateJob).toHaveBeenCalledWith(job.id, { status: OperationStatus.IN_PROGRESS });
+      expect(result).toEqual(job);
+    });
+
+    it('should not update job status when task type is neither init nor delete', async () => {
+      const { jobProcessor, mockGetJob, mockUpdateJob, configMock } = testContext;
+      const { tasks } = configMock.get<PollingConfig>('jobManagement.polling');
+      const job = createTasksTestCases[0]!.job;
+
+      mockGetJob.mockResolvedValueOnce(job);
+
+      const result = await jobProcessor['getJob'](job.id, tasks.finalize);
+
+      expect(mockGetJob).toHaveBeenCalledWith(job.id);
+      expect(mockUpdateJob).not.toHaveBeenCalled();
+      expect(result).toEqual(job);
     });
   });
 

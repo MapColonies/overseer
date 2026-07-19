@@ -33,6 +33,9 @@ data:
   S3_ARTIFACTS_BUCKET: {{ $storage.s3.artifactsBucket | quote }}
   S3_SSL_ENABLED: {{ $storage.s3.sslEnabled | quote }}
   {{- end }}
+  {{- if eq (upper $storage.tilesStorageProvider) "S3" }}
+  S3_TILES_BUCKET: {{ $storage.s3.tilesBucket | quote }}
+  {{- end }}
   npm_config_cache: /tmp/
 
   HTTP_RETRY_ATTEMPTS: {{ .Values.env.httpRetry.attempts | quote }}
@@ -49,9 +52,11 @@ data:
   POLLING_CREATE_TASKS_TASK: {{ $jobDefinitions.tasks.createTasks.type | quote }}
   POLLING_INIT_TASK: {{ $jobDefinitions.tasks.init.type | quote }}
   POLLING_FINALIZE_TASK: {{ $jobDefinitions.tasks.finalize.type | quote }}
+  POLLING_DELETE_TASK: {{ $jobDefinitions.tasks.delete.type | quote }}
   INGESTION_NEW_JOB_TYPE: {{ $jobDefinitions.jobs.new.type | quote }}
   INGESTION_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.update.type | quote }}
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}
+  INGESTION_DELETE_LAYER_JOB_TYPE: {{ $jobDefinitions.jobs.deleteLayer.type | quote }}
   INGESTION_SEED_JOB_TYPE : {{ $jobDefinitions.jobs.seed.type | quote }}
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
   EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}

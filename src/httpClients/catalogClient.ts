@@ -2,6 +2,7 @@ import type { Logger } from '@map-colonies/js-logger';
 import { LayerNameFormats, PolygonPartsEntityName, type LayerName } from '@map-colonies/raster-shared';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { type IRasterCatalogUpsertRequestBody, LayerMetadata, Link, PycswLayerCatalogRecord } from '@map-colonies/mc-model-types';
+import { NotFoundError } from '@map-colonies/error-types';
 import { RecordType } from '@map-colonies/types';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { inject, injectable } from 'tsyringe';
@@ -9,7 +10,7 @@ import type { IConfig, CatalogUpdateRequestBody, FindLayerResponse, FindLayerBod
 import { IngestionNewFinalizeJob, IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../utils/zod/schemas/job.schema';
 import { SERVICES } from '../common/constants';
 import { internalIdSchema } from '../utils/zod/schemas/jobParameters.schema';
-import { LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
+import { DeleteLayerError, LayerNotFoundError, PublishLayerError, UpdateLayerError } from '../common/errors';
 import { LinkBuilder, type ILinkBuilderData } from '../utils/linkBuilder';
 import { PolygonPartsMangerClient } from './polygonPartsMangerClient';
 
@@ -79,6 +80,32 @@ export class CatalogClient extends HttpClient {
           activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
           activeSpan?.recordException(err);
           throw new UpdateLayerError(this.targetService, internalId, err);
+        }
+      } finally {
+        activeSpan?.end();
+      }
+    });
+  }
+
+  public async deleteRecord(catalogId: string): Promise<void> {
+    await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CatalogClient.name}.${this.deleteRecord.name}`)), async () => {
+      const activeSpan = trace.getActiveSpan();
+      activeSpan?.setAttribute('catalogId', catalogId);
+
+      try {
+        const url = `/records/${catalogId}`;
+        await this.delete(url);
+        activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'Catalog record deleted successfully' });
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          this.logger.warn({ msg: 'catalog record not found, skipping', catalogId });
+          activeSpan?.setStatus({ code: SpanStatusCode.OK, message: 'catalog record not found, skipping' });
+          return;
+        }
+        if (err instanceof Error) {
+          activeSpan?.setStatus({ code: SpanStatusCode.ERROR, message: err.message });
+          activeSpan?.recordException(err);
+          throw new DeleteLayerError(this.targetService, catalogId, err);
         }
       } finally {
         activeSpan?.end();

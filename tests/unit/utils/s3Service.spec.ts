@@ -18,7 +18,8 @@ describe('s3Service', () => {
     accessKeyId: 'accessKeyId',
     secretAccessKey: 'secretAccessKey',
     endpointUrl: 'http://localhost:9000',
-    bucket: 'bucket',
+    artifactsBucket: 'artifactsBucket',
+    tilesBucket: 'tilesBucket',
     objectKey: 'objectKey',
     sslEnabled: false,
   };
@@ -41,7 +42,7 @@ describe('s3Service', () => {
     createReadStreamSpy = vi.spyOn(fs, 'createReadStream').mockReturnValue(mockReadStream as unknown as fs.ReadStream);
 
     uploadDoneSpy = vi.fn().mockResolvedValue({
-      Bucket: mockS3Config.bucket,
+      Bucket: mockS3Config.artifactsBucket,
       Key: testS3Key,
     });
 
@@ -59,14 +60,14 @@ describe('s3Service', () => {
       uploadDoneSpy.mockImplementation(() => {
         const index = callCount++;
         return Promise.resolve({
-          Bucket: mockS3Config.bucket,
+          Bucket: mockS3Config.artifactsBucket,
           Key: testFiles[index % testFiles.length]!.s3Key,
         });
       });
     });
 
     it('should upload multiple files to S3', async () => {
-      const expectedUrls = testFiles.map((file) => `${mockS3Config.endpointUrl}/${mockS3Config.bucket}/${file.s3Key}`);
+      const expectedUrls = testFiles.map((file) => `${mockS3Config.endpointUrl}/${mockS3Config.artifactsBucket}/${file.s3Key}`);
 
       const s3ClientCtorArgs = {
         credentials: {
@@ -92,7 +93,7 @@ describe('s3Service', () => {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           client: expect.any(S3Client),
           params: {
-            Bucket: mockS3Config.bucket,
+            Bucket: mockS3Config.artifactsBucket,
             Key: file.s3Key,
             ContentType: file.contentType,
             Body: mockReadStream,
@@ -106,7 +107,7 @@ describe('s3Service', () => {
     });
 
     it('should upload single file to S3', async () => {
-      const expectedUrl = `${mockS3Config.endpointUrl}/${mockS3Config.bucket}/${testFiles[0]!.s3Key}`;
+      const expectedUrl = `${mockS3Config.endpointUrl}/${mockS3Config.artifactsBucket}/${testFiles[0]!.s3Key}`;
       const s3ClientCtorArgs = {
         credentials: {
           accessKeyId: mockS3Config.accessKeyId,
@@ -128,7 +129,7 @@ describe('s3Service', () => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         client: expect.any(S3Client),
         params: {
-          Bucket: mockS3Config.bucket,
+          Bucket: mockS3Config.artifactsBucket,
           Key: testFiles[0]!.s3Key,
           ContentType: testFiles[0]!.contentType,
           Body: mockReadStream,
