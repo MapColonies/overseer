@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.10.0](https://github.com/MapColonies/overseer/compare/v2.9.0...v2.10.0) (2026-07-19)
+
+
+### Features
+
+* full layer deletion flow (MAPCO-7285) ([#107](https://github.com/MapColonies/overseer/issues/107)) ([9cf695b](https://github.com/MapColonies/overseer/commit/9cf695b759b32a987ba5d47ec70a40d054756ea0))
+
 ## [2.9.0](https://github.com/MapColonies/overseer/compare/v2.8.0...v2.9.0) (2026-07-07)
 
 
