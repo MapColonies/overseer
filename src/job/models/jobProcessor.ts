@@ -151,7 +151,7 @@ export class JobProcessor {
 
     const job = await this.queueClient.jobManagerClient.getJob(jobId);
 
-    if (taskType === this.pollingConfig.tasks.init) {
+    if (taskType === this.pollingConfig.tasks.init || taskType === this.pollingConfig.tasks.delete) {
       // currently only export jobs use the init task to change status to IN_PROGRESS
       await this.queueClient.jobManagerClient.updateJob(jobId, { status: OperationStatus.IN_PROGRESS });
     }
