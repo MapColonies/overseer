@@ -12,7 +12,7 @@ describe('DeleteLayerHandler', () => {
   const layerName = `${deleteLayerJob.resourceId}-${deleteLayerJob.productType}`;
   const entityName = getEntityName(deleteLayerJob.resourceId, deleteLayerJob.productType);
   const tilesDeletionType = 'tiles-deletion';
-  const tilesSubPath = 'raster/tiles';
+  const tilesSubPath = 'raster/artifacts/tiles';
 
   const fsCacheResponse: GetMapproxyCacheResponse = {
     cacheName: layerName,
