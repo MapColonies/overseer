@@ -12,6 +12,7 @@ describe('DeleteLayerHandler', () => {
   const layerName = `${deleteLayerJob.resourceId}-${deleteLayerJob.productType}`;
   const entityName = getEntityName(deleteLayerJob.resourceId, deleteLayerJob.productType);
   const tilesDeletionType = 'tiles-deletion';
+  const tilesSubPath = 'raster/artifacts/tiles';
 
   const fsCacheResponse: GetMapproxyCacheResponse = {
     cacheName: layerName,
@@ -159,7 +160,7 @@ describe('DeleteLayerHandler', () => {
       expect(cacheOrder).toBeLessThan(removeOrder);
     });
 
-    it('should pass the FS cache directory relative to the mount path (first folder stripped) without a bucket', async () => {
+    it('should pass the FS cache directory relative to the mount path (first folder stripped) with the configured tiles sub path', async () => {
       setValue('tilesStorageProvider', 'FS');
       const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
       const job = structuredClone(deleteLayerJob);
@@ -173,7 +174,29 @@ describe('DeleteLayerHandler', () => {
 
       expect(jobManagerClientMock.createTaskForJob).toHaveBeenCalledWith(
         job.id,
-        expect.objectContaining({ parameters: { paths: [fsRelativePath], storageProvider: 'FS' } })
+        expect.objectContaining({ parameters: { paths: [fsRelativePath], storageProvider: 'FS', subPath: tilesSubPath } })
+      );
+    });
+
+    it('should not attach a sub path to an S3 tiles deletion task even when one is configured', async () => {
+      setValue('tilesStorageProvider', 'S3');
+      setValue('storage.internalPvc.tilesSubPath', tilesSubPath);
+      const { deleteLayerHandler, jobManagerClientMock, mapproxyClientMock } = await setupDeleteLayerHandlerTest();
+      const job = structuredClone(deleteLayerJob);
+      const task = structuredClone(deleteTaskForDeleteLayer);
+
+      mapproxyClientMock.getLayerCache.mockResolvedValue({
+        ...s3CacheResponse,
+        cache: { ...s3CacheResponse.cache, bucket_name: 'mapproxy-cache-bucket' },
+      });
+      jobManagerClientMock.updateTask.mockResolvedValue(undefined);
+      jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
+
+      await deleteLayerHandler.handleJobDelete(job, task);
+
+      expect(jobManagerClientMock.createTaskForJob).toHaveBeenCalledWith(
+        job.id,
+        expect.objectContaining({ parameters: { paths: [s3KeyPrefix], storageProvider: 'S3', bucket: 'mapproxy-cache-bucket' } })
       );
     });
 
