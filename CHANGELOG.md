@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.11.0](https://github.com/MapColonies/overseer/compare/v2.10.1...v2.11.0) (2026-07-27)
+
+
+### Features
+
+* add tilesSubPath configuration and add it to deleteResources task(MAPCO-11213) ([#113](https://github.com/MapColonies/overseer/issues/113)) ([34350fc](https://github.com/MapColonies/overseer/commit/34350fc82392b09ccc465cd149ddf34262f66eb2))
+
 ## [2.10.1](https://github.com/MapColonies/overseer/compare/v2.10.0...v2.10.1) (2026-07-19)
 
 
