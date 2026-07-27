@@ -65,6 +65,9 @@ data:
   TILES_DELETION_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.tilesDeletion.taskBatchSize | quote }}
   INTERNAL_PVC_MOUNT_PATH: {{ $storage.fs.internalPvc.mountPath | quote }}
   GPKG_SUBPATH: {{ $storage.fs.internalPvc.gpkgSubPath | quote }}
+  {{- if eq (upper $storage.tilesStorageProvider) "FS" }}
+  TILES_SUBPATH: {{ $storage.fs.internalPvc.tilesSubPath | quote }}
+  {{- end }}
   TILES_MERGING_TASK_TYPE: {{ $jobDefinitions.tasks.merge.type | quote }}
   TILES_MERGING_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.tileBatchSize | quote }}
   TILES_MERGING_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.merge.taskBatchSize | quote }}

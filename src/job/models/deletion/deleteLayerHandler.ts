@@ -1,7 +1,7 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { context, trace, type Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient, type ICreateTaskBody } from '@map-colonies/mc-priority-queue';
-import { SourceType, type DeleteTaskParams, type DeleteStoredResourcesParams, type LayerName } from '@map-colonies/raster-shared';
+import { SourceType, type DeleteTaskParams, type DeleteStoredResourcesParams, type LayerName, Storage } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import type { IConfig, IJobHandler, JobAndTaskTelemetry, StepKey } from '../../../common/interfaces';
 import { SERVICES, type StorageProvider } from '../../../common/constants';
@@ -32,6 +32,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
   private readonly tilesDeletionType: string;
   private readonly tilesStorageProvider: StorageProvider;
   private readonly tilesBucketConfig: string;
+  private readonly tilesSubPathConfig: string;
 
   public constructor(
     @inject(SERVICES.LOGGER) logger: Logger,
@@ -50,6 +51,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
     this.tilesDeletionType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
     this.tilesStorageProvider = this.config.get<StorageProvider>('tilesStorageProvider');
     this.tilesBucketConfig = this.config.get<string>('S3.tilesBucket');
+    this.tilesSubPathConfig = this.config.get<string>('storage.internalPvc.tilesSubPath');
   }
 
   public async handleJobDelete(job: DeleteLayerJob, task: DeleteTask): Promise<void> {
@@ -161,10 +163,10 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
     const logger = this.logger.child({ jobId: job.id });
 
     // bucket is always resolved for S3 in resolveTilesLocation; the fallback only satisfies the optional TilesLocation.bucket type
-    const storage =
+    const storage: Storage =
       this.tilesStorageProvider === SourceType.S3
         ? { storageProvider: this.tilesStorageProvider, bucket: tilesLocation.bucket ?? this.tilesBucketConfig }
-        : { storageProvider: this.tilesStorageProvider };
+        : { storageProvider: this.tilesStorageProvider, subPath: this.tilesSubPathConfig };
 
     const tilesDeletionTask: ICreateTaskBody<DeleteStoredResourcesParams> = {
       type: this.tilesDeletionType,

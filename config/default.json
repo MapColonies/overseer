@@ -58,7 +58,8 @@
   "storage": {
     "internalPvc": {
       "mountPath": "",
-      "gpkgSubPath": ""
+      "gpkgSubPath": "",
+      "tilesSubPath": ""
     }
   },
   "ingestionSourcesDirPath": "",

@@ -96,6 +96,7 @@ storage:
       name: ""
       mountPath: ""
       gpkgSubPath: ""
+      tilesSubPath: ""
 
 cloudProvider:
   dockerRegistryUrl: 'my-registry-url.io'

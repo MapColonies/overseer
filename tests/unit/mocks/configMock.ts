@@ -98,6 +98,7 @@ const registerDefaultConfig = (): void => {
       internalPvc: {
         mountPath: '/outputs',
         gpkgSubPath: 'raster/artifacts/gpkgs',
+        tilesSubPath: 'raster/artifacts/tiles',
       },
     },
     disableHttpClientLogs: true,
