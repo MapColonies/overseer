@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.11.1](https://github.com/MapColonies/overseer/compare/v2.11.0...v2.11.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **deps:** upgrade @map-colonies/raster-shared to ^8.3.0 (MAPCO-11282) ([#115](https://github.com/MapColonies/overseer/issues/115)) ([fd29389](https://github.com/MapColonies/overseer/commit/fd293897199b41140e0bc09868281c2e57d50175))
+
 ## [2.11.0](https://github.com/MapColonies/overseer/compare/v2.10.1...v2.11.0) (2026-07-27)
 
 
