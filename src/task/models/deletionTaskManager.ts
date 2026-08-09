@@ -12,13 +12,13 @@ import type {
   FsStorage,
   S3Storage,
 } from '@map-colonies/raster-shared';
-import { SourceType } from '@map-colonies/raster-shared';
+import { StorageProvider } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { NotFoundError, UnprocessableEntityError } from '@map-colonies/error-types';
 import type { IConfig, BuildDeletionTaskParams } from '../../common/interfaces';
-import { SERVICES, StorageProvider } from '../../common/constants';
+import { SERVICES } from '../../common/constants';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
@@ -253,7 +253,11 @@ export class TileDeletionTaskManager {
   private resolveTilesStorage(): S3Storage | FsStorage {
     const provider = this.config.get<StorageProvider>('tilesStorageProvider');
 
-    return provider === SourceType.S3
+    if (provider === StorageProvider.REDIS) {
+      throw new Error('Redis storage provider is not supported for tile deletion tasks');
+    }
+
+    return provider === StorageProvider.S3
       ? { storageProvider: provider, bucket: this.config.get<string>('S3.tilesBucket') }
       : { storageProvider: provider, subPath: this.config.get<string>('storage.internalPvc.tilesSubPath') };
   }
