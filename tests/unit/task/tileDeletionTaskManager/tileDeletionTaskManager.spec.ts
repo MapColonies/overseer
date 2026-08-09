@@ -198,83 +198,83 @@ describe('TileDeletionTaskManager', () => {
         tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath)
       ).resolves.not.toThrow();
     });
-  });
 
-  describe('tiles storage on the built task parameters', () => {
-    // a single conflict feature that yields at least one tile batch
-    const conflictGeometry: Polygon = {
-      type: 'Polygon',
-      coordinates: [
-        [
-          [0, 0],
-          [1, 0],
-          [1, 1],
-          [0, 1],
-          [0, 0],
+    describe('tiles storage on the built task parameters', () => {
+      // a single conflict feature that yields at least one tile batch
+      const conflictGeometry: Polygon = {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [0, 0],
+            [1, 0],
+            [1, 1],
+            [0, 1],
+            [0, 0],
+          ],
         ],
-      ],
-    };
+      };
 
-    const arrangeSingleIntersection = (): void => {
-      jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
-      vi.spyOn(reportUtils, 'readConflictFeatures').mockResolvedValue([
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        { type: 'Feature', geometry: conflictGeometry, properties: { e_res: 'Resolution Conflict' } },
-      ]);
-      // one zoom level with an intersection, then empty so the upward iteration stops
-      polygonPartsMangerClientMock.getIntersection
-        .mockResolvedValueOnce({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: conflictGeometry, properties: {} }] })
-        .mockResolvedValue({ type: 'FeatureCollection', features: [] });
-    };
+      const arrangeSingleIntersection = (): void => {
+        jobManagerClientMock.findTasks.mockResolvedValue([validationTaskWithResolutionErrors]);
+        vi.spyOn(reportUtils, 'readConflictFeatures').mockResolvedValue([
+          // eslint-disable-next-line @typescript-eslint/naming-convention
+          { type: 'Feature', geometry: conflictGeometry, properties: { e_res: 'Resolution Conflict' } },
+        ]);
+        // one zoom level with an intersection, then empty so the upward iteration stops
+        polygonPartsMangerClientMock.getIntersection
+          .mockResolvedValueOnce({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: conflictGeometry, properties: {} }] })
+          .mockResolvedValue({ type: 'FeatureCollection', features: [] });
+      };
 
-    const getTasksParametersParams = (): TilesDeletionParams[] => {
-      const batches = jobManagerClientMock.createTaskForJob.mock.calls.map(([, batch]) => batch) as ICreateTaskBody<TilesDeletionParams>[][];
-      return batches.flat().map((task) => task.parameters);
-    };
+      const getTasksParametersParams = (): TilesDeletionParams[] => {
+        const batches = jobManagerClientMock.createTaskForJob.mock.calls.map(([, batch]) => batch) as ICreateTaskBody<TilesDeletionParams>[][];
+        return batches.flat().map((task) => task.parameters);
+      };
 
-    it('should carry the configured subPath on every task when tiles are stored on FS', async () => {
-      setValue('tilesStorageProvider', 'FS');
-      setValue('storage.internalPvc.tilesSubPath', 'raster/artifacts/tiles');
-      const { tileDeletionTaskManager } = await setupTileDeletionTaskManagerTest();
-      arrangeSingleIntersection();
+      it('should carry the configured subPath on every task when tiles are stored on FS', async () => {
+        setValue('tilesStorageProvider', 'FS');
+        setValue('storage.internalPvc.tilesSubPath', 'raster/artifacts/tiles');
+        const { tileDeletionTaskManager } = await setupTileDeletionTaskManagerTest();
+        arrangeSingleIntersection();
 
-      await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
+        await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-      const tasksParameters = getTasksParametersParams();
+        const tasksParameters = getTasksParametersParams();
 
-      expect(tasksParameters.length).toBeGreaterThan(0);
+        expect(tasksParameters.length).toBeGreaterThan(0);
 
-      tasksParameters.forEach((parameters) => {
-        expect(parameters).toStrictEqual({
-          storageProvider: 'FS',
-          subPath: 'raster/artifacts/tiles',
-          tilesRelativePath: layerRelativePath,
-          fileExtension: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat.toLowerCase(),
-          ranges: expect.any(Array) as TileRange[],
-        } satisfies FsTilesDeletionParams);
+        tasksParameters.forEach((parameters) => {
+          expect(parameters).toStrictEqual({
+            storageProvider: 'FS',
+            subPath: 'raster/artifacts/tiles',
+            tilesRelativePath: layerRelativePath,
+            fileExtension: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat.toLowerCase(),
+            ranges: expect.any(Array) as TileRange[],
+          } satisfies FsTilesDeletionParams);
+        });
       });
-    });
 
-    it('should carry the configured bucket on every task when tiles are stored on S3', async () => {
-      setValue('tilesStorageProvider', 'S3');
-      setValue('S3.tilesBucket', 'tiles-bucket');
-      const { tileDeletionTaskManager } = await setupTileDeletionTaskManagerTest();
-      arrangeSingleIntersection();
+      it('should carry the configured bucket on every task when tiles are stored on S3', async () => {
+        setValue('tilesStorageProvider', 'S3');
+        setValue('S3.tilesBucket', 'tiles-bucket');
+        const { tileDeletionTaskManager } = await setupTileDeletionTaskManagerTest();
+        arrangeSingleIntersection();
 
-      await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
+        await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-      const tasksParameters = getTasksParametersParams();
+        const tasksParameters = getTasksParametersParams();
 
-      expect(tasksParameters.length).toBeGreaterThan(0);
+        expect(tasksParameters.length).toBeGreaterThan(0);
 
-      tasksParameters.forEach((parameters) => {
-        expect(parameters).toStrictEqual({
-          storageProvider: 'S3',
-          bucket: 'tiles-bucket',
-          tilesRelativePath: layerRelativePath,
-          fileExtension: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat.toLowerCase(),
-          ranges: expect.any(Array) as TileRange[],
-        } satisfies S3TilesDeletionParams);
+        tasksParameters.forEach((parameters) => {
+          expect(parameters).toStrictEqual({
+            storageProvider: 'S3',
+            bucket: 'tiles-bucket',
+            tilesRelativePath: layerRelativePath,
+            fileExtension: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat.toLowerCase(),
+            ranges: expect.any(Array) as TileRange[],
+          } satisfies S3TilesDeletionParams);
+        });
       });
     });
   });
