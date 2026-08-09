@@ -11,12 +11,13 @@ import {
   polygonSchema,
   RasterLayerMetadata,
   SourceType,
+  StorageProvider,
   type RoiFeature,
   type RoiFeatureCollection,
 } from '@map-colonies/raster-shared';
 import { BBox2d, bboxToTileRange, degreesPerPixelToZoomLevel, type ITileRange } from '@map-colonies/mc-utils';
 import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
-import { SERVICES, StorageProvider } from '../../common/constants';
+import { SERVICES } from '../../common/constants';
 import type { IConfig, TaskSources, ZoomBoundsParameters } from '../../common/interfaces';
 import type { ExportJob } from '../../utils/zod/schemas/job.schema';
 import { createChildSpan } from '../../common/tracing';
@@ -24,7 +25,7 @@ import { createChildSpan } from '../../common/tracing';
 @injectable()
 export class ExportTaskManager {
   private readonly allWorldBounds: BBox;
-  private readonly tilesProvider: SourceType;
+  private readonly tilesProvider: StorageProvider;
   public constructor(
     @inject(SERVICES.LOGGER) private readonly logger: Logger,
     @inject(SERVICES.CONFIG) private readonly config: IConfig,

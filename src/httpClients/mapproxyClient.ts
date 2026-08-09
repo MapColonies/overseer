@@ -1,11 +1,11 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { LayerName, TileOutputFormat } from '@map-colonies/raster-shared';
+import type { LayerName, StorageProvider, TileOutputFormat } from '@map-colonies/raster-shared';
 import { context, SpanStatusCode, trace, type Tracer } from '@opentelemetry/api';
 import { HttpClient, type IHttpRetryConfig } from '@map-colonies/mc-utils';
 import { inject, injectable } from 'tsyringe';
 import { NotFoundError } from '@map-colonies/error-types';
 import type { IConfig, GetMapproxyCacheRequest, GetMapproxyCacheResponse, PublishMapLayerRequest } from '../common/interfaces';
-import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap, StorageProvider } from '../common/constants';
+import { LayerCacheType, SERVICES, storageProviderToCacheTypeMap } from '../common/constants';
 import {
   DeleteLayerError,
   LayerCacheNotFoundError,

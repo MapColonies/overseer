@@ -5,7 +5,7 @@ import { degreesPerPixelToZoomLevel, tileBatchGenerator, TileRanger } from '@map
 import { bbox, feature } from '@turf/turf';
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
-import { type InputFiles } from '@map-colonies/raster-shared';
+import { StorageProvider, type InputFiles } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type {
@@ -20,7 +20,7 @@ import type {
   ZoomDefinitions,
   FeatureTask,
 } from '../../common/interfaces';
-import { SERVICES, type StorageProvider } from '../../common/constants';
+import { SERVICES } from '../../common/constants';
 import { fileExtensionExtractor } from '../../utils/fileUtil';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
@@ -29,7 +29,7 @@ import { Grid } from '../../common/interfaces';
 
 @injectable()
 export class TileMergeTaskManager {
-  private readonly tilesStorageProvider: string;
+  private readonly tilesStorageProvider: StorageProvider;
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
