@@ -222,7 +222,7 @@ describe('TileDeletionTaskManager', () => {
         .mockResolvedValue({ type: 'FeatureCollection', features: [] });
     };
 
-    const getCreatedTasks = (): TilesDeletionParams[] => {
+    const getTasksParametersParams = (): TilesDeletionParams[] => {
       const batches = jobManagerClientMock.createTaskForJob.mock.calls.map(([, batch]) => batch) as ICreateTaskBody<TilesDeletionParams>[][];
       return batches.flat().map((task) => task.parameters);
     };
@@ -235,11 +235,11 @@ describe('TileDeletionTaskManager', () => {
 
       await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-      const createdTasks = getCreatedTasks();
+      const tasksParameters = getTasksParametersParams();
 
-      expect(createdTasks.length).toBeGreaterThan(0);
+      expect(tasksParameters.length).toBeGreaterThan(0);
 
-      createdTasks.forEach((parameters) => {
+      tasksParameters.forEach((parameters) => {
         expect(parameters).toStrictEqual({
           storageProvider: 'FS',
           subPath: 'raster/artifacts/tiles',
@@ -258,11 +258,11 @@ describe('TileDeletionTaskManager', () => {
 
       await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-      const createdTasks = getCreatedTasks();
+      const tasksParameters = getTasksParametersParams();
 
-      expect(createdTasks.length).toBeGreaterThan(0);
+      expect(tasksParameters.length).toBeGreaterThan(0);
 
-      createdTasks.forEach((parameters) => {
+      tasksParameters.forEach((parameters) => {
         expect(parameters).toStrictEqual({
           storageProvider: 'S3',
           bucket: 'tiles-bucket',
@@ -280,11 +280,11 @@ describe('TileDeletionTaskManager', () => {
 
       await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-      const createdTasks = getCreatedTasks();
+      const tasksParameters = getTasksParametersParams();
 
-      expect(createdTasks.length).toBeGreaterThan(0);
+      expect(tasksParameters.length).toBeGreaterThan(0);
 
-      createdTasks.forEach((parameters) => {
+      tasksParameters.forEach((parameters) => {
         expect(() => tilesDeletionParamsSchema.parse(parameters)).not.toThrow();
       });
     });
