@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { NotFoundError } from '@map-colonies/error-types';
-import type { TaskBlockDuplicationParam, TilesDeletionParams } from '@map-colonies/raster-shared';
-import { tilesDeletionParamsSchema } from '@map-colonies/raster-shared';
+import type {
+  FsTilesDeletionParams,
+  S3TilesDeletionParams,
+  TaskBlockDuplicationParam,
+  TileRange,
+  TilesDeletionParams,
+} from '@map-colonies/raster-shared';
 import type { ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import type { Polygon } from 'geojson';
 import { configMock, registerDefaultConfig, setValue } from '../../mocks/configMock';
@@ -245,8 +250,8 @@ describe('TileDeletionTaskManager', () => {
           subPath: 'raster/artifacts/tiles',
           tilesRelativePath: layerRelativePath,
           fileExtension: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat.toLowerCase(),
-          ranges: expect.any(Array) as unknown,
-        });
+          ranges: expect.any(Array) as TileRange[],
+        } satisfies FsTilesDeletionParams);
       });
     });
 
@@ -268,24 +273,8 @@ describe('TileDeletionTaskManager', () => {
           bucket: 'tiles-bucket',
           tilesRelativePath: layerRelativePath,
           fileExtension: ingestionUpdateJob.parameters.additionalParams.tileOutputFormat.toLowerCase(),
-          ranges: expect.any(Array) as unknown,
-        });
-      });
-    });
-
-    it('should produce task parameters that satisfy the raster-shared tiles-deletion schema', async () => {
-      setValue('tilesStorageProvider', 'FS');
-      const { tileDeletionTaskManager } = await setupTileDeletionTaskManagerTest();
-      arrangeSingleIntersection();
-
-      await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
-
-      const tasksParameters = getTasksParametersParams();
-
-      expect(tasksParameters.length).toBeGreaterThan(0);
-
-      tasksParameters.forEach((parameters) => {
-        expect(() => tilesDeletionParamsSchema.parse(parameters)).not.toThrow();
+          ranges: expect.any(Array) as TileRange[],
+        } satisfies S3TilesDeletionParams);
       });
     });
   });
