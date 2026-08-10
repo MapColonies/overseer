@@ -5,13 +5,20 @@ import { feature as turfFeature, featureCollection as turfFeatureCollection, uni
 import { inject, injectable } from 'tsyringe';
 import type { Logger } from '@map-colonies/js-logger';
 import { ShapefileChunkReader } from '@map-colonies/shapefile-reader';
-import type { IntersectionFeatureCollection, IngestionValidationTaskParams, TilesDeletionParams } from '@map-colonies/raster-shared';
+import type {
+  IntersectionFeatureCollection,
+  IngestionValidationTaskParams,
+  TilesDeletionParams,
+  FsStorage,
+  S3Storage,
+} from '@map-colonies/raster-shared';
+import { StorageProvider } from '@map-colonies/raster-shared';
 import type { ICreateTaskBody, ITaskResponse } from '@map-colonies/mc-priority-queue';
 import { TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { NotFoundError, UnprocessableEntityError } from '@map-colonies/error-types';
 import type { IConfig, BuildDeletionTaskParams } from '../../common/interfaces';
-import { SERVICES, StorageProvider } from '../../common/constants';
+import { SERVICES } from '../../common/constants';
 import { TaskMetrics } from '../../utils/metrics/taskMetrics';
 import { createChildSpan } from '../../common/tracing';
 import { IngestionCreateTasksTask, IngestionUpdateCreateTasksJob } from '../../utils/zod/schemas/job.schema';
@@ -23,7 +30,7 @@ export class TileDeletionTaskManager {
   private readonly tileBatchSize: number;
   private readonly taskBatchSize: number;
   private readonly taskType: string;
-  private readonly sourceProvider: StorageProvider;
+  private readonly tilesStorage: S3Storage | FsStorage;
   private readonly shapefileReader: ShapefileChunkReader;
 
   public constructor(
@@ -38,7 +45,7 @@ export class TileDeletionTaskManager {
     this.tileBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.tileBatchSize');
     this.taskBatchSize = this.config.get<number>('jobManagement.ingestion.tasks.tilesDeletion.taskBatchSize');
     this.taskType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
-    this.sourceProvider = this.config.get<StorageProvider>('tilesStorageProvider');
+    this.tilesStorage = this.resolveTilesStorage();
     this.shapefileReader = new ShapefileChunkReader({
       maxVerticesPerChunk: this.config.get<number>('shapefileReader.maxVerticesPerChunk'),
     });
@@ -226,10 +233,10 @@ export class TileDeletionTaskManager {
 
       for await (const batch of batches) {
         const taskParameters: TilesDeletionParams = {
-          tilesPath: layerRelativePath,
+          ...this.tilesStorage,
+          tilesRelativePath: layerRelativePath,
           ranges: batch,
           fileExtension: tileOutputFormat.toLowerCase(),
-          sourceProvider: this.sourceProvider,
         };
 
         yield {
@@ -241,6 +248,18 @@ export class TileDeletionTaskManager {
     } finally {
       span.end();
     }
+  }
+
+  private resolveTilesStorage(): S3Storage | FsStorage {
+    const provider = this.config.get<StorageProvider>('tilesStorageProvider');
+
+    if (provider === StorageProvider.REDIS) {
+      throw new Error('Redis storage provider is not supported for tile deletion tasks');
+    }
+
+    return provider === StorageProvider.S3
+      ? { storageProvider: provider, bucket: this.config.get<string>('S3.tilesBucket') }
+      : { storageProvider: provider, subPath: this.config.get<string>('storage.internalPvc.tilesSubPath') };
   }
 
   private async fetchValidationTask(jobId: string): Promise<ITaskResponse<IngestionValidationTaskParams>> {

@@ -92,6 +92,10 @@ const registerDefaultConfig = (): void => {
       maxVerticesPerChunk: 2500,
     },
     ingestionSourcesDirPath: '/layerSources',
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    S3: {
+      tilesBucket: 'tiles-bucket',
+    },
     tilesStorageProvider: 'FS',
     gpkgStorageProvider: 'FS',
     storage: {

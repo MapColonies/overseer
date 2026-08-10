@@ -1,7 +1,5 @@
-import { SourceType } from '@map-colonies/raster-shared';
+import { StorageProvider } from '@map-colonies/raster-shared';
 import { readPackageJsonSync } from '@map-colonies/read-pkg';
-
-export type StorageProvider = Exclude<SourceType, 'GPKG'>;
 
 export const SERVICE_NAME = readPackageJsonSync().name ?? 'unknown_service';
 export const SERVICE_VERSION = readPackageJsonSync().version ?? 'unknown_version';
@@ -42,8 +40,9 @@ export const LayerCacheType = {
 export type LayerCacheType = (typeof LayerCacheType)[keyof typeof LayerCacheType];
 
 export const storageProviderToCacheTypeMap = new Map([
-  [SourceType.FS, LayerCacheType.FS],
-  [SourceType.S3, LayerCacheType.S3],
+  [StorageProvider.FS, LayerCacheType.FS],
+  [StorageProvider.S3, LayerCacheType.S3],
+  [StorageProvider.REDIS, LayerCacheType.REDIS],
 ]);
 
 export const SeedMode = {

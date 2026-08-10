@@ -1,10 +1,10 @@
 import type { Logger } from '@map-colonies/js-logger';
 import { context, trace, type Tracer } from '@opentelemetry/api';
 import { TaskHandler as QueueClient, type ICreateTaskBody } from '@map-colonies/mc-priority-queue';
-import { SourceType, type DeleteTaskParams, type DeleteStoredResourcesParams, type LayerName, Storage } from '@map-colonies/raster-shared';
+import { type DeleteTaskParams, type DeleteStoredResourcesParams, type LayerName, StorageProvider, Storage } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import type { IConfig, IJobHandler, JobAndTaskTelemetry, StepKey } from '../../../common/interfaces';
-import { SERVICES, type StorageProvider } from '../../../common/constants';
+import { SERVICES } from '../../../common/constants';
 import { LayerCacheNotFoundError } from '../../../common/errors';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import { GeoserverClient } from '../../../httpClients/geoserverClient';
@@ -30,7 +30,8 @@ interface DeletionStep {
 @injectable()
 export class DeleteLayerHandler extends JobHandler implements IJobHandler<never, never, never, never, DeleteLayerJob, DeleteTask> {
   private readonly tilesDeletionType: string;
-  private readonly tilesStorageProvider: StorageProvider;
+  //TODO: when we support redis tiles deletion, change the type to StorageProvider and remove the Exclude<> wrapper
+  private readonly tilesStorageProvider: Exclude<StorageProvider, 'REDIS'>;
   private readonly tilesBucketConfig: string;
   private readonly tilesSubPathConfig: string;
 
@@ -49,7 +50,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
     super(logger, config, queueClient, jobTrackerClient);
     // whole-layer tiles deletion shares the 'tiles-deletion' task type with the range-based ingestion flow (raster-shared DeletionTaskTypes.LayerTilesDeletion); the Cleaner distinguishes them by params shape
     this.tilesDeletionType = this.config.get<string>('jobManagement.ingestion.tasks.tilesDeletion.type');
-    this.tilesStorageProvider = this.config.get<StorageProvider>('tilesStorageProvider');
+    this.tilesStorageProvider = this.config.get<Exclude<StorageProvider, 'REDIS'>>('tilesStorageProvider');
     this.tilesBucketConfig = this.config.get<string>('S3.tilesBucket');
     this.tilesSubPathConfig = this.config.get<string>('storage.internalPvc.tilesSubPath');
   }
@@ -136,7 +137,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
       throw new LayerCacheNotFoundError(layerName, this.tilesStorageProvider);
     }
 
-    if (this.tilesStorageProvider !== SourceType.S3) {
+    if (this.tilesStorageProvider !== StorageProvider.S3) {
       return { path };
     }
     return { path, bucket: this.resolveTilesBucket(cache?.cache.bucket_name, layerName) };
@@ -148,7 +149,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
    * - FS: the first segment is mapproxy's tiles-PVC mount path; the Cleaner remounts the same PVC at its own base, so it is dropped.
    */
   private toRelativeTilesPath(directory: string): string {
-    return this.tilesStorageProvider === SourceType.S3 ? directory.replace(/^\/+/, '') : directory.replace(/^\/?[^/]+\//, '');
+    return this.tilesStorageProvider === StorageProvider.S3 ? directory.replace(/^\/+/, '') : directory.replace(/^\/?[^/]+\//, '');
   }
 
   private resolveTilesBucket(cacheBucket: string | undefined, layerName: LayerName): string {
@@ -164,7 +165,7 @@ export class DeleteLayerHandler extends JobHandler implements IJobHandler<never,
 
     // bucket is always resolved for S3 in resolveTilesLocation; the fallback only satisfies the optional TilesLocation.bucket type
     const storage: Storage =
-      this.tilesStorageProvider === SourceType.S3
+      this.tilesStorageProvider === StorageProvider.S3
         ? { storageProvider: this.tilesStorageProvider, bucket: tilesLocation.bucket ?? this.tilesBucketConfig }
         : { storageProvider: this.tilesStorageProvider, subPath: this.tilesSubPathConfig };
 
