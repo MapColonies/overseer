@@ -226,7 +226,7 @@ describe('TileDeletionTaskManager', () => {
           .mockResolvedValue({ type: 'FeatureCollection', features: [] });
       };
 
-      const getTasksParametersParams = (): TilesDeletionParams[] => {
+      const getTasksParameters = (): TilesDeletionParams[] => {
         const batches = jobManagerClientMock.createTaskForJob.mock.calls.map(([, batch]) => batch) as ICreateTaskBody<TilesDeletionParams>[][];
         return batches.flat().map((task) => task.parameters);
       };
@@ -239,7 +239,7 @@ describe('TileDeletionTaskManager', () => {
 
         await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-        const tasksParameters = getTasksParametersParams();
+        const tasksParameters = getTasksParameters();
 
         expect(tasksParameters.length).toBeGreaterThan(0);
 
@@ -262,7 +262,7 @@ describe('TileDeletionTaskManager', () => {
 
         await tileDeletionTaskManager.buildAndPushTasks(ingestionUpdateJob, task, polygonPartsEntityName, layerRelativePath);
 
-        const tasksParameters = getTasksParametersParams();
+        const tasksParameters = getTasksParameters();
 
         expect(tasksParameters.length).toBeGreaterThan(0);
 
