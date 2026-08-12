@@ -80,6 +80,13 @@ export class LayerCacheNotFoundError extends Error {
   }
 }
 
+export class UnsupportedGridError extends Error {
+  public constructor(grid: string, supported: readonly string[]) {
+    super(`Unsupported grid (${grid}) for cache deletion, supported grids: ${supported.join(', ')}`);
+    this.name = UnsupportedGridError.name;
+  }
+}
+
 export class SeedJobCreationError extends Error {
   public constructor(msg: string, err: Error) {
     super(msg);

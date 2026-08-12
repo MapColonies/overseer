@@ -10,6 +10,8 @@ import type {
   InputFiles,
   LayerName,
   RasterLayerMetadata,
+  RedisDeleteStoredResourcesParams,
+  RedisTilesDeletionParams,
   TileFormatStrategy,
   TileOutputFormat,
 } from '@map-colonies/raster-shared';
@@ -60,6 +62,10 @@ export interface JobConfig {
 
 export interface IngestionJobsConfig {
   seed: JobConfig | undefined;
+  /** job type for the update flow's cache deletion; selects cleaner's range-deletion strategy */
+  updateCacheDeletion: JobConfig | undefined;
+  /** job type for the swap flow's cache deletion; selects cleaner's prefix-wipe strategy */
+  swapCacheDeletion: JobConfig | undefined;
 }
 
 export interface IngestionPollingJobsConfig {
@@ -79,6 +85,7 @@ export interface IngestionTasksConfig {
   tilesMerging: TilesMergingTaskConfig;
   tilesSeeding: TilesSeedingTaskConfig;
   tilesDeletion: TilesDeletionTaskConfig;
+  cacheDeletion: CacheDeletionTaskConfig;
 }
 
 export interface ExportTasksConfig {
@@ -120,6 +127,24 @@ export interface TilesSeedingTaskConfig {
   grid: string;
   maxZoom: number;
   skipUncached: boolean;
+}
+
+export interface CacheDeletionTaskConfig {
+  /** `tiles-deletion` - shared with the S3/FS path, told apart by job type */
+  type: string;
+  /** must be a member of GEODETIC_GRIDS; the sole input to the composed `${cacheName}_${grid}` key prefix */
+  grid: string;
+  maxZoom: number;
+  /** max tiles a single range-deletion task covers */
+  tileBatchSize: number;
+  /** max ITileRange objects a single task carries, bounding the serialized params size */
+  maxRangesPerTask: number;
+  /** tasks pushed per createTaskForJob call */
+  taskBatchSize: number;
+  /** mirrors helm's global.gracefulReloadMaxSeconds */
+  gracefulReloadMaxSeconds: number;
+  /** added on top, covering mapproxinator's <=5s poll plus pod drain */
+  reloadWindowMarginSeconds: number;
 }
 
 export interface TilesExportingTaskConfig {
@@ -398,6 +423,22 @@ export interface SeedTaskParams {
 }
 
 //#endregion seedingJobCreator
+
+//#region cacheDeletionJobCreator
+
+export interface CacheDeletionJobParams {
+  layerName: LayerName;
+  ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
+}
+
+/**
+ * Params of a `tiles-deletion` cache-deletion task. Both shapes share that task type; which one a
+ * task carries follows from the job type - Update_Delete_Cache means `ranges`, Swap_Delete_Cache
+ * means prefix-only - and that is also how cleaner picks the strategy to run.
+ */
+export type CacheDeletionTaskParams = RedisTilesDeletionParams | RedisDeleteStoredResourcesParams;
+
+//#endregion cacheDeletionJobCreator
 
 //#region telemetry
 export interface TraceParentContext {

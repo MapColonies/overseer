@@ -159,6 +159,12 @@ const registerDefaultConfig = (): void => {
           seed: {
             type: 'Ingestion_Seed',
           },
+          updateCacheDeletion: {
+            type: 'Update_Delete_Cache',
+          },
+          swapCacheDeletion: {
+            type: 'Swap_Delete_Cache',
+          },
         },
         tasks: {
           tilesMerging: {
@@ -178,6 +184,16 @@ const registerDefaultConfig = (): void => {
             type: 'tiles-deletion',
             tileBatchSize: 10000,
             taskBatchSize: 5,
+          },
+          cacheDeletion: {
+            type: 'tiles-deletion',
+            grid: 'WorldCRS84',
+            maxZoom: 21,
+            tileBatchSize: 100000,
+            maxRangesPerTask: 5000,
+            taskBatchSize: 5,
+            gracefulReloadMaxSeconds: 300,
+            reloadWindowMarginSeconds: 8,
           },
         },
       },

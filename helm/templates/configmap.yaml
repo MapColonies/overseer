@@ -58,6 +58,8 @@ data:
   INGESTION_SWAP_UPDATE_JOB_TYPE: {{ $jobDefinitions.jobs.swapUpdate.type | quote }}
   INGESTION_DELETE_LAYER_JOB_TYPE: {{ $jobDefinitions.jobs.deleteLayer.type | quote }}
   INGESTION_SEED_JOB_TYPE : {{ $jobDefinitions.jobs.seed.type | quote }}
+  UPDATE_CACHE_DELETION_JOB_TYPE: {{ $jobDefinitions.jobs.updateCacheDeletion.type | quote }}
+  SWAP_CACHE_DELETION_JOB_TYPE: {{ $jobDefinitions.jobs.swapCacheDeletion.type | quote }}
   EXPORT_JOB_TYPE: {{ $jobDefinitions.jobs.export.type | quote }}
   EXPORT_CLEANUP_EXPIRATION_DAYS: {{ $jobDefinitions.jobs.export.cleanupExpirationDays | quote }}
   TILES_DELETION_TASK_TYPE: {{ $jobDefinitions.tasks.tilesDeletion.type | quote }}
@@ -82,6 +84,14 @@ data:
   TILES_SEEDING_ZOOM_THRESHOLD: {{ $jobDefinitions.tasks.seed.zoomThreshold | quote }}
   TILES_SEEDING_MAX_TILES_PER_SEED_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerSeedTask | quote }}
   TILES_SEEDING_MAX_TILES_PER_CLEAN_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerCleanTask | quote }}
+  CACHE_DELETION_TASK_TYPE: {{ $jobDefinitions.tasks.cacheDeletion.type | quote }}
+  CACHE_DELETION_GRID: {{ $jobDefinitions.tasks.cacheDeletion.grid | quote }}
+  CACHE_DELETION_MAX_ZOOM: {{ $jobDefinitions.tasks.cacheDeletion.maxZoom | quote }}
+  CACHE_DELETION_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.cacheDeletion.tileBatchSize | quote }}
+  CACHE_DELETION_MAX_RANGES_PER_TASK: {{ $jobDefinitions.tasks.cacheDeletion.maxRangesPerTask | quote }}
+  CACHE_DELETION_TASK_BATCH_SIZE: {{ $jobDefinitions.tasks.cacheDeletion.taskBatchSize | quote }}
+  CACHE_DELETION_GRACEFUL_RELOAD_MAX_SECONDS: {{ .Values.global.gracefulReloadMaxSeconds | quote }}
+  CACHE_DELETION_RELOAD_WINDOW_MARGIN_SECONDS: {{ $jobDefinitions.tasks.cacheDeletion.reloadWindowMarginSeconds | quote }}
   TILES_EXPORTING_TASK_TYPE: {{ $jobDefinitions.tasks.export.type | quote }}
   MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
   GEOSERVER_API_URL: {{ $serviceUrls.geoserverApiUrl | quote }}

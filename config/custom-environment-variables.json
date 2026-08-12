@@ -148,6 +148,12 @@
       "jobs": {
         "seed": {
           "type": "INGESTION_SEED_JOB_TYPE"
+        },
+        "updateCacheDeletion": {
+          "type": "UPDATE_CACHE_DELETION_JOB_TYPE"
+        },
+        "swapCacheDeletion": {
+          "type": "SWAP_CACHE_DELETION_JOB_TYPE"
         }
       },
       "tasks": {
@@ -161,6 +167,16 @@
             "__name": "TILES_DELETION_TASK_BATCH_SIZE",
             "__format": "number"
           }
+        },
+        "cacheDeletion": {
+          "type": "CACHE_DELETION_TASK_TYPE",
+          "grid": "CACHE_DELETION_GRID",
+          "maxZoom": { "__name": "CACHE_DELETION_MAX_ZOOM", "__format": "number" },
+          "tileBatchSize": { "__name": "CACHE_DELETION_TILE_BATCH_SIZE", "__format": "number" },
+          "maxRangesPerTask": { "__name": "CACHE_DELETION_MAX_RANGES_PER_TASK", "__format": "number" },
+          "taskBatchSize": { "__name": "CACHE_DELETION_TASK_BATCH_SIZE", "__format": "number" },
+          "gracefulReloadMaxSeconds": { "__name": "CACHE_DELETION_GRACEFUL_RELOAD_MAX_SECONDS", "__format": "number" },
+          "reloadWindowMarginSeconds": { "__name": "CACHE_DELETION_RELOAD_WINDOW_MARGIN_SECONDS", "__format": "number" }
         },
         "tilesMerging": {
           "type": "TILES_MERGING_TASK_TYPE",
