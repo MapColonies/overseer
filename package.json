@@ -46,7 +46,7 @@
     "@map-colonies/js-logger": "^5.0.0",
     "@map-colonies/mc-model-types": "^17.15.1",
     "@map-colonies/mc-priority-queue": "^9.1.2",
-    "@map-colonies/mc-utils": "^6.0.1",
+    "@map-colonies/mc-utils": "https://ghatmpstorage.blob.core.windows.net/npm-packages/mc-utils-594e87195f23d153b8b6619e3e69c3f3bf247b0f.tgz",
     "@map-colonies/prometheus": "^1.0.0",
     "@map-colonies/raster-shared": "^9.0.0-alpha.0",
     "@map-colonies/read-pkg": "^1.0.0",
