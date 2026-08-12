@@ -54,8 +54,13 @@ describe('CacheDeletionJobCreator', () => {
         internalId: ingestionSwapUpdateFinalizeJob.internalId,
         version: ingestionSwapUpdateFinalizeJob.version,
         type: jobType,
-        parameters: {},
         status: OperationStatus.IN_PROGRESS,
+      });
+      // job params are how an operator traces a cache deletion back to the ingestion that caused it.
+      // Asserted strictly rather than via toMatchObject, whose `{}` would match any object at all.
+      expect(request.parameters).toStrictEqual({
+        ingestionJobId: ingestionSwapUpdateFinalizeJob.id,
+        ingestionJobType: ingestionSwapUpdateFinalizeJob.type,
       });
       // cleaner resolves DeleteStoredResourcesStrategy from this job type; the update job type
       // would route the same params to the range strategy and fail validation
