@@ -44,10 +44,3 @@ export const storageProviderToCacheTypeMap = new Map([
   [StorageProvider.S3, LayerCacheType.S3],
   [StorageProvider.REDIS, LayerCacheType.REDIS],
 ]);
-
-export const SeedMode = {
-  SEED: 'seed',
-  CLEAN: 'clean',
-} as const;
-
-export type SeedMode = (typeof SeedMode)[keyof typeof SeedMode];

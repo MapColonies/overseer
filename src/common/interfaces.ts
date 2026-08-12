@@ -26,7 +26,7 @@ import type {
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
-import type { LayerCacheType, SeedMode } from './constants';
+import type { LayerCacheType } from './constants';
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
@@ -397,32 +397,6 @@ export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
 //#region PolygonPartsManagerClient
 export type PolygonPartsProcessPayload = Pick<PolygonPartsPayload, 'productId' | 'productType'> & { shouldClearEntities?: boolean };
 //#endregion PolygonPartsManagerClient
-
-//#region seedingJobCreator
-
-export interface SeedJobParams {
-  layerName: LayerName;
-  ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
-}
-export interface SeedTaskOptions {
-  mode: SeedMode;
-  grid: string;
-  fromZoomLevel: number;
-  toZoomLevel: number;
-  geometry: Footprint;
-  skipUncached: boolean;
-  layerId: string; // cache name as configured in mapproxy
-  refreshBefore: string;
-}
-
-export interface SeedTaskParams {
-  seedTasks: SeedTaskOptions[];
-  catalogId: string;
-  traceParentContext?: TraceParentContext;
-  cacheType: LayerCacheType;
-}
-
-//#endregion seedingJobCreator
 
 //#region cacheDeletionJobCreator
 

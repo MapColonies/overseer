@@ -5,7 +5,7 @@ import type { TileMergeTaskManager } from '../../../../src/task/models/tileMerge
 import type { MapproxyApiClient } from '../../../../src/httpClients/mapproxyClient';
 import type { CatalogClient } from '../../../../src/httpClients/catalogClient';
 import { SwapJobHandler } from '../../../../src/job/models/ingestion/swapJobHandler';
-import type { SeedingJobCreator } from '../../../../src/job/models/ingestion/seedingJobCreator';
+import type { CacheDeletionJobCreator } from '../../../../src/job/models/ingestion/cacheDeletionJobCreator';
 import { taskMetricsMock } from '../../mocks/metricsMock';
 import { jobManagerClientMock, jobTrackerClientMock, queueClientMock } from '../../mocks/jobManagerMocks';
 import { tracerMock } from '../../mocks/tracerMock';
@@ -22,7 +22,7 @@ export interface SwapJobHandlerTestContext {
   jobManagerClientMock: Mocked<JobManagerClient>;
   mapproxyClientMock: Mocked<MapproxyApiClient>;
   catalogClientMock: Mocked<CatalogClient>;
-  seedingJobCreatorMock: Mocked<SeedingJobCreator>;
+  cacheDeletionJobCreatorMock: Mocked<CacheDeletionJobCreator>;
   jobTrackerClientMock: Mocked<JobTrackerClient>;
   polygonPartsManagerClientMock: Mocked<PolygonPartsMangerClient>;
   readProductGeometryMock: MockedFunction<typeof readProductGeometryMock>;
@@ -36,7 +36,7 @@ export const setupSwapJobHandlerTest = async (): Promise<SwapJobHandlerTestConte
 
   const mapproxyClientMock = { update: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
   const catalogClientMock = { update: vi.fn() } as unknown as Mocked<CatalogClient>;
-  const seedingJobCreatorMock = { create: vi.fn() } as unknown as Mocked<SeedingJobCreator>;
+  const cacheDeletionJobCreatorMock = { create: vi.fn() } as unknown as Mocked<CacheDeletionJobCreator>;
 
   const swapJobHandler = new SwapJobHandler(
     await getTestLogger(),
@@ -46,7 +46,7 @@ export const setupSwapJobHandlerTest = async (): Promise<SwapJobHandlerTestConte
     taskBuilderMock,
     mapproxyClientMock,
     catalogClientMock,
-    seedingJobCreatorMock,
+    cacheDeletionJobCreatorMock,
     jobTrackerClientMock,
     polygonPartsManagerClientMock,
     readProductGeometryMock,
@@ -60,7 +60,7 @@ export const setupSwapJobHandlerTest = async (): Promise<SwapJobHandlerTestConte
     jobManagerClientMock,
     mapproxyClientMock,
     catalogClientMock,
-    seedingJobCreatorMock,
+    cacheDeletionJobCreatorMock,
     jobTrackerClientMock,
     polygonPartsManagerClientMock,
     readProductGeometryMock,

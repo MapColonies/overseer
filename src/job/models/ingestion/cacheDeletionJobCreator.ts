@@ -28,9 +28,7 @@ type CacheDeletionTask = ICreateTaskBody<CacheDeletionTaskParams>;
 @injectable()
 export class CacheDeletionJobCreator {
   private readonly taskConfig: CacheDeletionTaskConfig;
-  /** the ingestion job type we are reacting to, used only to pick the flow */
   private readonly swapUpdateJobType: string;
-  /** cache-deletion job type per flow - cleaner picks its strategy from this */
   private readonly updateCacheDeletionJobType: string;
   private readonly swapCacheDeletionJobType: string;
   private readonly wipeDelaySeconds: number;

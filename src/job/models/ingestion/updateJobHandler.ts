@@ -20,7 +20,7 @@ import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { TileMergeTaskManager } from '../../../task/models/tileMergeTaskManager';
 import { TileDeletionTaskManager } from '../../../task/models/deletionTaskManager';
 import { JobHandler } from '../jobHandler';
-import { SeedingJobCreator } from './seedingJobCreator';
+import { CacheDeletionJobCreator } from './cacheDeletionJobCreator';
 
 @injectable()
 export class UpdateJobHandler
@@ -35,7 +35,7 @@ export class UpdateJobHandler
     @inject(TileDeletionTaskManager) private readonly tileDeletionTaskManager: TileDeletionTaskManager,
     @inject(SERVICES.QUEUE_CLIENT) protected override queueClient: QueueClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
-    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
+    @inject(CacheDeletionJobCreator) private readonly cacheDeletionJobCreator: CacheDeletionJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
     @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReadProductGeometry,
@@ -122,8 +122,8 @@ export class UpdateJobHandler
             logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
             await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
 
-            activeSpan?.addEvent('createSeedingJob.start', { layerName });
-            await this.seedingJobCreator.create({ layerName, ingestionJob: job });
+            activeSpan?.addEvent('createCacheDeletionJob.start', { layerName });
+            await this.cacheDeletionJobCreator.create({ layerName, ingestionJob: job });
           }
         } catch (err) {
           await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });

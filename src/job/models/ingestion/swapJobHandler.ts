@@ -22,7 +22,7 @@ import { CatalogClient } from '../../../httpClients/catalogClient';
 import { TaskMetrics } from '../../../utils/metrics/taskMetrics';
 import { SERVICES } from '../../../common/constants';
 import { JobHandler } from '../jobHandler';
-import { SeedingJobCreator } from './seedingJobCreator';
+import { CacheDeletionJobCreator } from './cacheDeletionJobCreator';
 
 @injectable()
 export class SwapJobHandler
@@ -37,7 +37,7 @@ export class SwapJobHandler
     @inject(TileMergeTaskManager) private readonly taskBuilder: TileMergeTaskManager,
     @inject(MapproxyApiClient) private readonly mapproxyClient: MapproxyApiClient,
     @inject(CatalogClient) private readonly catalogClient: CatalogClient,
-    @inject(SeedingJobCreator) private readonly seedingJobCreator: SeedingJobCreator,
+    @inject(CacheDeletionJobCreator) private readonly cacheDeletionJobCreator: CacheDeletionJobCreator,
     @inject(JobTrackerClient) jobTrackerClient: JobTrackerClient,
     @inject(PolygonPartsMangerClient) private readonly polygonPartsMangerClient: PolygonPartsMangerClient,
     @inject(SERVICES.PRODUCT_READER) private readonly readProductGeometry: ReadProductGeometry,
@@ -142,8 +142,8 @@ export class SwapJobHandler
           logger.info({ msg: 'All finalize steps completed successfully', ...finalizeTaskParams });
           await this.completeTask(job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
 
-          activeSpan?.addEvent('createSeedingJob.start', { layerName });
-          await this.seedingJobCreator.create({ layerName, ingestionJob: job });
+          activeSpan?.addEvent('createCacheDeletionJob.start', { layerName });
+          await this.cacheDeletionJobCreator.create({ layerName, ingestionJob: job });
         }
       } catch (err) {
         await this.handleError(err, job, task, { taskTracker: taskProcessTracking, tracingSpan: activeSpan });
