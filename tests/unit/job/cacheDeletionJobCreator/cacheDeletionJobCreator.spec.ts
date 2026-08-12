@@ -56,8 +56,6 @@ describe('CacheDeletionJobCreator', () => {
         type: jobType,
         status: OperationStatus.IN_PROGRESS,
       });
-      // job params are how an operator traces a cache deletion back to the ingestion that caused it.
-      // Asserted strictly rather than via toMatchObject, whose `{}` would match any object at all.
       expect(request.parameters).toStrictEqual({
         ingestionJobId: ingestionSwapUpdateFinalizeJob.id,
         ingestionJobType: ingestionSwapUpdateFinalizeJob.type,
