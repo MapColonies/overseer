@@ -187,7 +187,6 @@ const registerDefaultConfig = (): void => {
           },
           cacheDeletion: {
             type: 'tiles-deletion',
-            grid: 'WorldCRS84',
             maxZoom: 21,
             tileBatchSize: 100000,
             maxRangesPerTask: 5000,

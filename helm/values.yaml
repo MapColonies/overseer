@@ -184,7 +184,6 @@ jobDefinitions:
       taskBatchSize: 5
     cacheDeletion:
       type: ""
-      grid: "WorldCRS84" # must be a geodetic grid - footprintToTileRanges supports no other
       maxZoom: 21
       tileBatchSize: 100000 # max tiles per range-deletion task
       maxRangesPerTask: 5000 # bounds the serialized task params for jagged footprints

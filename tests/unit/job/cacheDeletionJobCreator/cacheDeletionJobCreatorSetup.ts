@@ -25,7 +25,7 @@ export const setupCacheDeletionJobCreatorTest = async (): Promise<CacheDeletionJ
     jobManagerClient: jobManagerClientMock,
   } as unknown as Mocked<QueueClient>;
 
-  const mapproxyClientMock = { getRedisCacheName: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
+  const mapproxyClientMock = { getRedisCache: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
 
   const cacheDeletionJobCreator = new CacheDeletionJobCreator(
     await getTestLogger(),

@@ -62,9 +62,7 @@ export interface JobConfig {
 
 export interface IngestionJobsConfig {
   seed: JobConfig | undefined;
-  /** job type for the update flow's cache deletion; selects cleaner's range-deletion strategy */
   updateCacheDeletion: JobConfig | undefined;
-  /** job type for the swap flow's cache deletion; selects cleaner's prefix-wipe strategy */
   swapCacheDeletion: JobConfig | undefined;
 }
 
@@ -132,8 +130,6 @@ export interface TilesSeedingTaskConfig {
 export interface CacheDeletionTaskConfig {
   /** `tiles-deletion` - shared with the S3/FS path, told apart by job type */
   type: string;
-  /** must be a member of GEODETIC_GRIDS; the sole input to the composed `${cacheName}_${grid}` key prefix */
-  grid: string;
   maxZoom: number;
   /** max tiles a single range-deletion task covers */
   tileBatchSize: number;
@@ -364,6 +360,8 @@ export interface GetMapproxyCacheResponse {
   cacheName: string;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   cache: { type: LayerCacheType; directory?: string; directory_layout?: string; bucket_name?: string };
+  /** the grids the cache is served on; mapproxy derives one redis key prefix per grid */
+  grids?: string[];
 }
 //#endregion mapproxyApi
 

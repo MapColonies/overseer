@@ -7,7 +7,7 @@ import { GEODETIC_GRIDS, StorageProvider } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { context, SpanStatusCode, trace, type Span, type Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SERVICES } from '../../../common/constants';
-import { UnsupportedGridError } from '../../../common/errors';
+import { UnexpectedCacheGridsError, UnsupportedGridError } from '../../../common/errors';
 import type { CacheDeletionJobParams, CacheDeletionTaskConfig, CacheDeletionTaskParams, IConfig } from '../../../common/interfaces';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
@@ -46,10 +46,6 @@ export class CacheDeletionJobCreator {
     this.updateCacheDeletionJobType = this.config.get<string>('jobManagement.ingestion.jobs.updateCacheDeletion.type');
     this.swapCacheDeletionJobType = this.config.get<string>('jobManagement.ingestion.jobs.swapCacheDeletion.type');
 
-    // Refuse to start rather than delete the wrong keys and report success.
-    if (!GEODETIC_GRIDS.includes(this.taskConfig.grid)) {
-      throw new UnsupportedGridError(this.taskConfig.grid, GEODETIC_GRIDS);
-    }
     // Serving pods reload config on their own schedule (gracefulReloadMaxSeconds).
     // Delay wiping cache keys until all pods have reloaded to prevent stale pods from re-caching
     // old tiles under removed keys.
@@ -101,16 +97,29 @@ export class CacheDeletionJobCreator {
 
   /**
    * Composes the redis key prefix in format `${cacheName}_${gridName}`, matching mapproxy's loader.py behavior.
-   * The grid comes from config since mapproxy-api does not report it.
+   * Both parts come from mapproxy-api's cache response, so the grid is not a second source of truth here.
    */
   private async resolvePrefix(layerName: LayerName, logger: Logger): Promise<string> {
-    const cacheName = await this.mapproxyClient.getRedisCacheName({ layerName, cacheType: LayerCacheType.REDIS });
-    const prefix = `${cacheName}_${this.taskConfig.grid}`;
+    const { cacheName, grids } = await this.mapproxyClient.getRedisCache({ layerName, cacheType: LayerCacheType.REDIS });
+    const grid = this.resolveGrid(cacheName, grids);
+    const prefix = `${cacheName}_${grid}`;
 
-    logger.info({ msg: 'Composed redis key prefix', cacheName, grid: this.taskConfig.grid, prefix });
-    trace.getActiveSpan()?.setAttributes({ cacheName, redisPrefix: prefix });
+    logger.info({ msg: 'Composed redis key prefix', cacheName, grid, prefix });
+    trace.getActiveSpan()?.setAttributes({ cacheName, grid, redisPrefix: prefix });
 
     return prefix;
+  }
+
+  private resolveGrid(cacheName: string, grids: string[] | undefined): string {
+    const grid = grids?.length === 1 ? grids[0] : undefined;
+    if (grid === undefined) {
+      throw new UnexpectedCacheGridsError(cacheName, grids);
+    }
+    if (!GEODETIC_GRIDS.includes(grid)) {
+      throw new UnsupportedGridError(grid, GEODETIC_GRIDS);
+    }
+
+    return grid;
   }
 
   // eslint-disable-next-line @typescript-eslint/require-await
@@ -123,10 +132,10 @@ export class CacheDeletionJobCreator {
   }
 
   private async *buildRangeTasks(job: IngestionFinalizeJob, prefix: string, logger: Logger): AsyncGenerator<CacheDeletionTask> {
-    const { grid, maxZoom, tileBatchSize, maxRangesPerTask } = this.taskConfig;
+    const { maxZoom, tileBatchSize, maxRangesPerTask } = this.taskConfig;
 
     const geometry = await this.readProductGeometry(job.parameters.inputFiles.productShapefilePath);
-    logger.info({ msg: 'Computing tile ranges over the updated footprint', grid, maxZoom, tileBatchSize, maxRangesPerTask });
+    logger.info({ msg: 'Computing tile ranges over the updated footprint', maxZoom, tileBatchSize, maxRangesPerTask });
 
     const ranges = footprintToTileRanges(geometry, { minZoom: 0, maxZoom });
 

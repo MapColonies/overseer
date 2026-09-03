@@ -85,7 +85,6 @@ data:
   TILES_SEEDING_MAX_TILES_PER_SEED_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerSeedTask | quote }}
   TILES_SEEDING_MAX_TILES_PER_CLEAN_TASK: {{ $jobDefinitions.tasks.seed.maxTilesPerCleanTask | quote }}
   CACHE_DELETION_TASK_TYPE: {{ $jobDefinitions.tasks.cacheDeletion.type | quote }}
-  CACHE_DELETION_GRID: {{ $jobDefinitions.tasks.cacheDeletion.grid | quote }}
   CACHE_DELETION_MAX_ZOOM: {{ $jobDefinitions.tasks.cacheDeletion.maxZoom | quote }}
   CACHE_DELETION_TILE_BATCH_SIZE: {{ $jobDefinitions.tasks.cacheDeletion.tileBatchSize | quote }}
   CACHE_DELETION_MAX_RANGES_PER_TASK: {{ $jobDefinitions.tasks.cacheDeletion.maxRangesPerTask | quote }}

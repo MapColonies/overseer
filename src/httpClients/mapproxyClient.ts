@@ -125,7 +125,7 @@ export class MapproxyApiClient extends HttpClient {
     return this.fetchLayerCache(layerName, this.layerCacheType);
   }
 
-  public async getRedisCacheName(getCacheReq: GetMapproxyCacheRequest): Promise<string> {
+  public async getRedisCache(getCacheReq: GetMapproxyCacheRequest): Promise<GetMapproxyCacheResponse> {
     const { layerName, cacheType } = getCacheReq;
     const res = await this.fetchLayerCache(layerName, cacheType);
     if (res === undefined) {
@@ -134,7 +134,7 @@ export class MapproxyApiClient extends HttpClient {
     if (res.cache.type !== LayerCacheType.REDIS) {
       throw new UnsupportedLayerCacheError(layerName, cacheType);
     }
-    return res.cacheName;
+    return res;
   }
 
   private async fetchLayerCache(layerName: LayerName, cacheType: LayerCacheType): Promise<GetMapproxyCacheResponse | undefined> {

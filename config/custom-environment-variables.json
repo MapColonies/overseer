@@ -170,7 +170,6 @@
         },
         "cacheDeletion": {
           "type": "CACHE_DELETION_TASK_TYPE",
-          "grid": "CACHE_DELETION_GRID",
           "maxZoom": { "__name": "CACHE_DELETION_MAX_ZOOM", "__format": "number" },
           "tileBatchSize": { "__name": "CACHE_DELETION_TILE_BATCH_SIZE", "__format": "number" },
           "maxRangesPerTask": { "__name": "CACHE_DELETION_MAX_RANGES_PER_TASK", "__format": "number" },

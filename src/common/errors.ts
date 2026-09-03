@@ -87,6 +87,14 @@ export class UnsupportedGridError extends Error {
   }
 }
 
+export class UnexpectedCacheGridsError extends Error {
+  public constructor(cacheName: string, grids: readonly string[] | undefined) {
+    const reported = grids === undefined ? 'none' : grids.join(', ');
+    super(`Expected exactly one grid for cache ${cacheName}, mapproxy reported: ${reported}`);
+    this.name = UnexpectedCacheGridsError.name;
+  }
+}
+
 export class S3Error extends Error {
   public constructor(err: unknown, customMessage?: string) {
     const message = `S3 Error(${customMessage}): ${err instanceof Error ? err.message : 'unknown'}`;
