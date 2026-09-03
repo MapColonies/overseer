@@ -18,6 +18,11 @@ import type { ReadProductGeometry } from '../../../utils/storage/productReader';
 type IngestionFinalizeJob = IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
 type CacheDeletionTask = ICreateTaskBody<CacheDeletionTaskParams>;
 
+interface CacheDeletionStrategy {
+  jobType: string;
+  buildTasks: (prefix: string, logger: Logger) => AsyncGenerator<CacheDeletionTask>;
+}
+
 /**
  * Creates the job that deletes a layer's MapProxy redis tile cache after an ingestion.
  *
@@ -55,11 +60,7 @@ export class CacheDeletionJobCreator {
   public async create({ layerName, ingestionJob }: CacheDeletionJobParams): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CacheDeletionJobCreator.name}.${this.create.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
-      const isSwapUpdate = ingestionJob.type === this.swapUpdateJobType;
-
-      // The job type is what tells cleaner which strategy to run, so it is chosen per flow rather
-      // than fixed at construction.
-      const jobType = isSwapUpdate ? this.swapCacheDeletionJobType : this.updateCacheDeletionJobType;
+      const { jobType, buildTasks } = this.resolveStrategy(ingestionJob);
 
       const logger = this.logger.child({
         ingestionJobId: ingestionJob.id,
@@ -73,16 +74,13 @@ export class CacheDeletionJobCreator {
         activeSpan?.setAttributes({
           ingestionJobId: ingestionJob.id,
           cacheDeletionJobType: jobType,
-          cacheDeletionShape: isSwapUpdate ? 'prefix-wipe' : 'range-deletion',
           layerName,
         });
 
         const prefix = await this.resolvePrefix(layerName, logger);
         const catalogId = internalIdSchema.parse(ingestionJob).internalId;
 
-        const tasks = isSwapUpdate ? this.buildWipeTask(prefix) : this.buildRangeTasks(ingestionJob, prefix, logger);
-
-        await this.createJobWithStreamedTasks(ingestionJob, jobType, catalogId, tasks, logger, activeSpan);
+        await this.createJobWithStreamedTasks(ingestionJob, jobType, catalogId, buildTasks(prefix, logger), logger, activeSpan);
       } catch (err) {
         if (err instanceof Error) {
           activeSpan?.recordException(err);
@@ -93,6 +91,20 @@ export class CacheDeletionJobCreator {
         activeSpan?.end();
       }
     });
+  }
+
+  private resolveStrategy(ingestionJob: IngestionFinalizeJob): CacheDeletionStrategy {
+    if (ingestionJob.type === this.swapUpdateJobType) {
+      return {
+        jobType: this.swapCacheDeletionJobType,
+        buildTasks: (prefix) => this.buildWipeTask(prefix),
+      };
+    }
+
+    return {
+      jobType: this.updateCacheDeletionJobType,
+      buildTasks: (prefix, logger) => this.buildRangeTasks(ingestionJob, prefix, logger),
+    };
   }
 
   private async resolvePrefix(layerName: LayerName, logger: Logger): Promise<string> {
