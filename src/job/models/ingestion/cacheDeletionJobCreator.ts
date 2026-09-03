@@ -95,10 +95,6 @@ export class CacheDeletionJobCreator {
     });
   }
 
-  /**
-   * Composes the redis key prefix in format `${cacheName}_${gridName}`, matching mapproxy's loader.py behavior.
-   * Both parts come from mapproxy-api's cache response, so the grid is not a second source of truth here.
-   */
   private async resolvePrefix(layerName: LayerName, logger: Logger): Promise<string> {
     const { cacheName, grids } = await this.mapproxyClient.getRedisCache({ layerName, cacheType: LayerCacheType.REDIS });
     const grid = this.resolveGrid(cacheName, grids);
@@ -148,10 +144,6 @@ export class CacheDeletionJobCreator {
     }
   }
 
-  /**
-   * Tasks are streamed to avoid memory overhead. The job is created with its first batch
-   * so job-tracker never sees an empty job.
-   */
   private async createJobWithStreamedTasks(
     job: IngestionFinalizeJob,
     jobType: string,
