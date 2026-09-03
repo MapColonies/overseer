@@ -128,18 +128,12 @@ export interface TilesSeedingTaskConfig {
 }
 
 export interface CacheDeletionTaskConfig {
-  /** `tiles-deletion` - shared with the S3/FS path, told apart by job type */
   type: string;
   maxZoom: number;
-  /** max tiles a single range-deletion task covers */
   tileBatchSize: number;
-  /** max ITileRange objects a single task carries, bounding the serialized params size */
   maxRangesPerTask: number;
-  /** tasks pushed per createTaskForJob call */
   taskBatchSize: number;
-  /** mirrors helm's global.gracefulReloadMaxSeconds */
   gracefulReloadMaxSeconds: number;
-  /** added on top, covering mapproxinator's <=5s poll plus pod drain */
   reloadWindowMarginSeconds: number;
 }
 
