@@ -16,7 +16,7 @@ import { setupCacheDeletionJobCreatorTest } from './cacheDeletionJobCreatorSetup
 const GRID = 'WorldCRS84';
 
 const redisCache = (cacheName: string, grids: string[] = [GRID]): GetMapproxyCacheResponse => ({
-  cacheName,
+  cacheName: `${cacheName}-redis`,
   cache: { type: LayerCacheType.REDIS },
   grids,
 });
@@ -44,7 +44,7 @@ describe('CacheDeletionJobCreator', () => {
       const jobType = configMock.get<string>('jobManagement.ingestion.jobs.swapCacheDeletion.type');
       const jobId = randomUUID();
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis'));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       jobManagerClientMock.createJob.mockResolvedValue({ id: jobId, taskIds: [randomUUID()] });
 
       const params: CacheDeletionJobParams = { layerName: 'layer-Orthophoto', ingestionJob: ingestionSwapUpdateFinalizeJob };
@@ -89,7 +89,7 @@ describe('CacheDeletionJobCreator', () => {
     it('should compose the prefix from the cache name and grid mapproxy reports, not from config', async () => {
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock } = ctx;
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('sss-Orthophoto-redis', ['WorldCRS84']));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('sss-Orthophoto', ['WorldCRS84']));
       jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
 
       await cacheDeletionJobCreator.create({ layerName: 'sss-Orthophoto', ingestionJob: ingestionSwapUpdateFinalizeJob });
@@ -103,7 +103,7 @@ describe('CacheDeletionJobCreator', () => {
     it('should not read the product shapefile, since a wipe needs no geometry', async () => {
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis'));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
 
       await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: ingestionSwapUpdateFinalizeJob });
@@ -117,7 +117,7 @@ describe('CacheDeletionJobCreator', () => {
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
       const taskConfig = configMock.get<CacheDeletionTaskConfig>('jobManagement.ingestion.tasks.cacheDeletion');
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis'));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       readProductGeometryMock.mockResolvedValue(productGeometry);
       jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
 
@@ -153,7 +153,7 @@ describe('CacheDeletionJobCreator', () => {
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
       const taskConfig = configMock.get<CacheDeletionTaskConfig>('jobManagement.ingestion.tasks.cacheDeletion');
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis'));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       readProductGeometryMock.mockResolvedValue(productGeometry);
       jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
       jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
@@ -182,7 +182,7 @@ describe('CacheDeletionJobCreator', () => {
 
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = await setupCacheDeletionJobCreatorTest();
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis'));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       readProductGeometryMock.mockResolvedValue(productGeometry);
       jobManagerClientMock.createJob.mockResolvedValue({ id: jobId, taskIds: [randomUUID()] });
 
@@ -213,7 +213,7 @@ describe('CacheDeletionJobCreator', () => {
 
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = await setupCacheDeletionJobCreatorTest();
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis'));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       readProductGeometryMock.mockResolvedValue(productGeometry);
       jobManagerClientMock.createJob.mockResolvedValue({ id: jobId, taskIds: [randomUUID()] });
       jobManagerClientMock.createTaskForJob.mockRejectedValue(new Error('job-manager unreachable'));
@@ -238,7 +238,7 @@ describe('CacheDeletionJobCreator', () => {
     // deletes nothing and the task still acks, bad grid math deletes the wrong tiles. Both are
     // pinned here against a key observed in a deployed environment:
     //   bluemarble_swap_test-RasterVectorBest-redis_WorldCRS84-6-76-43
-    const CACHE_NAME = 'bluemarble_swap_test-RasterVectorBest-redis';
+    const CACHE_NAME = 'bluemarble_swap_test-RasterVectorBest';
     const LAYER_NAME = 'bluemarble_swap_test-RasterVectorBest';
     const KNOWN_KEY = 'bluemarble_swap_test-RasterVectorBest-redis_WorldCRS84-6-76-43';
     const TILE = { zoom: 6, x: 76, y: 43 };
@@ -305,7 +305,7 @@ describe('CacheDeletionJobCreator', () => {
     it('should create no job when mapproxy reports a grid footprintToTileRanges does not support', async () => {
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
 
-      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto-redis', ['webmercator']));
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto', ['webmercator']));
       readProductGeometryMock.mockResolvedValue(productGeometry);
 
       await expect(
@@ -317,10 +317,10 @@ describe('CacheDeletionJobCreator', () => {
     // loader.py derives a prefix per grid, so there is no single prefix that covers the cache -
     // creating a job anyway would delete one grid's keys and report the whole cache as deleted
     it.each<{ name: string; cache: GetMapproxyCacheResponse }>([
-      { name: 'several grids', cache: redisCache('layer-Orthophoto-redis', [GRID, 'epsg3857']) },
-      { name: 'no grids', cache: redisCache('layer-Orthophoto-redis', []) },
+      { name: 'several grids', cache: redisCache('layer-Orthophoto', [GRID, 'epsg3857']) },
+      { name: 'no grids', cache: redisCache('layer-Orthophoto', []) },
       // mapproxy-api returns the cache verbatim, so a cache without grids has no grids field
-      { name: 'no grids field at all', cache: { cacheName: 'layer-Orthophoto-redis', cache: { type: LayerCacheType.REDIS } } },
+      { name: 'no grids field at all', cache: { cacheName: 'layer-Orthophoto', cache: { type: LayerCacheType.REDIS } } },
     ])('should create no job when mapproxy reports $name', async ({ cache }) => {
       const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock } = ctx;
 
