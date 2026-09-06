@@ -314,8 +314,6 @@ describe('CacheDeletionJobCreator', () => {
       expect(jobManagerClientMock.createJob).not.toHaveBeenCalled();
     });
 
-    // loader.py derives a prefix per grid, so there is no single prefix that covers the cache -
-    // creating a job anyway would delete one grid's keys and report the whole cache as deleted
     it.each<{ name: string; cache: GetMapproxyCacheResponse }>([
       { name: 'several grids', cache: redisCache('layer-Orthophoto', [GRID, 'epsg3857']) },
       { name: 'no grids', cache: redisCache('layer-Orthophoto', []) },
