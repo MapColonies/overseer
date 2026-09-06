@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.0](https://github.com/MapColonies/overseer/compare/v2.11.1...v3.0.0) (2026-09-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* overseer no longer creates seeding jobs.
+
+### Features
+
+* carry tiles storage on the tiles-deletion task params (MAPCO-11294) ([#117](https://github.com/MapColonies/overseer/issues/117)) ([687fdf9](https://github.com/MapColonies/overseer/commit/687fdf987521a1433930c6f1563a417af3b064b4))
+* create the cache deletion job instead of the seeding job (MAPCO-11265) ([#119](https://github.com/MapColonies/overseer/issues/119)) ([d5caf4a](https://github.com/MapColonies/overseer/commit/d5caf4a54d47c96dd72fec159ba7dbb492020c8e))
+
 ## [2.11.1](https://github.com/MapColonies/overseer/compare/v2.11.0...v2.11.1) (2026-08-04)
 
 
