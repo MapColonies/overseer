@@ -2,7 +2,7 @@
 import { getEntityName, getMapServingLayerName, type LayerName, swapUpdateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
-import { Grid, type MergeTask, type SeedJobParams } from '../../../../src/common/interfaces';
+import { Grid, type MergeTask, type CacheDeletionJobParams } from '../../../../src/common/interfaces';
 import { finalizeTaskForIngestionSwapUpdate, createTasksTaskForIngestionSwapUpdate } from '../../mocks/tasksMockData';
 import { ingestionSwapUpdateFinalizeJob, ingestionSwapUpdateJob } from '../../mocks/jobsMockData';
 import { jobTrackerClientMock } from '../../mocks/jobManagerMocks';
@@ -81,7 +81,7 @@ describe('swapJobHandler', () => {
         jobManagerClientMock,
         mapproxyClientMock,
         catalogClientMock,
-        seedingJobCreatorMock,
+        cacheDeletionJobCreatorMock,
         polygonPartsManagerClientMock,
       } = await setupSwapJobHandlerTest();
       const job = structuredClone(ingestionSwapUpdateFinalizeJob);
@@ -93,7 +93,7 @@ describe('swapJobHandler', () => {
       const layerName: LayerName = getMapServingLayerName(job.resourceId, productType);
       const entityName = getEntityName(job.resourceId, productType);
       const layerRelativePath = `${job.internalId}/${displayPath}`;
-      const createSeedingJobParams: SeedJobParams = {
+      const createCacheDeletionJobParams: CacheDeletionJobParams = {
         ingestionJob: job,
         layerName,
       };
@@ -119,7 +119,7 @@ describe('swapJobHandler', () => {
       });
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
       expect(jobTrackerClientMock.notify).toHaveBeenCalledWith(task);
-      expect(seedingJobCreatorMock.create).toHaveBeenCalledWith(createSeedingJobParams);
+      expect(cacheDeletionJobCreatorMock.create).toHaveBeenCalledWith(createCacheDeletionJobParams);
     });
 
     it('should handle job finalize failure and reject the task', async () => {

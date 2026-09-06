@@ -10,6 +10,8 @@ import type {
   InputFiles,
   LayerName,
   RasterLayerMetadata,
+  RedisDeleteStoredResourcesParams,
+  RedisTilesDeletionParams,
   TileFormatStrategy,
   TileOutputFormat,
 } from '@map-colonies/raster-shared';
@@ -24,7 +26,7 @@ import type {
   ingestionSwapUpdateFinalizeJobParamsSchema,
   ingestionUpdateFinalizeJobParamsSchema,
 } from '../utils/zod/schemas/jobParameters.schema';
-import type { LayerCacheType, SeedMode } from './constants';
+import type { LayerCacheType } from './constants';
 
 export type StepKey<T> = keyof T & { [K in keyof T]: T[K] extends boolean ? K : never }[keyof T]; // this is a utility type that extracts the keys of T that are of type boolean
 
@@ -60,6 +62,8 @@ export interface JobConfig {
 
 export interface IngestionJobsConfig {
   seed: JobConfig | undefined;
+  updateCacheDeletion: JobConfig | undefined;
+  swapCacheDeletion: JobConfig | undefined;
 }
 
 export interface IngestionPollingJobsConfig {
@@ -79,6 +83,7 @@ export interface IngestionTasksConfig {
   tilesMerging: TilesMergingTaskConfig;
   tilesSeeding: TilesSeedingTaskConfig;
   tilesDeletion: TilesDeletionTaskConfig;
+  cacheDeletion: CacheDeletionTaskConfig;
 }
 
 export interface ExportTasksConfig {
@@ -120,6 +125,16 @@ export interface TilesSeedingTaskConfig {
   grid: string;
   maxZoom: number;
   skipUncached: boolean;
+}
+
+export interface CacheDeletionTaskConfig {
+  type: string;
+  maxZoom: number;
+  tileBatchSize: number;
+  maxRangesPerTask: number;
+  taskBatchSize: number;
+  gracefulReloadMaxSeconds: number;
+  reloadWindowMarginSeconds: number;
 }
 
 export interface TilesExportingTaskConfig {
@@ -339,6 +354,8 @@ export interface GetMapproxyCacheResponse {
   cacheName: string;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   cache: { type: LayerCacheType; directory?: string; directory_layout?: string; bucket_name?: string };
+  /** the grids the cache is served on; mapproxy derives one redis key prefix per grid */
+  grids?: string[];
 }
 //#endregion mapproxyApi
 
@@ -373,31 +390,21 @@ export type CatalogUpdateMetadata = Partial<RasterLayerMetadata>;
 export type PolygonPartsProcessPayload = Pick<PolygonPartsPayload, 'productId' | 'productType'> & { shouldClearEntities?: boolean };
 //#endregion PolygonPartsManagerClient
 
-//#region seedingJobCreator
+//#region cacheDeletionJobCreator
 
-export interface SeedJobParams {
+export interface CacheDeletionJobParams {
   layerName: LayerName;
   ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
 }
-export interface SeedTaskOptions {
-  mode: SeedMode;
-  grid: string;
-  fromZoomLevel: number;
-  toZoomLevel: number;
-  geometry: Footprint;
-  skipUncached: boolean;
-  layerId: string; // cache name as configured in mapproxy
-  refreshBefore: string;
-}
 
-export interface SeedTaskParams {
-  seedTasks: SeedTaskOptions[];
-  catalogId: string;
-  traceParentContext?: TraceParentContext;
-  cacheType: LayerCacheType;
-}
+/**
+ * Params of a `tiles-deletion` cache-deletion task. Both shapes share that task type; which one a
+ * task carries follows from the job type - Update_Delete_Cache means `ranges`, Swap_Delete_Cache
+ * means prefix-only - and that is also how cleaner picks the strategy to run.
+ */
+export type CacheDeletionTaskParams = RedisTilesDeletionParams | RedisDeleteStoredResourcesParams;
 
-//#endregion seedingJobCreator
+//#endregion cacheDeletionJobCreator
 
 //#region telemetry
 export interface TraceParentContext {

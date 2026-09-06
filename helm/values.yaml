@@ -143,6 +143,10 @@ jobDefinitions:
       type: ""
     seed:
       type: ""
+    updateCacheDeletion:
+      type: ""
+    swapCacheDeletion:
+      type: ""
     export:
       type: ""
       cleanupExpirationDays: 14
@@ -178,6 +182,13 @@ jobDefinitions:
       type: ""
       tileBatchSize: 10000
       taskBatchSize: 5
+    cacheDeletion:
+      type: ""
+      maxZoom: 21
+      tileBatchSize: 100000 # max tiles per range-deletion task
+      maxRangesPerTask: 5000 # bounds the serialized task params for jagged footprints
+      taskBatchSize: 5
+      reloadWindowMarginSeconds: 8 # added to global.gracefulReloadMaxSeconds: mapproxinator's poll plus drain
 
   config:
     dequeueIntervalMs: 3000

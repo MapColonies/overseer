@@ -115,23 +115,25 @@ describe('mapproxyClient', () => {
     });
   });
 
-  describe('getRedisCacheName', () => {
-    it('should get cache name from mapproxy', async () => {
+  describe('getRedisCache', () => {
+    it('should get the whole redis cache, grids included, from mapproxy', async () => {
       const baseUrl = configMock.get<string>('servicesUrl.mapproxyApi');
       const layerName: LayerName = 'test-Orthophoto';
       const cacheType = LayerCacheType.REDIS;
       const cacheName = 'cacheName';
+      const grids = ['WorldCRS84'];
 
       nock(baseUrl)
         .get(`/layer/${layerName}/${cacheType}`)
-        .reply(200, { cacheName, cache: { type: cacheType } });
+        .reply(200, { cacheName, grids, cache: { type: cacheType } });
 
-      const action = mapproxyApiClient.getRedisCacheName({ layerName, cacheType });
+      const action = mapproxyApiClient.getRedisCache({ layerName, cacheType });
 
       await expect(action).resolves.not.toThrow();
       // eslint-disable-next-line import-x/no-named-as-default-member
       expect(nock.isDone()).toBe(true);
-      await expect(action).resolves.toBe(cacheName);
+      // the grid is the second half of the redis key prefix, so it must survive the client
+      await expect(action).resolves.toMatchObject({ cacheName, grids });
     });
 
     it('should throw an error for unsupported layer cache type', async () => {
@@ -144,7 +146,7 @@ describe('mapproxyClient', () => {
         .get(`/layer/${layerName}/${cacheType}`)
         .reply(200, { cacheName, cache: { type: cacheType } });
 
-      const action = mapproxyApiClient.getRedisCacheName({ layerName, cacheType });
+      const action = mapproxyApiClient.getRedisCache({ layerName, cacheType });
 
       await expect(action).rejects.toThrow(UnsupportedLayerCacheError);
     });
@@ -156,7 +158,7 @@ describe('mapproxyClient', () => {
 
       nock(baseUrl).get(`/layer/${layerName}/${cacheType}`).reply(404);
 
-      const action = mapproxyApiClient.getRedisCacheName({ layerName, cacheType });
+      const action = mapproxyApiClient.getRedisCache({ layerName, cacheType });
 
       await expect(action).rejects.toThrow(LayerCacheNotFoundError);
     });

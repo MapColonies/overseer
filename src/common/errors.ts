@@ -80,11 +80,18 @@ export class LayerCacheNotFoundError extends Error {
   }
 }
 
-export class SeedJobCreationError extends Error {
-  public constructor(msg: string, err: Error) {
-    super(msg);
-    this.name = SeedJobCreationError.name;
-    this.stack = err.stack;
+export class UnsupportedGridError extends Error {
+  public constructor(grid: string, supported: readonly string[]) {
+    super(`Unsupported grid (${grid}) for cache deletion, supported grids: ${supported.join(', ')}`);
+    this.name = UnsupportedGridError.name;
+  }
+}
+
+export class UnexpectedCacheGridsError extends Error {
+  public constructor(cacheName: string, grids: readonly string[] | undefined) {
+    const reported = grids === undefined ? 'none' : grids.join(', ');
+    super(`Expected exactly one grid for cache ${cacheName}, mapproxy reported: ${reported}`);
+    this.name = UnexpectedCacheGridsError.name;
   }
 }
 

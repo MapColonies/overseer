@@ -17,7 +17,12 @@ export function createFakePolygon(options?: { radiusInMeters?: number }): Polygo
   const radius = options?.radiusInMeters ?? 1000;
   // Center point
   const centerLon = faker.location.longitude({ min: -180, max: 180 });
-  const centerLat = faker.location.latitude({ min: -90, max: 90 });
+  // The centre latitude is clamped to +/-85 rather than the full +/-90. Longitude degrees shrink by
+  // cos(lat), so at extreme latitudes a fixed metric radius legitimately spans tens of degrees of
+  // longitude - which is correct geodesy, but it makes the polygon enormous in tile terms for any
+  // consumer that walks it down to high zoom (e.g. footprintToTileRanges). Clamping the centre keeps
+  // the span bounded while leaving radiusInMeters honest at every latitude the fixture can produce.
+  const centerLat = faker.location.latitude({ min: -85, max: 85 });
 
   // Convert meters to approximate degrees (1 degree ≈ 111320 meters at equator)
   const radiusInDegrees = radius / 111320;
