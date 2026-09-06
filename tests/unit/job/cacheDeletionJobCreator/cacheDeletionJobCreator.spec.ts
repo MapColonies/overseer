@@ -7,7 +7,7 @@ import type { CacheDeletionJobParams, CacheDeletionTaskConfig, GetMapproxyCacheR
 import { registerDefaultConfig, configMock, setValue } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { LayerCacheType } from '../../../../src/common/constants';
-import { LayerCacheNotFoundError, UnsupportedGridError } from '../../../../src/common/errors';
+import { LayerCacheNotFoundError, UnexpectedCacheGridsError, UnsupportedGridError } from '../../../../src/common/errors';
 import { ingestionSwapUpdateFinalizeJob, ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import type { CacheDeletionJobCreatorTestContext } from './cacheDeletionJobCreatorSetup';
 import { setupCacheDeletionJobCreatorTest } from './cacheDeletionJobCreatorSetup';
@@ -312,8 +312,12 @@ describe('CacheDeletionJobCreator', () => {
       await expect(
         cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: ingestionUpdateFinalizeJob })
       ).resolves.toBeUndefined();
-      expect(resolveGridSpy).toThrowError(UnsupportedGridError);
       expect(jobManagerClientMock.createJob).not.toHaveBeenCalled();
+      expect(resolveGridSpy.mock.results[0]).toMatchObject({
+        type: 'throw',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        value: expect.any(UnsupportedGridError),
+      });
     });
 
     it.each<{ name: string; cache: GetMapproxyCacheResponse }>([
