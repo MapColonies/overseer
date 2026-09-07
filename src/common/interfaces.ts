@@ -61,7 +61,6 @@ export interface JobConfig {
 }
 
 export interface IngestionJobsConfig {
-  seed: JobConfig | undefined;
   updateCacheDeletion: JobConfig | undefined;
   swapCacheDeletion: JobConfig | undefined;
 }
@@ -81,7 +80,6 @@ export interface ExportPollingJobsConfig {
 
 export interface IngestionTasksConfig {
   tilesMerging: TilesMergingTaskConfig;
-  tilesSeeding: TilesSeedingTaskConfig;
   tilesDeletion: TilesDeletionTaskConfig;
   cacheDeletion: CacheDeletionTaskConfig;
 }
@@ -118,13 +116,6 @@ export interface TilesDeletionTaskConfig {
   type: string;
   tileBatchSize: number;
   taskBatchSize: number;
-}
-
-export interface TilesSeedingTaskConfig {
-  type: string;
-  grid: string;
-  maxZoom: number;
-  skipUncached: boolean;
 }
 
 export interface CacheDeletionTaskConfig {

@@ -146,9 +146,6 @@
         }
       },
       "jobs": {
-        "seed": {
-          "type": "INGESTION_SEED_JOB_TYPE"
-        },
         "updateCacheDeletion": {
           "type": "UPDATE_CACHE_DELETION_JOB_TYPE"
         },
@@ -198,30 +195,6 @@
           },
           "truncateCoordinates": {
             "__name": "TILES_MERGING_TRUNCATE_COORDINATES",
-            "__format": "number"
-          }
-        },
-        "tilesSeeding": {
-          "type": "TILES_SEEDING_TASK_TYPE",
-          "grid": "TILES_SEEDING_GRID",
-          "maxZoom": {
-            "__name": "TILES_SEEDING_MAX_ZOOM",
-            "__format": "number"
-          },
-          "skipUncached": {
-            "__name": "TILES_SEEDING_SKIP_UNCACHED",
-            "__format": "boolean"
-          },
-          "zoomThreshold": {
-            "__name": "TILES_SEEDING_ZOOM_THRESHOLD",
-            "__format": "number"
-          },
-          "maxTilesPerSeedTask": {
-            "__name": "TILES_SEEDING_MAX_TILES_PER_SEED_TASK",
-            "__format": "number"
-          },
-          "maxTilesPerCleanTask": {
-            "__name": "TILES_SEEDING_MAX_TILES_PER_CLEAN_TASK",
             "__format": "number"
           }
         }

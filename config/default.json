@@ -113,9 +113,6 @@
         }
       },
       "jobs": {
-        "seed": {
-          "type": "Ingestion_Seed"
-        },
         "updateCacheDeletion": {
           "type": "Update_Delete_Cache"
         },
@@ -132,15 +129,6 @@
           "radiusBufferUnits": "degrees",
           "truncatePrecision": 11,
           "truncateCoordinates": 2
-        },
-        "tilesSeeding": {
-          "type": "tiles-seeding",
-          "grid": "WorldCRS84",
-          "maxZoom": 21,
-          "skipUncached": true,
-          "zoomThreshold": 16,
-          "maxTilesPerSeedTask": 500000,
-          "maxTilesPerCleanTask": 4000000
         },
         "validation": {
           "type": "validation"
