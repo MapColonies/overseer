@@ -141,8 +141,6 @@ jobDefinitions:
       type: ""
     deleteLayer:
       type: ""
-    seed:
-      type: ""
     updateCacheDeletion:
       type: ""
     swapCacheDeletion:
@@ -168,14 +166,6 @@ jobDefinitions:
       radiusBufferUnits: "degrees" # supported values are: "degrees" | "centimeters" | "meters" | "millimeters" | "kilometers" | "miles" | "inches" | "yards" | "feet" | "radians"
       truncatePrecision: 11 # coordinate decimal precision 
       truncateCoordinates: 2 # maximum number of coordinates (primarly used to remove z coordinates)
-    seed:
-      type: ""
-      grid: "WorldCRS84"
-      maxZoom: 21
-      skipUncached: true
-      zoomThreshold: 16 #zoom level threshold for high res seeding first seeding task will be 0->zoomThreshold
-      maxTilesPerSeedTask: 250000
-      maxTilesPerCleanTask: 500000
     export:
       type: ""
     tilesDeletion:

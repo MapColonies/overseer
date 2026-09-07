@@ -143,7 +143,6 @@ The service can be configured using environment variables or a configuration fil
 | INGESTION_NEW_JOB_TYPE | string | New ingestion job type | `"Ingestion_New"` |
 | INGESTION_UPDATE_JOB_TYPE | string | Update ingestion job type | `"Ingestion_Update"` |
 | INGESTION_SWAP_UPDATE_JOB_TYPE | string | Swap update job type | `"Ingestion_Swap_Update"` |
-| INGESTION_SEED_JOB_TYPE | string | Seed job type | `"Ingestion_Seed"` |
 | TILES_MERGING_TASK_TYPE | string | Tiles merging task type | `"tiles-merging"` |
 | TILES_MERGING_TILE_BATCH_SIZE | number | Batch size for tile merging | `10000` |
 | TILES_MERGING_TASK_BATCH_SIZE | number | Batch size for task merging | `5` |
@@ -151,10 +150,15 @@ The service can be configured using environment variables or a configuration fil
 | TILES_MERGING_RADIUS_BUFFER_UNITS | string | Units for radius buffer | `"meters"` |
 | TILES_MERGING_TRUNCATE_PRECISION | number | Precision for truncating | `6` |
 | TILES_MERGING_TRUNCATE_COORDINATES | number | Coordinates for truncating | `6` |
-| TILES_SEEDING_TASK_TYPE | string | Tiles seeding task type | `"tiles-seeding"` |
-| TILES_SEEDING_GRID | string | Grid configuration for tiles seeding | `"WorldCRS84"` |
-| TILES_SEEDING_MAX_ZOOM | number | Maximum zoom level for seeding | `21` |
-| TILES_SEEDING_SKIP_UNCACHED | boolean | Skip uncached tiles during seeding | `true` |
+| UPDATE_CACHE_DELETION_JOB_TYPE | string | Cache deletion job type created after an update ingestion | `"Update_Delete_Cache"` |
+| SWAP_CACHE_DELETION_JOB_TYPE | string | Cache deletion job type created after a swap-update ingestion | `"Swap_Delete_Cache"` |
+| CACHE_DELETION_TASK_TYPE | string | Cache deletion task type | `"tiles-deletion"` |
+| CACHE_DELETION_MAX_ZOOM | number | Maximum zoom level for the deleted tile ranges | `21` |
+| CACHE_DELETION_TILE_BATCH_SIZE | number | Maximum tiles per range-deletion task | `100000` |
+| CACHE_DELETION_MAX_RANGES_PER_TASK | number | Maximum tile ranges per task, bounding the serialized task params | `5000` |
+| CACHE_DELETION_TASK_BATCH_SIZE | number | Number of tasks enqueued per job-manager call | `5` |
+| CACHE_DELETION_GRACEFUL_RELOAD_MAX_SECONDS | number | Serving pods' config reload window, waited out before wiping cache keys | `300` |
+| CACHE_DELETION_RELOAD_WINDOW_MARGIN_SECONDS | number | Margin added to the reload window | `8` |
 
 ## Export Configuration
 
@@ -203,12 +207,12 @@ For both processing types, the service handles two primary task phases:
 
 - **For Update Ingestion:**
   - Updates catalog layers
-  - Creates seed jobs and tasks
+  - Creates a cache deletion job whose tasks delete the ingested footprint's tile ranges from MapProxy's redis cache
 
 - **For Swap Update Ingestion:**
   - Updates catalog layers
   - Handles layer updates in MapProxy when required
-  - Creates seed jobs and tasks
+  - Creates a cache deletion job whose task wipes the layer's entire redis cache prefix
 
 ## Export Processing
 
