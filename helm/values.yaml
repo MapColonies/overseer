@@ -108,7 +108,7 @@ cloudProvider:
 image:
   repository: overseer
   tag: 'latest'
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
 
 serviceUrls:
   jobManager: ""
@@ -122,12 +122,8 @@ serviceUrls:
   polygonPartsManager: ""
   downloadServerPublicDNS: ""
 
-tracing:
-  enabled: false
-  url: ""
-
 configManagement:
-  offlineMode: false
+  offlineMode: true
   name: 'overseer'
   version: 'latest'
   serverUrl: 'http://localhost:8080/api'
