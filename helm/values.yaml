@@ -1,7 +1,9 @@
 global:
   cloudProvider: {}
-  tracing: {}
-  openTelemetryOptions: {}
+  telemetry:
+    tracing: {}
+    logger:
+      opentelemetryOptions: {}
   environment: ''
   serviceUrls: {}
   jobDefinitions: {}
@@ -186,19 +188,29 @@ jobDefinitions:
       intervalMs: 3000
     maxTaskAttempts: 3
 
-env:
+server:
   port: 8080
   targetPort: 8080
   protocol: TCP
-  logLevel: info
-  logPrettyPrintEnabled: false
-  openTelemetryOptions:
-    enabled: false
-    url: ''
-    resourceAttributes: {}
   responseCompressionEnabled: true
   requestPayloadLimit: 1mb
 
+telemetry:
+  logger:
+    level: info
+    prettyPrint: false
+    opentelemetryOptions:
+      enabled: true
+      url: http://localhost:4317
+      # Rendered as OTEL_RESOURCE_ATTRIBUTES in "key=value,key=value" format
+      # resourceAttributes:
+      #   service.namespace: namespace
+      #   deployment.environment: dev
+  tracing:
+    enabled: true
+    url: http://localhost:4318/v1/traces
+
+env:
   httpRetry:
     attempts: 5
     delay: exponential
