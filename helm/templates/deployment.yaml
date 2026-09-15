@@ -5,6 +5,7 @@
 {{- $cloudProviderImagePullSecretName := include "overseer.cloudProviderImagePullSecretName" . -}}
 {{- $cloudProviderDockerRegistryUrl := include "overseer.cloudProviderDockerRegistryUrl" . -}}
 {{- $imageTag := include "overseer.tag" . -}}
+{{- $server := .Values.server -}}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
 
 {{- /* PVC handling - check if both PVCs point to the same claim */ -}}
@@ -89,7 +90,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.uid
             - name: SERVER_PORT
-              value: {{ .Values.env.targetPort | quote }}
+              value: {{ $server.targetPort | quote }}
             {{- if .Values.global.ca.secretName }}
             - name: REQUESTS_CA_BUNDLE
               value: {{ printf "%s/%s" .Values.global.ca.path .Values.global.ca.key | quote }}
@@ -116,8 +117,8 @@ spec:
                 name: {{ $configmapName }}
           ports:
             - name: http
-              containerPort: {{ .Values.env.targetPort }}
-              protocol: {{ .Values.env.protocol }}
+              containerPort: {{ $server.targetPort }}
+              protocol: {{ $server.protocol }}
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
@@ -125,7 +126,7 @@ spec:
             failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
             httpGet:
               path: {{ .Values.livenessProbe.path }}
-              port: {{ .Values.env.targetPort }}
+              port: {{ $server.targetPort }}
           {{- end }}
           {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
@@ -134,7 +135,7 @@ spec:
             failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
             httpGet:
               path: {{ .Values.readinessProbe.path }}
-              port: {{ .Values.env.targetPort }}
+              port: {{ $server.targetPort }}
           {{- end }}        
           {{- if .Values.resources.enabled }}
           resources:

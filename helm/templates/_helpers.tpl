@@ -107,3 +107,37 @@ Create chart name and version as used by the chart label.
 {{- define "overseer.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
+
+{{/*
+Returns the tracing url from global if set, otherwise from the chart's values
+*/}}
+{{- define "overseer.tracingUrl" -}}
+{{- if .Values.global.telemetry.tracing.url }}
+    {{- .Values.global.telemetry.tracing.url -}}
+{{- else if .Values.telemetry.tracing.url -}}
+    {{- .Values.telemetry.tracing.url -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns the opentelemetry logging url from global if set, otherwise from the chart's values
+*/}}
+{{- define "overseer.opentelemetryLoggingUrl" -}}
+{{- if .Values.global.telemetry.logger.opentelemetryOptions.url }}
+    {{- .Values.global.telemetry.logger.opentelemetryOptions.url -}}
+{{- else if .Values.telemetry.logger.opentelemetryOptions.url -}}
+    {{- .Values.telemetry.logger.opentelemetryOptions.url -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Renders a map of resource attributes as key=value,key=value for OTEL_RESOURCE_ATTRIBUTES.
+Usage: {{ include "overseer.otelResourceAttributes" .resourceAttributes }}
+*/}}
+{{- define "overseer.otelResourceAttributes" -}}
+{{- $attributes := list }}
+{{- range $key, $value := . }}
+{{- $attributes = append $attributes (printf "%s=%s" $key (toString $value)) }}
+{{- end }}
+{{- join "," $attributes }}
+{{- end -}}
