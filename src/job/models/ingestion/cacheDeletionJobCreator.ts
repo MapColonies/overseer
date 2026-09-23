@@ -2,13 +2,13 @@ import type { Logger } from '@map-colonies/js-logger';
 import { footprintToTileRanges } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
-import type { LayerName } from '@map-colonies/raster-shared';
+import type { CacheDeletionJobParams, LayerName } from '@map-colonies/raster-shared';
 import { GEODETIC_GRIDS, StorageProvider } from '@map-colonies/raster-shared';
 import { inject, injectable } from 'tsyringe';
 import { context, SpanStatusCode, trace, type Span, type Tracer } from '@opentelemetry/api';
 import { LayerCacheType, SERVICES } from '../../../common/constants';
 import { UnexpectedCacheGridsError, UnsupportedGridError } from '../../../common/errors';
-import type { CacheDeletionJobParams, CacheDeletionTaskConfig, CacheDeletionTaskParams, IConfig } from '../../../common/interfaces';
+import type { CreateCacheDeletionJobParams, CacheDeletionTaskConfig, CacheDeletionTaskParams, IConfig } from '../../../common/interfaces';
 import { MapproxyApiClient } from '../../../httpClients/mapproxyClient';
 import { internalIdSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { IngestionSwapUpdateFinalizeJob, IngestionUpdateFinalizeJob } from '../../../utils/zod/schemas/job.schema';
@@ -57,7 +57,7 @@ export class CacheDeletionJobCreator {
     this.wipeDelaySeconds = this.taskConfig.gracefulReloadMaxSeconds + this.taskConfig.reloadWindowMarginSeconds;
   }
 
-  public async create({ layerName, ingestionJob }: CacheDeletionJobParams): Promise<void> {
+  public async create({ layerName, ingestionJob }: CreateCacheDeletionJobParams): Promise<void> {
     await context.with(trace.setSpan(context.active(), this.tracer.startSpan(`${CacheDeletionJobCreator.name}.${this.create.name}`)), async () => {
       const activeSpan = trace.getActiveSpan();
       const { jobType, buildTasks } = this.resolveStrategy(ingestionJob);
@@ -168,6 +168,7 @@ export class CacheDeletionJobCreator {
     let taskBatch: CacheDeletionTask[] = [];
     let jobId: string | undefined;
     let taskCount = 0;
+    let isJobCreatedWithAllTasks = false;
 
     try {
       for await (const task of tasks) {
@@ -175,13 +176,18 @@ export class CacheDeletionJobCreator {
         taskCount++;
 
         if (taskBatch.length === taskBatchSize) {
-          jobId = await this.flushTaskBatch(job, jobType, catalogId, jobId, taskBatch);
+          jobId = await this.flushTaskBatch(job, jobType, catalogId, jobId, taskBatch, false);
           taskBatch = [];
         }
       }
 
       if (taskBatch.length > 0) {
-        jobId = await this.flushTaskBatch(job, jobType, catalogId, jobId, taskBatch);
+        isJobCreatedWithAllTasks = jobId === undefined;
+        jobId = await this.flushTaskBatch(job, jobType, catalogId, jobId, taskBatch, true);
+      }
+
+      if (jobId !== undefined && !isJobCreatedWithAllTasks) {
+        await this.markTasksCreationCompleted(jobId, job.id);
       }
     } catch (err) {
       if (jobId !== undefined) {
@@ -205,7 +211,8 @@ export class CacheDeletionJobCreator {
     jobType: string,
     catalogId: string,
     jobId: string | undefined,
-    tasks: CacheDeletionTask[]
+    tasks: CacheDeletionTask[],
+    isLastBatch: boolean
   ): Promise<string> {
     if (jobId !== undefined) {
       await this.queueClient.jobManagerClient.createTaskForJob(jobId, tasks);
@@ -213,12 +220,12 @@ export class CacheDeletionJobCreator {
     }
 
     const { resourceId, version, producerName, productName, productType, domain } = job;
-    const createJobRequest: ICreateJobBody<unknown, CacheDeletionTaskParams> = {
+    const createJobRequest: ICreateJobBody<CacheDeletionJobParams, CacheDeletionTaskParams> = {
       resourceId,
       internalId: catalogId,
       version,
       type: jobType,
-      parameters: { ingestionJobId: job.id, ingestionJobType: job.type },
+      parameters: { ingestionJobId: job.id, tasksCreationCompleted: isLastBatch },
       status: OperationStatus.IN_PROGRESS,
       producerName: producerName ?? undefined,
       productName,
@@ -231,11 +238,11 @@ export class CacheDeletionJobCreator {
     return res.id;
   }
 
-  /**
-   * A job created with its first batch but missing later ones would run its enqueued tasks to
-   * completion, and job-tracker would then report the whole cache deletion as successful. Fail it
-   * explicitly instead - silent partial success is the failure mode this creator exists to avoid.
-   */
+  private async markTasksCreationCompleted(jobId: string, ingestionJobId: string): Promise<void> {
+    const parameters: CacheDeletionJobParams = { ingestionJobId, tasksCreationCompleted: true };
+    await this.queueClient.jobManagerClient.updateJob(jobId, { parameters });
+  }
+
   private async failPartialJob(jobId: string, cause: unknown, logger: Logger): Promise<void> {
     const reason = `cache deletion task enqueue failed: ${cause instanceof Error ? cause.message : String(cause)}`;
     logger.error({ msg: 'Cache deletion job is missing tasks after an enqueue failure, marking it failed', cacheDeletionJobId: jobId, reason });

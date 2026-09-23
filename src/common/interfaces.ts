@@ -383,7 +383,7 @@ export type PolygonPartsProcessPayload = Pick<PolygonPartsPayload, 'productId' |
 
 //#region cacheDeletionJobCreator
 
-export interface CacheDeletionJobParams {
+export interface CreateCacheDeletionJobParams {
   layerName: LayerName;
   ingestionJob: IngestionUpdateFinalizeJob | IngestionSwapUpdateFinalizeJob;
 }
