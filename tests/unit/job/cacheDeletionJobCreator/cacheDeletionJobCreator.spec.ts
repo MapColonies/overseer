@@ -2,8 +2,8 @@
 import { randomUUID } from 'node:crypto';
 import type { MultiPolygon, Polygon } from 'geojson';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
-import { StorageProvider } from '@map-colonies/raster-shared';
-import type { CacheDeletionJobParams, CacheDeletionTaskConfig, GetMapproxyCacheResponse } from '../../../../src/common/interfaces';
+import { StorageProvider, type CacheDeletionJobParams } from '@map-colonies/raster-shared';
+import type { CreateCacheDeletionJobParams, CacheDeletionTaskConfig, GetMapproxyCacheResponse } from '../../../../src/common/interfaces';
 import { registerDefaultConfig, configMock, setValue } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { LayerCacheType } from '../../../../src/common/constants';
@@ -47,7 +47,7 @@ describe('CacheDeletionJobCreator', () => {
       mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
       jobManagerClientMock.createJob.mockResolvedValue({ id: jobId, taskIds: [randomUUID()] });
 
-      const params: CacheDeletionJobParams = { layerName: 'layer-Orthophoto', ingestionJob: ingestionSwapUpdateFinalizeJob };
+      const params: CreateCacheDeletionJobParams = { layerName: 'layer-Orthophoto', ingestionJob: ingestionSwapUpdateFinalizeJob };
 
       await cacheDeletionJobCreator.create(params);
 
@@ -65,10 +65,12 @@ describe('CacheDeletionJobCreator', () => {
         type: jobType,
         status: OperationStatus.IN_PROGRESS,
       });
+      // the single wipe task is the whole job, so tasks creation is completed with the job itself
       expect(request.parameters).toStrictEqual({
         ingestionJobId: ingestionSwapUpdateFinalizeJob.id,
-        ingestionJobType: ingestionSwapUpdateFinalizeJob.type,
-      });
+        tasksCreationCompleted: true,
+      } satisfies CacheDeletionJobParams);
+      expect(jobManagerClientMock.updateJob).not.toHaveBeenCalled();
       // cleaner resolves DeleteStoredResourcesStrategy from this job type; the update job type
       // would route the same params to the range strategy and fail validation
       expect(request.type).toBe('Swap_Delete_Cache');
@@ -198,6 +200,58 @@ describe('CacheDeletionJobCreator', () => {
         // array. The final flush may be a partial batch, hence the inequality.
         expect((call[1] as unknown[]).length).toBeLessThanOrEqual(2);
       }
+    });
+
+    it('should create the job with tasks creation completed and skip the close-out when all tasks fit in the first batch', async () => {
+      setValue('jobManagement.ingestion.tasks.cacheDeletion.taskBatchSize', 1000);
+
+      const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = await setupCacheDeletionJobCreatorTest();
+
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
+      readProductGeometryMock.mockResolvedValue(productGeometry);
+      jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
+
+      await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: ingestionUpdateFinalizeJob });
+
+      expect(jobManagerClientMock.createJob).toHaveBeenCalledTimes(1);
+      expect(jobManagerClientMock.createTaskForJob).not.toHaveBeenCalled();
+      expect(jobManagerClientMock.createJob.mock.calls[0]![0].parameters).toStrictEqual({
+        ingestionJobId: ingestionUpdateFinalizeJob.id,
+        tasksCreationCompleted: true,
+      } satisfies CacheDeletionJobParams);
+      expect(jobManagerClientMock.updateJob).not.toHaveBeenCalled();
+    });
+
+    it('should flag tasks creation as completed only after the last batch is enqueued', async () => {
+      const jobId = randomUUID();
+
+      // Same config trick as the streaming test above - guarantees more than one flush.
+      setValue('jobManagement.ingestion.tasks.cacheDeletion.tileBatchSize', 1);
+      setValue('jobManagement.ingestion.tasks.cacheDeletion.taskBatchSize', 2);
+      setValue('jobManagement.ingestion.tasks.cacheDeletion.maxZoom', 3);
+
+      const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = await setupCacheDeletionJobCreatorTest();
+
+      mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
+      readProductGeometryMock.mockResolvedValue(productGeometry);
+      jobManagerClientMock.createJob.mockResolvedValue({ id: jobId, taskIds: [randomUUID()] });
+
+      await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: ingestionUpdateFinalizeJob });
+
+      expect(jobManagerClientMock.createJob.mock.calls[0]![0].parameters).toStrictEqual({
+        ingestionJobId: ingestionUpdateFinalizeJob.id,
+        tasksCreationCompleted: false,
+      } satisfies CacheDeletionJobParams);
+
+      // job-manager overwrites parameters on update, so the full object must be sent
+      expect(jobManagerClientMock.updateJob).toHaveBeenCalledTimes(1);
+      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(jobId, {
+        parameters: { ingestionJobId: ingestionUpdateFinalizeJob.id, tasksCreationCompleted: true } satisfies CacheDeletionJobParams,
+      });
+
+      const lastEnqueueOrder = Math.max(...jobManagerClientMock.createTaskForJob.mock.invocationCallOrder);
+
+      expect(jobManagerClientMock.updateJob.mock.invocationCallOrder[0]).toBeGreaterThan(lastEnqueueOrder);
     });
 
     it('should fail the job explicitly when a mid-stream enqueue fails, rather than leaving a silent partial success', async () => {
