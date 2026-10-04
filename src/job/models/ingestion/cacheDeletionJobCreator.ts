@@ -175,17 +175,23 @@ export class CacheDeletionJobCreator {
         taskBatch.push(task);
         taskCount++;
 
+        // A full batch: the first one creates the job, later ones are appended to it.
+        // More tasks may still follow, so the job is not flagged as complete yet.
         if (taskBatch.length === taskBatchSize) {
           jobId = await this.flushTaskBatch(job, jobType, catalogId, jobId, taskBatch, false);
           taskBatch = [];
         }
       }
 
+      // The leftover partial batch. If no job exists yet, every task fit in this single batch,
+      // so the job is created already flagged as complete and needs no follow-up update.
       if (taskBatch.length > 0) {
         isJobCreatedWithAllTasks = jobId === undefined;
         jobId = await this.flushTaskBatch(job, jobType, catalogId, jobId, taskBatch, true);
       }
 
+      // The job was created by an earlier full batch with the flag unset (tasks were appended
+      // afterwards, or the task count was an exact multiple of the batch size), so set it now.
       if (jobId !== undefined && !isJobCreatedWithAllTasks) {
         await this.markTasksCreationCompleted(jobId, job.id);
       }
