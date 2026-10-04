@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.1](https://github.com/MapColonies/overseer/compare/v3.0.0...v3.0.1) (2026-10-04)
+
+
+### Bug Fixes
+
+* flag cache deletion job once all tasks are created (MAPCO-11779) ([#122](https://github.com/MapColonies/overseer/issues/122)) ([de77493](https://github.com/MapColonies/overseer/commit/de774939af66e82bfe1296e7b95007b2d65c39d8))
+
 ## [3.0.0](https://github.com/MapColonies/overseer/compare/v2.11.1...v3.0.0) (2026-09-07)
 
 
