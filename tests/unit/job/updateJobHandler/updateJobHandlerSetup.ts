@@ -40,7 +40,7 @@ export const setupUpdateJobHandlerTest = async (): Promise<UpdateJobHandlerTestC
   } as unknown as Mocked<TileDeletionTaskManager>;
 
   const mapproxyClientMock = { publish: vi.fn() } as unknown as Mocked<MapproxyApiClient>;
-  const catalogClientMock = { publish: vi.fn(), update: vi.fn() } as unknown as Mocked<CatalogClient>;
+  const catalogClientMock = { publish: vi.fn(), update: vi.fn(), findLayer: vi.fn() } as unknown as Mocked<CatalogClient>;
 
   const cacheDeletionJobCreatorMock = { create: vi.fn() } as unknown as Mocked<CacheDeletionJobCreator>;
   const updateJobHandler = new UpdateJobHandler(

@@ -10,6 +10,7 @@ import {
   IngestionUpdateFinalizeTask,
   IngestionUpdateCreateTasksJob,
 } from '../../../utils/zod/schemas/job.schema';
+import { previousFootprintSchema } from '../../../utils/zod/schemas/jobParameters.schema';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
 import { CatalogClient } from '../../../httpClients/catalogClient';
 import type { ReadProductGeometry } from '../../../utils/storage/productReader';
@@ -65,6 +66,8 @@ export class UpdateJobHandler
         }
 
         const layerRelativePath = join(job.internalId, additionalParams.displayPath);
+
+        await this.recordPreviousFootprint(job, job.internalId, logger);
 
         logger.info({ msg: 'building tasks' });
 
@@ -132,5 +135,36 @@ export class UpdateJobHandler
         }
       }
     );
+  }
+
+  /**
+   * Records the layer's catalog footprint, as it stands before this update lands, on the job's additional
+   * params. The cache deletion job created at finalize uses it to leave out the part of the update area that
+   * never had tiles to cache, and by then the catalog already holds the merged footprint. Best effort: without
+   * it the cache deletion covers the whole update area, so a failure here must not fail the ingestion.
+   */
+  private async recordPreviousFootprint(job: IngestionUpdateCreateTasksJob, catalogId: string, logger: Logger): Promise<void> {
+    const activeSpan = trace.getActiveSpan();
+
+    try {
+      const { metadata } = await this.catalogClient.findLayer(catalogId);
+      const previousFootprint = previousFootprintSchema.parse(metadata.footprint);
+
+      await this.queueClient.jobManagerClient.updateJob(job.id, {
+        parameters: { ...job.parameters, additionalParams: { ...job.parameters.additionalParams, previousFootprint } },
+      });
+
+      logger.info({ msg: 'Recorded the previous layer footprint on the job for the cache deletion', catalogId });
+      activeSpan?.addEvent('recordPreviousFootprint.success', { catalogId });
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      logger.warn({
+        msg: 'Could not record the previous layer footprint, the cache deletion will cover the whole update area',
+        catalogId,
+        reason,
+        err,
+      });
+      activeSpan?.addEvent('recordPreviousFootprint.skipped', { catalogId, reason });
+    }
   }
 }
