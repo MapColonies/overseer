@@ -1,6 +1,6 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import { bbox, buffer, clone, coordEach, feature, featureCollection, intersect } from '@turf/turf';
+import type { MultiPolygon, Polygon, Position } from 'geojson';
+import { booleanPointInPolygon } from '@turf/turf';
 import { degreesPerTile, footprintToTileRanges } from '@map-colonies/mc-utils';
 import type { ITileRange } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
@@ -33,49 +33,98 @@ interface CacheDeletionStrategy {
  *  - swap-update: wipes entire prefix (layer redirects to new tiles path)
  *  - update: deletes specific tile ranges over ingested footprint across all zooms
  */
-/** the globe is flat for practical purposes across this many degrees around the equator */
-const FLAT_EXTENT_DEGREES = 1;
-/**
- * keeps the buffer a superset of the grid distance: turf draws the round ends as polygons inscribed in the
- * circle, which fall short of the radius by up to half a percent, and the flat patch has a little curvature
- */
-const FLAT_BUFFER_MARGIN = 1.01;
-const HALF = 2;
+const GRID_MIN_LON = -180;
+const GRID_MIN_LAT = -90;
+const SUBTILES_PER_AXIS = 2;
+/** the geodetic grid has two root tiles at zoom 0: the west (x=0) and the east (x=1) hemisphere */
+const ROOT_TILES_X = [0, 1];
 
-const midpoint = (a: number, b: number): number => a + (b - a) / HALF;
+interface TileBounds {
+  minLon: number;
+  minLat: number;
+  maxLon: number;
+  maxLat: number;
+}
 
-const mapCoordinates = <G extends Polygon | MultiPolygon>(geometry: G, map: (x: number, y: number) => [number, number]): G => {
-  const mapped = clone(geometry);
-  coordEach(mapped, (coord) => {
-    const [x, y] = map(coord[0] as number, coord[1] as number);
-    coord[0] = x;
-    coord[1] = y;
-  });
-  return mapped;
+interface Edge {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/** how a tile relates to one footprint, from the edges of the footprint that cross the tile's parent */
+interface FootprintEdges {
+  footprint: Polygon | MultiPolygon;
+  edges: Edge[];
+}
+
+/** bounds of a tile on the WorldCRS84 grid: tiles span 180 / 2^zoom degrees from the south-west corner */
+const tileBounds = (zoom: number, x: number, y: number): TileBounds => {
+  const side = degreesPerTile(zoom);
+  const minLon = GRID_MIN_LON + x * side;
+  const minLat = GRID_MIN_LAT + y * side;
+  return { minLon, minLat, maxLon: minLon + side, maxLat: minLat + side };
+};
+
+const tileCenter = (bounds: TileBounds): Position => [
+  (bounds.minLon + bounds.maxLon) / SUBTILES_PER_AXIS,
+  (bounds.minLat + bounds.maxLat) / SUBTILES_PER_AXIS,
+];
+
+/** the edges of every ring of a footprint; rings are closed, so each point joins the next */
+const edgesOf = (footprint: Polygon | MultiPolygon): Edge[] => {
+  const rings = footprint.type === 'Polygon' ? footprint.coordinates : footprint.coordinates.flat();
+  return rings.flatMap((ring) =>
+    ring.slice(1).map((point, i) => ({ x1: ring[i]![0] as number, y1: ring[i]![1] as number, x2: point[0] as number, y2: point[1] as number }))
+  );
 };
 
 /**
- * Buffers a footprint by a distance in grid degrees, the metric of the WorldCRS84 tile grid.
- *
- * turf measures a buffer along the globe, so a buffer of many degrees around a footprint away from the
- * equator bends around the sphere and can even leave the footprint itself outside the result. The footprint
- * is therefore moved to the equator and scaled down to a patch small enough to be flat, buffered there, and
- * mapped back, which makes the buffer planar in degrees as the grid requires.
+ * Liang-Barsky clipping as a yes/no: does any part of the edge lie within the tile? The edge is
+ * `start + t * (dx, dy)` for t in [0, 1]; each of the four tile borders narrows the window [t0, t1] of
+ * the part inside, and an empty window means a miss. Touching a border counts as inside
  */
-const bufferInGridDegrees = (footprint: Feature<Polygon | MultiPolygon>, distance: number): Feature<Polygon | MultiPolygon> | undefined => {
-  const [minX, minY, maxX, maxY] = bbox(footprint);
-  const centerX = midpoint(minX, maxX);
-  const centerY = midpoint(minY, maxY);
-  // the flat patch has to hold the footprint plus the buffer on both sides
-  const scale = FLAT_EXTENT_DEGREES / (Math.max(maxX - minX, maxY - minY) + distance + distance);
+const edgeCrossesTile = (edge: Edge, bounds: TileBounds): boolean => {
+  const dx = edge.x2 - edge.x1;
+  const dy = edge.y2 - edge.y1;
+  const speedTowardBorder = [-dx, dx, -dy, dy];
+  const distanceInsideBorder = [edge.x1 - bounds.minLon, bounds.maxLon - edge.x1, edge.y1 - bounds.minLat, bounds.maxLat - edge.y1];
+  let t0 = 0;
+  let t1 = 1;
 
-  const flat = mapCoordinates(footprint.geometry, (x, y) => [(x - centerX) * scale, (y - centerY) * scale]);
-  const buffered = buffer(flat, distance * scale * FLAT_BUFFER_MARGIN, { units: 'degrees' });
-  if (buffered === undefined) {
-    return undefined;
+  for (let i = 0; i < speedTowardBorder.length; i++) {
+    const p = speedTowardBorder[i]!;
+    const q = distanceInsideBorder[i]!;
+    if (p === 0) {
+      if (q < 0) {
+        return false; // parallel to this border and outside it
+      }
+      continue;
+    }
+    const t = q / p;
+    if (p < 0) {
+      if (t > t1) {
+        return false; // enters only after it has already left
+      }
+      t0 = Math.max(t0, t);
+    } else {
+      if (t < t0) {
+        return false; // leaves before it has entered
+      }
+      t1 = Math.min(t1, t);
+    }
   }
-  return feature(mapCoordinates(buffered.geometry, (x, y) => [x / scale + centerX, y / scale + centerY]));
+  return true;
 };
+
+/** every descendant of a tile down to maxZoom, one range per zoom, by arithmetic alone */
+function* subtreeRanges(zoom: number, x: number, y: number, maxZoom: number): Generator<ITileRange> {
+  for (let z = zoom; z <= maxZoom; z++) {
+    const factor = SUBTILES_PER_AXIS ** (z - zoom);
+    yield { zoom: z, minX: x * factor, maxX: (x + 1) * factor - 1, minY: y * factor, maxY: (y + 1) * factor - 1 };
+  }
+}
 
 @injectable()
 export class CacheDeletionJobCreator {
@@ -215,15 +264,17 @@ export class CacheDeletionJobCreator {
   }
 
   /**
-   * Walks only the tiles that can hold a cached tile of the replaced data.
+   * Walks the tile pyramid and keeps only the tiles that touch both the update area and the previous footprint.
    *
    * Only the previous footprint ever had tiles to cache, so a tile of the update area that does not also
-   * touch it was never cached and needs no deletion. A tile of side `s` that touches the previous footprint
-   * lies within `s * sqrt(2)` of it, so clipping the update area to a buffer of that reach, per zoom, gives a
-   * tight superset of the tiles touching both: at most a rim about two tiles wide along the previous
-   * boundary. Touching is monotone down the pyramid (a child touching both implies its parent does), so the
-   * first zoom with an empty clip ends the walk - for an update outside the previous footprint that happens
-   * at a low zoom, leaving just the coarse tiles both areas share.
+   * touch it was never cached and needs no deletion. A tile can touch a footprint only if its parent does,
+   * so the walk descends from the two root tiles and drops every tile that misses either area together with
+   * all of its descendants. A tile that no edge of a footprint crosses lies wholly inside or wholly outside
+   * it, and its centre tells which; a tile wholly inside both areas has every descendant inside both, so its
+   * subtree is emitted by arithmetic without being visited. Only the edges that cross a tile are handed to
+   * its children, so the work shrinks as the walk narrows onto the boundaries. For an update outside the
+   * previous footprint the walk dies out after a few coarse zooms; over an overlap it follows the two
+   * boundaries down to maxZoom.
    */
   private *rangesTouchingPreviousFootprint(
     updateArea: Polygon | MultiPolygon,
@@ -231,21 +282,42 @@ export class CacheDeletionJobCreator {
     maxZoom: number,
     logger: Logger
   ): Generator<ITileRange> {
-    const update = feature(updateArea);
-    const previous = feature(previousFootprint);
+    let deepestZoom = -1;
 
-    for (let zoom = 0; zoom <= maxZoom; zoom++) {
-      const reach = degreesPerTile(zoom) * Math.SQRT2;
-      const nearPrevious = bufferInGridDegrees(previous, reach);
-      const target = nearPrevious === undefined ? null : intersect(featureCollection([update, nearPrevious]));
-
-      if (target === null) {
-        logger.info({ msg: 'Update area stops touching the previous footprint, ending the range walk', lastZoom: zoom - 1, maxZoom });
+    function* descend(zoom: number, x: number, y: number, areas: FootprintEdges[]): Generator<ITileRange> {
+      const bounds = tileBounds(zoom, x, y);
+      const crossing = areas.map(({ footprint, edges }) => ({ footprint, edges: edges.filter((edge) => edgeCrossesTile(edge, bounds)) }));
+      const uncrossed = crossing.filter(({ edges }) => edges.length === 0);
+      if (uncrossed.some(({ footprint }) => !booleanPointInPolygon(tileCenter(bounds), footprint))) {
+        return; // wholly outside one of the areas, and so is every descendant
+      }
+      if (uncrossed.length === areas.length) {
+        deepestZoom = maxZoom;
+        yield* subtreeRanges(zoom, x, y, maxZoom); // wholly inside both areas, and so is every descendant
         return;
       }
 
-      yield* footprintToTileRanges(target, { minZoom: zoom, maxZoom: zoom });
+      deepestZoom = Math.max(deepestZoom, zoom);
+      yield { zoom, minX: x, maxX: x, minY: y, maxY: y };
+
+      if (zoom < maxZoom) {
+        const childX = SUBTILES_PER_AXIS * x;
+        const childY = SUBTILES_PER_AXIS * y;
+        yield* descend(zoom + 1, childX, childY, crossing);
+        yield* descend(zoom + 1, childX + 1, childY, crossing);
+        yield* descend(zoom + 1, childX, childY + 1, crossing);
+        yield* descend(zoom + 1, childX + 1, childY + 1, crossing);
+      }
     }
+
+    const areas: FootprintEdges[] = [
+      { footprint: updateArea, edges: edgesOf(updateArea) },
+      { footprint: previousFootprint, edges: edgesOf(previousFootprint) },
+    ];
+    for (const rootX of ROOT_TILES_X) {
+      yield* descend(0, rootX, 0, areas);
+    }
+    logger.info({ msg: 'Cache deletion range walk ended', deepestZoom, maxZoom });
   }
 
   private async createJobWithStreamedTasks(
