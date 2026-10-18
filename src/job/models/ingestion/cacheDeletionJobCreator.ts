@@ -1,6 +1,6 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import { bbox, buffer, clone, coordEach, feature, featureCollection, intersect } from '@turf/turf';
+import type { MultiPolygon, Polygon } from 'geojson';
+import { buffer, feature, featureCollection, intersect } from '@turf/turf';
 import { degreesPerTile, footprintToTileRanges } from '@map-colonies/mc-utils';
 import type { ITileRange } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
@@ -33,49 +33,14 @@ interface CacheDeletionStrategy {
  *  - swap-update: wipes entire prefix (layer redirects to new tiles path)
  *  - update: deletes specific tile ranges over ingested footprint across all zooms
  */
-/** the globe is flat for practical purposes across this many degrees around the equator */
-const FLAT_EXTENT_DEGREES = 1;
 /**
- * keeps the buffer a superset of the grid distance: turf draws the round ends as polygons inscribed in the
- * circle, which fall short of the radius by up to half a percent, and the flat patch has a little curvature
+ * turf measures a buffer along the globe. Up to this reach the result holds every point within that many grid
+ * degrees of the footprint (a degree of latitude is the same distance everywhere and a degree of longitude is
+ * shorter away from the equator), while a wider buffer bends around the sphere and falls apart
  */
-const FLAT_BUFFER_MARGIN = 1.01;
-const HALF = 2;
-
-const midpoint = (a: number, b: number): number => a + (b - a) / HALF;
-
-const mapCoordinates = <G extends Polygon | MultiPolygon>(geometry: G, map: (x: number, y: number) => [number, number]): G => {
-  const mapped = clone(geometry);
-  coordEach(mapped, (coord) => {
-    const [x, y] = map(coord[0] as number, coord[1] as number);
-    coord[0] = x;
-    coord[1] = y;
-  });
-  return mapped;
-};
-
-/**
- * Buffers a footprint by a distance in grid degrees, the metric of the WorldCRS84 tile grid.
- *
- * turf measures a buffer along the globe, so a buffer of many degrees around a footprint away from the
- * equator bends around the sphere and can even leave the footprint itself outside the result. The footprint
- * is therefore moved to the equator and scaled down to a patch small enough to be flat, buffered there, and
- * mapped back, which makes the buffer planar in degrees as the grid requires.
- */
-const bufferInGridDegrees = (footprint: Feature<Polygon | MultiPolygon>, distance: number): Feature<Polygon | MultiPolygon> | undefined => {
-  const [minX, minY, maxX, maxY] = bbox(footprint);
-  const centerX = midpoint(minX, maxX);
-  const centerY = midpoint(minY, maxY);
-  // the flat patch has to hold the footprint plus the buffer on both sides
-  const scale = FLAT_EXTENT_DEGREES / (Math.max(maxX - minX, maxY - minY) + distance + distance);
-
-  const flat = mapCoordinates(footprint.geometry, (x, y) => [(x - centerX) * scale, (y - centerY) * scale]);
-  const buffered = buffer(flat, distance * scale * FLAT_BUFFER_MARGIN, { units: 'degrees' });
-  if (buffered === undefined) {
-    return undefined;
-  }
-  return feature(mapCoordinates(buffered.geometry, (x, y) => [x / scale + centerX, y / scale + centerY]));
-};
+const MAX_BUFFERED_REACH_DEGREES = 10;
+/** turf draws the round ends of a buffer as polygons inscribed in the circle, which fall short of the radius by up to half a percent */
+const REACH_MARGIN = 1.01;
 
 @injectable()
 export class CacheDeletionJobCreator {
@@ -236,7 +201,13 @@ export class CacheDeletionJobCreator {
 
     for (let zoom = 0; zoom <= maxZoom; zoom++) {
       const reach = degreesPerTile(zoom) * Math.SQRT2;
-      const nearPrevious = bufferInGridDegrees(previous, reach);
+      if (reach > MAX_BUFFERED_REACH_DEGREES) {
+        // tiles this coarse are a handful and nearly always shared, so the whole update area is walked
+        yield* footprintToTileRanges(update, { minZoom: zoom, maxZoom: zoom });
+        continue;
+      }
+
+      const nearPrevious = buffer(previous, reach * REACH_MARGIN, { units: 'degrees' });
       const target = nearPrevious === undefined ? null : intersect(featureCollection([update, nearPrevious]));
 
       if (target === null) {
