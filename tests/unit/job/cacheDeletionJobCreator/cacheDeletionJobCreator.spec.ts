@@ -344,8 +344,8 @@ describe('CacheDeletionJobCreator', () => {
         const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
         // a layer near 35E 32N with an update 0.05 degrees east of it. A zoom 12 tile is 0.044 wide (0.062
         // across its diagonal) so its clip still reaches the update; a zoom 13 tile (0.031 across) cannot.
-        // A buffer of 127 degrees at zoom 1 would bend around the globe and miss this latitude altogether,
-        // which is why the coarse zooms are walked without a clip
+        // An arc-length buffer of 127 degrees at zoom 1 bends around the globe and misses this latitude
+        // altogether, which used to end the walk after zoom 0
         const PREVIOUS_NORTH = square(34.9, 32, 0.2);
         const UPDATE = square(35.15, 32.05, 0.1);
         const LAST_BRIDGING_ZOOM = 12;
