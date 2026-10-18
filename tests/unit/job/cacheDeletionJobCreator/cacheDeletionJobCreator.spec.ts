@@ -266,8 +266,9 @@ describe('CacheDeletionJobCreator', () => {
       it('should walk no deeper than the last zoom whose tiles can still span both areas when the update lies outside the previous footprint', async () => {
         const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
         const taskConfig = configMock.get<CacheDeletionTaskConfig>('jobManagement.ingestion.tasks.cacheDeletion');
-        // 1.5 degrees east of PREVIOUS. A zoom 7 tile is 1.41 degrees wide (1.99 across its diagonal), so the
-        // clip still reaches the update area; a zoom 8 tile is 0.70 wide (0.99 across) and cannot bridge the gap
+        // 1.5 degrees east of PREVIOUS. A zoom 7 tile is 1.41 degrees wide, so the tile box around PREVIOUS padded
+        // by one tile still reaches the update area's first column; at zoom 8 (0.70 wide) whole tiles of new
+        // ground separate the two
         const UPDATE = square(2.5, 0, 1);
         const LAST_BRIDGING_ZOOM = 7;
 
@@ -324,28 +325,26 @@ describe('CacheDeletionJobCreator', () => {
           }
         }
 
-        // at the deepest zoom nothing starts farther from PREVIOUS than one tile diagonal: the new-only ground
+        // at the deepest zoom nothing starts farther from PREVIOUS than the one-tile pad: the new-only ground
         // beyond that was never cached and is left alone
-        const reach = degreesPerTile(MAX_ZOOM) * Math.SQRT2;
+        const pad = degreesPerTile(MAX_ZOOM);
         const deepest = ranges.filter((range) => range.zoom === MAX_ZOOM);
 
         expect(deepest.length).toBeGreaterThan(0);
 
         for (const range of deepest) {
-          expect(tileMinLon(MAX_ZOOM, range.maxX)).toBeLessThanOrEqual(NEW_GROUND_EDGE + reach);
+          expect(tileMinLon(MAX_ZOOM, range.maxX)).toBeLessThanOrEqual(NEW_GROUND_EDGE + pad);
         }
-        // whereas the update area itself does extend past that reach, so the full walk would have gone there
+        // whereas the update area itself does extend past the pad, so the full walk would have gone there
         const farEdgeTile = Math.floor((boundsOf(UPDATE).maxLon + 180) / degreesPerTile(MAX_ZOOM));
 
-        expect(tileMinLon(MAX_ZOOM, farEdgeTile)).toBeGreaterThan(NEW_GROUND_EDGE + reach);
+        expect(tileMinLon(MAX_ZOOM, farEdgeTile)).toBeGreaterThan(NEW_GROUND_EDGE + pad);
       });
 
-      it('should measure the reach in grid degrees for a layer far from the equator', async () => {
+      it('should clip in grid tiles, unaffected by latitude, for a layer far from the equator', async () => {
         const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
-        // a layer near 35E 32N with an update 0.05 degrees east of it. A zoom 12 tile is 0.044 wide (0.062
-        // across its diagonal) so its clip still reaches the update; a zoom 13 tile (0.031 across) cannot.
-        // An arc-length buffer of 127 degrees at zoom 1 bends around the globe and misses this latitude
-        // altogether, which used to end the walk after zoom 0
+        // a layer near 35E 32N with an update 0.05 degrees east of it. A zoom 12 tile is 0.044 wide, so the
+        // one-tile pad around the layer still reaches the update; a zoom 13 tile (0.022 wide) does not
         const PREVIOUS_NORTH = square(34.9, 32, 0.2);
         const UPDATE = square(35.15, 32.05, 0.1);
         const LAST_BRIDGING_ZOOM = 12;

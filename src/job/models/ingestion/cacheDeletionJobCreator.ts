@@ -1,8 +1,8 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
-import { bbox, buffer, clone, coordEach, feature, featureCollection, intersect } from '@turf/turf';
-import { degreesPerTile, footprintToTileRanges } from '@map-colonies/mc-utils';
-import type { ITileRange } from '@map-colonies/mc-utils';
+import type { MultiPolygon, Polygon } from 'geojson';
+import { bbox } from '@turf/turf';
+import { bboxToTileRange, footprintToTileRanges } from '@map-colonies/mc-utils';
+import type { BBox2d, ITileRange } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { CacheDeletionJobParams, LayerName } from '@map-colonies/raster-shared';
@@ -33,50 +33,6 @@ interface CacheDeletionStrategy {
  *  - swap-update: wipes entire prefix (layer redirects to new tiles path)
  *  - update: deletes specific tile ranges over ingested footprint across all zooms
  */
-/** the globe is flat for practical purposes across this many degrees around the equator */
-const FLAT_EXTENT_DEGREES = 1;
-/**
- * keeps the buffer a superset of the grid distance: turf draws the round ends as polygons inscribed in the
- * circle, which fall short of the radius by up to half a percent, and the flat patch has a little curvature
- */
-const FLAT_BUFFER_MARGIN = 1.01;
-const HALF = 2;
-
-const midpoint = (a: number, b: number): number => a + (b - a) / HALF;
-
-const mapCoordinates = <G extends Polygon | MultiPolygon>(geometry: G, map: (x: number, y: number) => [number, number]): G => {
-  const mapped = clone(geometry);
-  coordEach(mapped, (coord) => {
-    const [x, y] = map(coord[0] as number, coord[1] as number);
-    coord[0] = x;
-    coord[1] = y;
-  });
-  return mapped;
-};
-
-/**
- * Buffers a footprint by a distance in grid degrees, the metric of the WorldCRS84 tile grid.
- *
- * turf measures a buffer along the globe, so a buffer of many degrees around a footprint away from the
- * equator bends around the sphere and can even leave the footprint itself outside the result. The footprint
- * is therefore moved to the equator and scaled down to a patch small enough to be flat, buffered there, and
- * mapped back, which makes the buffer planar in degrees as the grid requires.
- */
-const bufferInGridDegrees = (footprint: Feature<Polygon | MultiPolygon>, distance: number): Feature<Polygon | MultiPolygon> | undefined => {
-  const [minX, minY, maxX, maxY] = bbox(footprint);
-  const centerX = midpoint(minX, maxX);
-  const centerY = midpoint(minY, maxY);
-  // the flat patch has to hold the footprint plus the buffer on both sides
-  const scale = FLAT_EXTENT_DEGREES / (Math.max(maxX - minX, maxY - minY) + distance + distance);
-
-  const flat = mapCoordinates(footprint.geometry, (x, y) => [(x - centerX) * scale, (y - centerY) * scale]);
-  const buffered = buffer(flat, distance * scale * FLAT_BUFFER_MARGIN, { units: 'degrees' });
-  if (buffered === undefined) {
-    return undefined;
-  }
-  return feature(mapCoordinates(buffered.geometry, (x, y) => [x / scale + centerX, y / scale + centerY]));
-};
-
 @injectable()
 export class CacheDeletionJobCreator {
   private readonly taskConfig: CacheDeletionTaskConfig;
@@ -215,15 +171,14 @@ export class CacheDeletionJobCreator {
   }
 
   /**
-   * Walks only the tiles that can hold a cached tile of the replaced data.
+   * Keeps only the update tiles that can also hold a cached tile of the replaced data.
    *
-   * Only the previous footprint ever had tiles to cache, so a tile of the update area that does not also
-   * touch it was never cached and needs no deletion. A tile of side `s` that touches the previous footprint
-   * lies within `s * sqrt(2)` of it, so clipping the update area to a buffer of that reach, per zoom, gives a
-   * tight superset of the tiles touching both: at most a rim about two tiles wide along the previous
-   * boundary. Touching is monotone down the pyramid (a child touching both implies its parent does), so the
-   * first zoom with an empty clip ends the walk - for an update outside the previous footprint that happens
-   * at a low zoom, leaving just the coarse tiles both areas share.
+   * Only the previous footprint ever had tiles to cache, so an update tile that lies outside the tile box
+   * around it was never cached and needs no deletion. Each zoom clips the update ranges to that box with
+   * plain range arithmetic, padded by one tile so tiles that merely touch the previous footprint's edge are
+   * kept too. Sharing a tile is monotone down the pyramid (a child shared by both areas has a shared parent),
+   * so the first zoom with no shared tile ends the walk - for an update on new ground that happens at a low
+   * zoom, leaving just the coarse tiles both areas share.
    */
   private *rangesTouchingPreviousFootprint(
     updateArea: Polygon | MultiPolygon,
@@ -231,20 +186,31 @@ export class CacheDeletionJobCreator {
     maxZoom: number,
     logger: Logger
   ): Generator<ITileRange> {
-    const update = feature(updateArea);
-    const previous = feature(previousFootprint);
+    const [minLon, minLat, maxLon, maxLat] = bbox(previousFootprint);
+    const previousBbox: BBox2d = [minLon, minLat, maxLon, maxLat];
 
     for (let zoom = 0; zoom <= maxZoom; zoom++) {
-      const reach = degreesPerTile(zoom) * Math.SQRT2;
-      const nearPrevious = bufferInGridDegrees(previous, reach);
-      const target = nearPrevious === undefined ? null : intersect(featureCollection([update, nearPrevious]));
+      const previous = bboxToTileRange(previousBbox, zoom);
+      let shared = false;
 
-      if (target === null) {
-        logger.info({ msg: 'Update area stops touching the previous footprint, ending the range walk', lastZoom: zoom - 1, maxZoom });
-        return;
+      for (const range of footprintToTileRanges(updateArea, { minZoom: zoom, maxZoom: zoom })) {
+        const clipped: ITileRange = {
+          zoom,
+          minX: Math.max(range.minX, previous.minX - 1),
+          minY: Math.max(range.minY, previous.minY - 1),
+          maxX: Math.min(range.maxX, previous.maxX + 1),
+          maxY: Math.min(range.maxY, previous.maxY + 1),
+        };
+        if (clipped.minX <= clipped.maxX && clipped.minY <= clipped.maxY) {
+          shared = true;
+          yield clipped;
+        }
       }
 
-      yield* footprintToTileRanges(target, { minZoom: zoom, maxZoom: zoom });
+      if (!shared) {
+        logger.info({ msg: 'Update area stops sharing tiles with the previous footprint, ending the range walk', lastZoom: zoom - 1, maxZoom });
+        return;
+      }
     }
   }
 
