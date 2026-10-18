@@ -196,14 +196,14 @@ describe('CacheDeletionJobCreator', () => {
 
       // axis-aligned squares: tile/footprint contact reduces to interval overlap, which keeps the exhaustive
       // oracle below trivial
-      const square = (minLon: number, minLat: number, size: number): Polygon => ({
+      const square = (minLon: number, minLat: number, width: number, height = width): Polygon => ({
         type: 'Polygon',
         coordinates: [
           [
             [minLon, minLat],
-            [minLon + size, minLat],
-            [minLon + size, minLat + size],
-            [minLon, minLat + size],
+            [minLon + width, minLat],
+            [minLon + width, minLat + height],
+            [minLon, minLat + height],
             [minLon, minLat],
           ],
         ],
@@ -339,6 +339,56 @@ describe('CacheDeletionJobCreator', () => {
         const farEdgeTile = Math.floor((boundsOf(UPDATE).maxLon + 180) / degreesPerTile(MAX_ZOOM));
 
         expect(tileMinLon(MAX_ZOOM, farEdgeTile)).toBeGreaterThan(NEW_GROUND_EDGE + pad);
+      });
+
+      it('should stop early when the update sits inside the previous bbox but outside the previous footprint', async () => {
+        const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
+        const taskConfig = configMock.get<CacheDeletionTaskConfig>('jobManagement.ingestion.tasks.cacheDeletion');
+        // an L-shaped layer whose bbox is the unit square, with the update in the notch: the bbox clip alone would
+        // keep every update tile to max zoom, the footprint check drops them once a tile no longer reaches the L.
+        // The notch starts 0.35 away from both arms; a zoom 9 tile is 0.35 wide, so its one-tile pad still reaches,
+        // a zoom 10 tile (0.18) does not
+        const PREVIOUS_L: Polygon = {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [0, 0],
+              [1, 0],
+              [1, 0.3],
+              [0.3, 0.3],
+              [0.3, 1],
+              [0, 1],
+              [0, 0],
+            ],
+          ],
+        };
+        const UPDATE = square(0.65, 0.65, 0.2);
+        const LAST_REACHING_ZOOM = 9;
+
+        mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
+        readProductGeometryMock.mockResolvedValue(UPDATE);
+        jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
+        jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
+
+        await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: withPreviousFootprint(PREVIOUS_L) });
+
+        const ranges = emittedRanges(jobManagerClientMock);
+        const zooms = ranges.map((range) => range.zoom);
+
+        expect(Math.min(...zooms)).toBe(0);
+        expect(Math.max(...zooms)).toBe(LAST_REACHING_ZOOM);
+        expect(LAST_REACHING_ZOOM).toBeLessThan(taskConfig.maxZoom);
+
+        // the coarse tiles a square-based oracle cannot judge for an L are checked by brute force instead:
+        // every tile touching both the update and either arm of the L is covered
+        const ARMS = [square(0, 0, 1, 0.3), square(0, 0, 0.3, 1)];
+        for (let zoom = 0; zoom <= LAST_REACHING_ZOOM; zoom++) {
+          for (const arm of ARMS) {
+            for (const tile of tilesTouchingBoth(UPDATE, arm, zoom)) {
+              expect(covers(ranges, tile)).toBe(true);
+            }
+          }
+        }
       });
 
       it('should clip in grid tiles, unaffected by latitude, for a layer far from the equator', async () => {

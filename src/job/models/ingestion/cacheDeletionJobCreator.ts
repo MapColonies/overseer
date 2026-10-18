@@ -1,7 +1,7 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { MultiPolygon, Polygon } from 'geojson';
-import { bbox } from '@turf/turf';
-import { bboxToTileRange, footprintToTileRanges } from '@map-colonies/mc-utils';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import { bbox, bboxPolygon, booleanIntersects } from '@turf/turf';
+import { bboxToTileRange, degreesPerTile, footprintToTileRanges } from '@map-colonies/mc-utils';
 import type { BBox2d, ITileRange } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
@@ -33,6 +33,22 @@ interface CacheDeletionStrategy {
  *  - swap-update: wipes entire prefix (layer redirects to new tiles path)
  *  - update: deletes specific tile ranges over ingested footprint across all zooms
  */
+/** tiles kept around the previous footprint, so tiles that only touch its edge are deleted as well */
+const PAD_TILES = 1;
+const GRID_MIN_LON = -180;
+const GRID_MIN_LAT = -90;
+
+/** the ground a tile range covers, grown by `pad` tiles on every side */
+const tileRangeToPolygon = (range: ITileRange, pad: number): Feature<Polygon> => {
+  const side = degreesPerTile(range.zoom);
+  return bboxPolygon([
+    GRID_MIN_LON + (range.minX - pad) * side,
+    GRID_MIN_LAT + (range.minY - pad) * side,
+    GRID_MIN_LON + (range.maxX + 1 + pad) * side,
+    GRID_MIN_LAT + (range.maxY + 1 + pad) * side,
+  ]);
+};
+
 @injectable()
 export class CacheDeletionJobCreator {
   private readonly taskConfig: CacheDeletionTaskConfig;
@@ -176,9 +192,12 @@ export class CacheDeletionJobCreator {
    * Only the previous footprint ever had tiles to cache, so an update tile that lies outside the tile box
    * around it was never cached and needs no deletion. Each zoom clips the update ranges to that box with
    * plain range arithmetic, padded by one tile so tiles that merely touch the previous footprint's edge are
-   * kept too. Sharing a tile is monotone down the pyramid (a child shared by both areas has a shared parent),
-   * so the first zoom with no shared tile ends the walk - for an update on new ground that happens at a low
-   * zoom, leaving just the coarse tiles both areas share.
+   * kept too. The box is the footprint's bbox, which for an irregular footprint also holds ground the layer
+   * never covered, so each clipped range is then checked against the footprint itself: a range that, grown
+   * by one tile, does not touch the previous footprint is dropped. Sharing a tile is monotone down the
+   * pyramid (a child shared by both areas has a shared parent), so the first zoom with no shared tile ends
+   * the walk - for an update on new ground that happens at a low zoom, leaving just the coarse tiles both
+   * areas share.
    */
   private *rangesTouchingPreviousFootprint(
     updateArea: Polygon | MultiPolygon,
@@ -196,12 +215,16 @@ export class CacheDeletionJobCreator {
       for (const range of footprintToTileRanges(updateArea, { minZoom: zoom, maxZoom: zoom })) {
         const clipped: ITileRange = {
           zoom,
-          minX: Math.max(range.minX, previous.minX - 1),
-          minY: Math.max(range.minY, previous.minY - 1),
-          maxX: Math.min(range.maxX, previous.maxX + 1),
-          maxY: Math.min(range.maxY, previous.maxY + 1),
+          minX: Math.max(range.minX, previous.minX - PAD_TILES),
+          minY: Math.max(range.minY, previous.minY - PAD_TILES),
+          maxX: Math.min(range.maxX, previous.maxX + PAD_TILES),
+          maxY: Math.min(range.maxY, previous.maxY + PAD_TILES),
         };
-        if (clipped.minX <= clipped.maxX && clipped.minY <= clipped.maxY) {
+        if (
+          clipped.minX <= clipped.maxX &&
+          clipped.minY <= clipped.maxY &&
+          booleanIntersects(tileRangeToPolygon(clipped, PAD_TILES), previousFootprint)
+        ) {
           shared = true;
           yield clipped;
         }
