@@ -202,15 +202,8 @@ export class CacheDeletionJobCreator {
   }
 
   /**
-   * Keeps only the update tiles that can also hold a cached tile of the replaced data.
-   *
-   * Only the previous footprint ever had tiles to cache, so an update tile that lies outside the tile box
-   * around it was never cached and needs no deletion. Each zoom clips the update ranges to the tiles touching
-   * the previous bbox with plain range arithmetic. The bbox of an irregular footprint also holds ground the
-   * layer never covered, so each clipped range is then checked against the footprint itself and dropped when
-   * its ground does not touch it. Sharing a tile is monotone down the pyramid (a child shared by both areas
-   * has a shared parent), so the first zoom with no shared tile ends the walk - for an update on new ground
-   * that happens at a low zoom, leaving just the coarse tiles both areas share.
+   * Per zoom, clips the update ranges to the tile box of the previous bbox and keeps those whose ground touches the
+   * previous footprint; stops at the first zoom with no shared tile, since deeper zooms cannot share any either.
    */
   private *rangesTouchingPreviousFootprint(
     updateArea: Polygon | MultiPolygon,
