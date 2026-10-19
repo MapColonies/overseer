@@ -138,10 +138,8 @@ export class UpdateJobHandler
   }
 
   /**
-   * Records the layer's catalog footprint, as it stands before this update lands, on the job's additional
-   * params. The cache deletion job created at finalize uses it to leave out the part of the update area that
-   * never had tiles to cache, and by then the catalog already holds the merged footprint. Best effort: without
-   * it the cache deletion covers the whole update area, so a failure here must not fail the ingestion.
+   * Saves the catalog footprint from before this update on the job, so the cache deletion at finalize can limit itself
+   * to the previously covered ground. Best effort: without it the cache deletion covers the whole update area.
    */
   private async recordPreviousFootprint(job: IngestionUpdateCreateTasksJob, catalogId: string, logger: Logger): Promise<void> {
     const activeSpan = trace.getActiveSpan();
