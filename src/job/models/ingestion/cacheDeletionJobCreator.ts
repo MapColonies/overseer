@@ -1,5 +1,8 @@
 import type { Logger } from '@map-colonies/js-logger';
-import { footprintToTileRanges } from '@map-colonies/mc-utils';
+import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import { bbox, bboxPolygon, booleanIntersects } from '@turf/turf';
+import { degreesPerTile, footprintToTileRanges } from '@map-colonies/mc-utils';
+import type { BBox2d, ITileRange } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { CacheDeletionJobParams, LayerName } from '@map-colonies/raster-shared';
@@ -30,6 +33,37 @@ interface CacheDeletionStrategy {
  *  - swap-update: wipes entire prefix (layer redirects to new tiles path)
  *  - update: deletes specific tile ranges over ingested footprint across all zooms
  */
+const GRID_MIN_LON = -180;
+const GRID_MIN_LAT = -90;
+
+/**
+ * The tiles whose squares touch the bbox, bounds included: an edge lying exactly on a grid line also claims the
+ * tile beyond it on either side (ceil - 1 and floor agree everywhere else), as footprintToTileRanges does for
+ * footprints. Indices may fall outside the grid at the world's edge; they are only ever intersected with ranges
+ * that lie within it
+ */
+const tilesTouchingBbox = ([minLon, minLat, maxLon, maxLat]: BBox2d, zoom: number): ITileRange => {
+  const side = degreesPerTile(zoom);
+  return {
+    zoom,
+    minX: Math.ceil((minLon - GRID_MIN_LON) / side) - 1,
+    minY: Math.ceil((minLat - GRID_MIN_LAT) / side) - 1,
+    maxX: Math.floor((maxLon - GRID_MIN_LON) / side),
+    maxY: Math.floor((maxLat - GRID_MIN_LAT) / side),
+  };
+};
+
+/** the ground a tile range covers */
+const tileRangeToPolygon = (range: ITileRange): Feature<Polygon> => {
+  const side = degreesPerTile(range.zoom);
+  return bboxPolygon([
+    GRID_MIN_LON + range.minX * side,
+    GRID_MIN_LAT + range.minY * side,
+    GRID_MIN_LON + (range.maxX + 1) * side,
+    GRID_MIN_LAT + (range.maxY + 1) * side,
+  ]);
+};
+
 @injectable()
 export class CacheDeletionJobCreator {
   private readonly taskConfig: CacheDeletionTaskConfig;
@@ -141,11 +175,22 @@ export class CacheDeletionJobCreator {
 
   private async *buildRangeTasks(job: IngestionFinalizeJob, prefix: string, logger: Logger): AsyncGenerator<CacheDeletionTask> {
     const { maxZoom, tileBatchSize, maxRangesPerTask } = this.taskConfig;
+    const { previousFootprint } = job.parameters.additionalParams;
 
-    const geometry = await this.readProductGeometry(job.parameters.inputFiles.productShapefilePath);
-    logger.info({ msg: 'Computing tile ranges over the updated footprint', maxZoom, tileBatchSize, maxRangesPerTask });
+    const updateArea = await this.readProductGeometry(job.parameters.inputFiles.productShapefilePath);
+    logger.info({
+      msg: 'Computing tile ranges over the updated footprint',
+      maxZoom,
+      tileBatchSize,
+      maxRangesPerTask,
+      restrictedToPreviousFootprint: previousFootprint !== undefined,
+    });
 
-    const ranges = footprintToTileRanges(geometry, { minZoom: 0, maxZoom });
+    // without the previous footprint (jobs created before init recorded it) every tile of the update area is covered
+    const ranges =
+      previousFootprint === undefined
+        ? footprintToTileRanges(updateArea, { minZoom: 0, maxZoom })
+        : this.rangesTouchingPreviousFootprint(updateArea, previousFootprint, maxZoom, logger);
 
     for await (const batch of limitedTileBatchGenerator(tileBatchSize, maxRangesPerTask, ranges)) {
       yield {
@@ -153,6 +198,44 @@ export class CacheDeletionJobCreator {
         description: 'redis cache range deletion',
         parameters: { storageProvider: StorageProvider.REDIS, prefix, ranges: batch },
       };
+    }
+  }
+
+  /**
+   * Per zoom, clips the update ranges to the tile box of the previous bbox and keeps those whose ground touches the
+   * previous footprint; stops at the first zoom with no shared tile, since deeper zooms cannot share any either.
+   */
+  private *rangesTouchingPreviousFootprint(
+    updateArea: Polygon | MultiPolygon,
+    previousFootprint: Polygon | MultiPolygon,
+    maxZoom: number,
+    logger: Logger
+  ): Generator<ITileRange> {
+    const [minLon, minLat, maxLon, maxLat] = bbox(previousFootprint);
+    const previousBbox: BBox2d = [minLon, minLat, maxLon, maxLat];
+
+    for (let zoom = 0; zoom <= maxZoom; zoom++) {
+      const previous = tilesTouchingBbox(previousBbox, zoom);
+      let shared = false;
+
+      for (const range of footprintToTileRanges(updateArea, { minZoom: zoom, maxZoom: zoom })) {
+        const clipped: ITileRange = {
+          zoom,
+          minX: Math.max(range.minX, previous.minX),
+          minY: Math.max(range.minY, previous.minY),
+          maxX: Math.min(range.maxX, previous.maxX),
+          maxY: Math.min(range.maxY, previous.maxY),
+        };
+        if (clipped.minX <= clipped.maxX && clipped.minY <= clipped.maxY && booleanIntersects(tileRangeToPolygon(clipped), previousFootprint)) {
+          shared = true;
+          yield clipped;
+        }
+      }
+
+      if (!shared) {
+        logger.info({ msg: 'Update area stops sharing tiles with the previous footprint, ending the range walk', lastZoom: zoom - 1, maxZoom });
+        return;
+      }
     }
   }
 
