@@ -62,6 +62,10 @@ Custom definitions
 {{- include "common.tplvalues.merge" ( dict "values" ( list .Values.storage .Values.global.storage ) "context" . ) }}
 {{- end -}}
 
+{{- define "common.geoserver.merged" -}}
+{{- include "common.tplvalues.merge" ( dict "values" ( list .Values.geoserver .Values.global.geoserver ) "context" . ) }}
+{{- end -}}
+
 {{- define "common.jobDefinitions.merged" -}}
 {{- include "common.tplvalues.merge" ( dict "values" ( list .Values.jobDefinitions .Values.global.jobDefinitions ) "context" . ) }}
 {{- end -}}

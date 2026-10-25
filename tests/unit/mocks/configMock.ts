@@ -109,7 +109,7 @@ const registerDefaultConfig = (): void => {
     linkTemplatesPath: 'config/linkTemplates.template',
     servicesUrl: {
       mapproxyApi: 'http://mapproxy-api',
-      geoserverApi: 'http://geoserver-api',
+      geoserver: 'http://geoserver-internal/geoserver',
       catalogManager: 'http://catalog-manager',
       mapproxyDns: 'http://mapproxy',
       polygonPartsManager: 'http://polygon-parts-manager',
@@ -120,6 +120,10 @@ const registerDefaultConfig = (): void => {
     geoserver: {
       workspace: 'testWorkspace',
       dataStore: 'testDataStore',
+      auth: {
+        username: 'testUser',
+        password: 'testPassword',
+      },
     },
     instanceType: 'ingestion',
     jobManagement: {

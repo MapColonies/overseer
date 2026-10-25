@@ -114,7 +114,7 @@ The service can be configured using environment variables or a configuration fil
 | Variable Name | Type | Description | Default |
 |--------------|------|-------------|---------|
 | MAPPROXY_API_URL | string | MapProxy API URL | `"http://localhost:8083"` |
-| GEOSERVER_API_URL | string | GeoServer API URL | `"http://localhost:8084"` |
+| GEOSERVER_URL | string | GeoServer internal URL, used for its REST API | `"http://localhost:8084/geoserver"` |
 | GEOSERVER_DNS | string | GeoServer DNS | `"http://localhost:8088"` |
 | CATALOG_MANAGER_URL | string | Catalog Manager URL | `"http://localhost:8085"` |
 | MAPPROXY_DNS | string | MapProxy DNS | `"http://localhost:8086"` |
@@ -132,6 +132,8 @@ The service can be configured using environment variables or a configuration fil
 | DEQUEUE_INTERVAL_MS | number | Dequeue polling interval in milliseconds | `3000` |
 | GEOSERVER_WORKSPACE | string | GeoServer workspace name | `"polygonParts"` |
 | GEOSERVER_DATASTORE | string | GeoServer datastore name | `"polygonParts"` |
+| GEOSERVER_USER | string | GeoServer admin username | `"admin"` |
+| GEOSERVER_PASSWORD | string | GeoServer admin password | `"geoserver"` |
 | MAX_TASK_ATTEMPTS | number | Maximum number of task execution attempts | `3` |
 | POLLING_CREATE_TASKS_TASK | string | createTasks task type for polling | `"create-tasks"` |
 | POLLING_FINALIZE_TASK | string | Finalize task type for polling | `"finalize"` |
@@ -255,7 +257,7 @@ The service is part of a larger system that includes:
 - Job Manager
 - Ingestion Trigger
 - MapProxy API
-- GeoServer API
+- GeoServer
 - Raster Catalog Manager
 - Polygon Parts Manager
 - Tiles Merger
