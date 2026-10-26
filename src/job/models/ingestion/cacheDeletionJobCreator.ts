@@ -1,8 +1,8 @@
 import type { Logger } from '@map-colonies/js-logger';
-import type { Feature, MultiPolygon, Polygon } from 'geojson';
+import type { BBox, Feature, MultiPolygon, Polygon } from 'geojson';
 import { bbox, bboxPolygon, booleanIntersects } from '@turf/turf';
 import { degreesPerTile, footprintToTileRanges } from '@map-colonies/mc-utils';
-import type { BBox2d, ITileRange } from '@map-colonies/mc-utils';
+import type { ITileRange } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { CacheDeletionJobParams, LayerName } from '@map-colonies/raster-shared';
@@ -42,7 +42,7 @@ const GRID_MIN_LAT = -90;
  * footprints. Indices may fall outside the grid at the world's edge; they are only ever intersected with ranges
  * that lie within it
  */
-const tilesTouchingBbox = ([minLon, minLat, maxLon, maxLat]: BBox2d, zoom: number): ITileRange => {
+const tilesTouchingBbox = ([minLon, minLat, maxLon, maxLat]: BBox, zoom: number): ITileRange => {
   const side = degreesPerTile(zoom);
   return {
     zoom,
@@ -211,8 +211,7 @@ export class CacheDeletionJobCreator {
     maxZoom: number,
     logger: Logger
   ): Generator<ITileRange> {
-    const [minLon, minLat, maxLon, maxLat] = bbox(previousFootprint);
-    const previousBbox: BBox2d = [minLon, minLat, maxLon, maxLat];
+    const previousBbox = bbox(previousFootprint);
 
     for (let zoom = 0; zoom <= maxZoom; zoom++) {
       const previous = tilesTouchingBbox(previousBbox, zoom);

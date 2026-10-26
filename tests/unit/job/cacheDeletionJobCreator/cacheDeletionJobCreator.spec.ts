@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { randomUUID } from 'node:crypto';
-import type { MultiPolygon, Polygon } from 'geojson';
+import type { BBox, MultiPolygon, Polygon } from 'geojson';
+import { bbox } from '@turf/turf';
 import { OperationStatus } from '@map-colonies/mc-priority-queue';
 import { StorageProvider, type CacheDeletionJobParams } from '@map-colonies/raster-shared';
 import { degreesPerTile } from '@map-colonies/mc-utils';
+import type { ITile, ITileRange } from '@map-colonies/mc-utils';
 import type { CreateCacheDeletionJobParams, CacheDeletionTaskConfig, GetMapproxyCacheResponse } from '../../../../src/common/interfaces';
 import type { IngestionUpdateFinalizeJob } from '../../../../src/utils/zod/schemas/job.schema';
 import { registerDefaultConfig, configMock, setValue } from '../../mocks/configMock';
@@ -175,25 +177,6 @@ describe('CacheDeletionJobCreator', () => {
     });
 
     describe('with the previous layer footprint recorded on the job', () => {
-      interface Range {
-        zoom: number;
-        minX: number;
-        maxX: number;
-        minY: number;
-        maxY: number;
-      }
-      interface Tile {
-        zoom: number;
-        x: number;
-        y: number;
-      }
-      interface Bounds {
-        minLon: number;
-        maxLon: number;
-        minLat: number;
-        maxLat: number;
-      }
-
       // axis-aligned squares: tile/footprint contact reduces to interval overlap, which keeps the exhaustive
       // oracle below trivial
       const square = (minLon: number, minLat: number, width: number, height = width): Polygon => ({
@@ -218,13 +201,13 @@ describe('CacheDeletionJobCreator', () => {
         },
       });
 
-      const emittedRanges = (jobManagerClientMock: CacheDeletionJobCreatorTestContext['jobManagerClientMock']): Range[] => {
+      const emittedRanges = (jobManagerClientMock: CacheDeletionJobCreatorTestContext['jobManagerClientMock']): ITileRange[] => {
         const streamed = jobManagerClientMock.createTaskForJob.mock.calls.flatMap((call) => call[1] as { parameters: unknown }[]);
         const tasks = [...jobManagerClientMock.createJob.mock.calls[0]![0].tasks!, ...streamed];
-        return tasks.flatMap((task) => (task.parameters as { ranges: Range[] }).ranges);
+        return tasks.flatMap((task) => (task.parameters as { ranges: ITileRange[] }).ranges);
       };
 
-      const covers = (ranges: Range[], tile: Tile): boolean =>
+      const covers = (ranges: ITileRange[], tile: ITile): boolean =>
         ranges.some(
           (range) => range.zoom === tile.zoom && tile.x >= range.minX && tile.x <= range.maxX && tile.y >= range.minY && tile.y <= range.maxY
         );
@@ -232,27 +215,17 @@ describe('CacheDeletionJobCreator', () => {
       // west edge of a tile column on the geodetic grid
       const tileMinLon = (zoom: number, x: number): number => -180 + x * degreesPerTile(zoom);
 
-      const boundsOf = (polygon: Polygon): Bounds => {
-        const ring = polygon.coordinates[0]!;
-        return {
-          minLon: Math.min(...ring.map((point) => point[0]!)),
-          maxLon: Math.max(...ring.map((point) => point[0]!)),
-          minLat: Math.min(...ring.map((point) => point[1]!)),
-          maxLat: Math.max(...ring.map((point) => point[1]!)),
-        };
-      };
-
       // exhaustive oracle: every tile at `zoom` whose square touches both footprints, with closed bounds
       // since footprintToTileRanges counts a shared edge as touching
-      const tilesTouchingBoth = (a: Polygon, b: Polygon, zoom: number): Tile[] => {
+      const tilesTouchingBoth = (a: Polygon, b: Polygon, zoom: number): ITile[] => {
         const side = degreesPerTile(zoom);
-        const [boundsA, boundsB] = [boundsOf(a), boundsOf(b)];
-        const touches = (bounds: Bounds, minLon: number, minLat: number): boolean =>
-          minLon <= bounds.maxLon && minLon + side >= bounds.minLon && minLat <= bounds.maxLat && minLat + side >= bounds.minLat;
+        const [boundsA, boundsB] = [bbox(a), bbox(b)];
+        const touches = ([boundsMinLon, boundsMinLat, boundsMaxLon, boundsMaxLat]: BBox, minLon: number, minLat: number): boolean =>
+          minLon <= boundsMaxLon && minLon + side >= boundsMinLon && minLat <= boundsMaxLat && minLat + side >= boundsMinLat;
 
-        const tiles: Tile[] = [];
-        for (let x = Math.floor((boundsA.minLon + 180) / side) - 1; x <= Math.floor((boundsA.maxLon + 180) / side) + 1; x++) {
-          for (let y = Math.floor((boundsA.minLat + 90) / side) - 1; y <= Math.floor((boundsA.maxLat + 90) / side) + 1; y++) {
+        const tiles: ITile[] = [];
+        for (let x = Math.floor((boundsA[0] + 180) / side) - 1; x <= Math.floor((boundsA[2] + 180) / side) + 1; x++) {
+          for (let y = Math.floor((boundsA[1] + 90) / side) - 1; y <= Math.floor((boundsA[3] + 90) / side) + 1; y++) {
             const minLon = tileMinLon(zoom, x);
             const minLat = -90 + y * side;
             if (touches(boundsA, minLon, minLat) && touches(boundsB, minLon, minLat)) {
@@ -263,24 +236,49 @@ describe('CacheDeletionJobCreator', () => {
         return tiles;
       };
 
+      /** the mapproxy cache and job-manager answers every walk below needs */
+      const primeMocks = ({ jobManagerClientMock, mapproxyClientMock }: CacheDeletionJobCreatorTestContext): void => {
+        mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
+        jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
+        jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
+      };
+
+      beforeEach(() => {
+        primeMocks(ctx);
+      });
+
       it('should walk no deeper than the last zoom whose tiles can still span both areas when the update lies outside the previous footprint', async () => {
-        const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
+        const { cacheDeletionJobCreator, jobManagerClientMock, readProductGeometryMock } = ctx;
         const taskConfig = configMock.get<CacheDeletionTaskConfig>('jobManagement.ingestion.tasks.cacheDeletion');
         // 1.5 degrees east of PREVIOUS. A zoom 6 tile is 2.81 degrees wide and can span the gap; a zoom 7 tile is
         // 1.41 wide and cannot, so no tile touches both areas from there on
         const UPDATE = square(2.5, 0, 1);
         const LAST_BRIDGING_ZOOM = 6;
+        // the one column of tiles that touches both squares at each zoom, straddling the equator from zoom 1 on
+        const EXPECTED_RANGES: ITileRange[] = [
+          { zoom: 0, minX: 1, minY: 0, maxX: 1, maxY: 0 },
+          { zoom: 1, minX: 2, minY: 0, maxX: 2, maxY: 0 },
+          { zoom: 1, minX: 2, minY: 1, maxX: 2, maxY: 1 },
+          { zoom: 2, minX: 4, minY: 1, maxX: 4, maxY: 1 },
+          { zoom: 2, minX: 4, minY: 2, maxX: 4, maxY: 2 },
+          { zoom: 3, minX: 8, minY: 3, maxX: 8, maxY: 3 },
+          { zoom: 3, minX: 8, minY: 4, maxX: 8, maxY: 4 },
+          { zoom: 4, minX: 16, minY: 7, maxX: 16, maxY: 7 },
+          { zoom: 4, minX: 16, minY: 8, maxX: 16, maxY: 8 },
+          { zoom: 5, minX: 32, minY: 15, maxX: 32, maxY: 15 },
+          { zoom: 5, minX: 32, minY: 16, maxX: 32, maxY: 16 },
+          { zoom: 6, minX: 64, minY: 31, maxX: 64, maxY: 31 },
+          { zoom: 6, minX: 64, minY: 32, maxX: 64, maxY: 32 },
+        ];
 
-        mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
         readProductGeometryMock.mockResolvedValue(UPDATE);
-        jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
-        jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
         await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: withPreviousFootprint(PREVIOUS) });
 
         const ranges = emittedRanges(jobManagerClientMock);
         const zooms = ranges.map((range) => range.zoom);
 
+        expect(ranges).toEqual(EXPECTED_RANGES);
         expect(Math.min(...zooms)).toBe(0);
         expect(Math.max(...zooms)).toBe(LAST_BRIDGING_ZOOM);
         // the full walk would have gone on to the configured ceiling
@@ -301,16 +299,14 @@ describe('CacheDeletionJobCreator', () => {
         // a shallow ceiling keeps the walk over the overlap small
         const MAX_ZOOM = 10;
         setValue('jobManagement.ingestion.tasks.cacheDeletion.maxZoom', MAX_ZOOM);
-        const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } =
-          await setupCacheDeletionJobCreatorTest();
+        const shallowCtx = await setupCacheDeletionJobCreatorTest();
+        const { cacheDeletionJobCreator, jobManagerClientMock, readProductGeometryMock } = shallowCtx;
         // overlaps PREVIOUS on lon 0.5..1 and extends onto new ground up to lon 1.5
         const UPDATE = square(0.5, 0, 1);
         const NEW_GROUND_EDGE = 1;
 
-        mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
+        primeMocks(shallowCtx);
         readProductGeometryMock.mockResolvedValue(UPDATE);
-        jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
-        jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
         await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: withPreviousFootprint(PREVIOUS) });
 
@@ -334,13 +330,13 @@ describe('CacheDeletionJobCreator', () => {
           expect(tileMinLon(MAX_ZOOM, range.maxX)).toBeLessThanOrEqual(NEW_GROUND_EDGE);
         }
         // whereas the update area itself does extend past that tile, so the full walk would have gone there
-        const farEdgeTile = Math.floor((boundsOf(UPDATE).maxLon + 180) / degreesPerTile(MAX_ZOOM));
+        const farEdgeTile = Math.floor((bbox(UPDATE)[2] + 180) / degreesPerTile(MAX_ZOOM));
 
         expect(tileMinLon(MAX_ZOOM, farEdgeTile)).toBeGreaterThan(NEW_GROUND_EDGE);
       });
 
       it('should stop early when the update sits inside the previous bbox but outside the previous footprint', async () => {
-        const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
+        const { cacheDeletionJobCreator, jobManagerClientMock, readProductGeometryMock } = ctx;
         const taskConfig = configMock.get<CacheDeletionTaskConfig>('jobManagement.ingestion.tasks.cacheDeletion');
         // an L-shaped layer whose bbox is the unit square, with the update in the notch: the bbox clip alone would
         // keep every update tile to max zoom, the footprint check drops them once no tile touches both. The notch
@@ -363,10 +359,7 @@ describe('CacheDeletionJobCreator', () => {
         const UPDATE = square(0.65, 0.65, 0.2);
         const LAST_REACHING_ZOOM = 8;
 
-        mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
         readProductGeometryMock.mockResolvedValue(UPDATE);
-        jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
-        jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
         await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: withPreviousFootprint(PREVIOUS_L) });
 
@@ -390,17 +383,14 @@ describe('CacheDeletionJobCreator', () => {
       });
 
       it('should clip in grid tiles, unaffected by latitude, for a layer far from the equator', async () => {
-        const { cacheDeletionJobCreator, jobManagerClientMock, mapproxyClientMock, readProductGeometryMock } = ctx;
+        const { cacheDeletionJobCreator, jobManagerClientMock, readProductGeometryMock } = ctx;
         // a layer near 35E 32N with an update 0.05 degrees east of it. A zoom 11 tile is 0.088 wide and spans
         // the gap; a zoom 12 tile (0.044 wide) does not
         const PREVIOUS_NORTH = square(34.9, 32, 0.2);
         const UPDATE = square(35.15, 32.05, 0.1);
         const LAST_BRIDGING_ZOOM = 11;
 
-        mapproxyClientMock.getRedisCache.mockResolvedValue(redisCache('layer-Orthophoto'));
         readProductGeometryMock.mockResolvedValue(UPDATE);
-        jobManagerClientMock.createJob.mockResolvedValue({ id: randomUUID(), taskIds: [randomUUID()] });
-        jobManagerClientMock.createTaskForJob.mockResolvedValue(undefined);
 
         await cacheDeletionJobCreator.create({ layerName: 'layer-Orthophoto', ingestionJob: withPreviousFootprint(PREVIOUS_NORTH) });
 

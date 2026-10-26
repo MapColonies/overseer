@@ -43,7 +43,6 @@ export const internalIdSchema = z.object({
 //#region AdditionalParams
 /** the layer's catalog footprint as it stood before the update, recorded by the update job's init step */
 export const previousFootprintSchema = polygonSchema.or(multiPolygonSchema);
-export type PreviousFootprint = z.infer<typeof previousFootprintSchema>;
 
 export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema.extend({
   // optional so jobs created before overseer recorded it still finalize; cache deletion then covers the whole update area
