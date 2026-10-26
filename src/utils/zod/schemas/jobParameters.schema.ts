@@ -7,6 +7,8 @@ import {
   taskBlockDuplicationParamSchema,
   ingestionBaseJobParamsSchema,
   ingestionUpdateJobParamsSchema,
+  multiPolygonSchema,
+  polygonSchema,
 } from '@map-colonies/raster-shared';
 import { z } from 'zod';
 import { Grid } from '../../../common/interfaces';
@@ -39,7 +41,13 @@ export const internalIdSchema = z.object({
 });
 
 //#region AdditionalParams
-export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema;
+/** the layer's catalog footprint as it stood before the update, recorded by the update job's init step */
+export const previousFootprintSchema = polygonSchema.or(multiPolygonSchema);
+
+export const updateFinalizeAdditionalParamsSchema = updateAdditionalParamsSchema.extend({
+  // optional so jobs created before overseer recorded it still finalize; cache deletion then covers the whole update area
+  previousFootprint: previousFootprintSchema.optional(),
+});
 
 export const swapUpdateFinalizeAdditionalParamsSchema = updateFinalizeAdditionalParamsSchema.extend({
   displayPath: updateAdditionalParamsSchema.shape.displayPath.optional(),

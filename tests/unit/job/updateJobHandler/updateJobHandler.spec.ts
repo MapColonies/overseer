@@ -2,6 +2,7 @@
 import { updateAdditionalParamsSchema } from '@map-colonies/raster-shared';
 import { finalizeTaskForIngestionUpdate, createTasksTaskForIngestionUpdate } from '../../mocks/tasksMockData';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
+import { layerRecord } from '../../mocks/catalogClientMockData';
 import { registerDefaultConfig } from '../../mocks/configMock';
 import { ingestionUpdateFinalizeJob, ingestionUpdateJob } from '../../mocks/jobsMockData';
 import { setupUpdateJobHandlerTest, type UpdateJobHandlerTestContext } from './updateJobHandlerSetup';
@@ -42,6 +43,8 @@ describe('updateJobHandler', () => {
       const polygonPartsEntityName = `${job.resourceId}_${String(job.productType).toLowerCase()}`;
 
       readProductGeometryMock.mockResolvedValue(productGeometry);
+      catalogClientMock.findLayer.mockResolvedValue(layerRecord);
+      jobManagerClientMock.updateJob.mockResolvedValue(undefined);
       tileDeletionTaskManagerMock.buildAndPushTasks.mockResolvedValue(undefined);
       taskBuilderMock.buildAndPushTasks.mockResolvedValue(undefined);
       queueClientMock.ack.mockResolvedValue(undefined);
@@ -50,6 +53,52 @@ describe('updateJobHandler', () => {
 
       expect(tileDeletionTaskManagerMock.buildAndPushTasks).toHaveBeenCalledWith(job, task, polygonPartsEntityName, layerRelativePath);
       expect(taskBuilderMock.buildAndPushTasks).toHaveBeenCalledWith(job, task, productGeometry, layerRelativePath);
+      expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
+    });
+
+    it('should record the previous layer footprint on the job before building tasks', async () => {
+      const job = structuredClone(ingestionUpdateJob);
+      const task = createTasksTaskForIngestionUpdate;
+
+      readProductGeometryMock.mockResolvedValue(createFakePolygonalGeometry());
+      catalogClientMock.findLayer.mockResolvedValue(layerRecord);
+      jobManagerClientMock.updateJob.mockResolvedValue(undefined);
+      tileDeletionTaskManagerMock.buildAndPushTasks.mockResolvedValue(undefined);
+      taskBuilderMock.buildAndPushTasks.mockResolvedValue(undefined);
+      queueClientMock.ack.mockResolvedValue(undefined);
+
+      await updateJobHandler.handleJobInit(job, task);
+
+      expect(catalogClientMock.findLayer).toHaveBeenCalledWith(job.internalId);
+      // finalize reads it back from the job, by which time the catalog already holds the merged footprint
+      expect(jobManagerClientMock.updateJob).toHaveBeenCalledWith(job.id, {
+        parameters: {
+          ...job.parameters,
+          additionalParams: { ...job.parameters.additionalParams, previousFootprint: layerRecord.metadata.footprint },
+        },
+      });
+      expect(jobManagerClientMock.updateJob.mock.invocationCallOrder[0]).toBeLessThan(taskBuilderMock.buildAndPushTasks.mock.invocationCallOrder[0]!);
+    });
+
+    it('should still build the tasks when the previous footprint cannot be recorded', async () => {
+      const job = structuredClone(ingestionUpdateJob);
+      const task = createTasksTaskForIngestionUpdate;
+
+      readProductGeometryMock.mockResolvedValue(createFakePolygonalGeometry());
+      catalogClientMock.findLayer.mockRejectedValue(new Error('catalog unavailable'));
+      tileDeletionTaskManagerMock.buildAndPushTasks.mockResolvedValue(undefined);
+      taskBuilderMock.buildAndPushTasks.mockResolvedValue(undefined);
+      queueClientMock.ack.mockResolvedValue(undefined);
+
+      await updateJobHandler.handleJobInit(job, task);
+
+      const recordedFootprint = jobManagerClientMock.updateJob.mock.calls.some(
+        ([, body]) =>
+          (body as { parameters?: { additionalParams?: Record<string, unknown> } }).parameters?.additionalParams?.previousFootprint !== undefined
+      );
+
+      expect(recordedFootprint).toBe(false);
+      expect(taskBuilderMock.buildAndPushTasks).toHaveBeenCalledTimes(1);
       expect(queueClientMock.ack).toHaveBeenCalledWith(job.id, task.id);
     });
 
