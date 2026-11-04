@@ -301,6 +301,121 @@ describe('ExportJobHandler', () => {
             gpkgUploadedToS3: true,
           },
         });
+        expect(fsServiceMock.deleteFile).toHaveBeenCalledExactlyOnceWith(jsonFilePath);
+        expect(fsServiceMock.deleteFileAndParentDir).toHaveBeenCalledExactlyOnceWith(gpkgFilePath);
+      });
+
+      const buildS3Context = async (): Promise<{ job: ExportJob; task: ExportFinalizeTask }> => {
+        setValue('gpkgStorageProvider', 'S3');
+
+        ({ exportJobHandler, s3ServiceMock, fsServiceMock, queueClientMock, jobManagerClientMock } = await setupExportJobHandlerTest());
+
+        const job = {
+          ...exportJob,
+          parameters: {
+            ...exportJob.parameters,
+            additionalParams: {
+              ...exportJob.parameters.additionalParams,
+              packageRelativePath: gpkgRelativePath,
+            },
+          },
+        };
+        const task = {
+          ...finalizeSuccessTaskForExport,
+          parameters: {
+            ...finalizeSuccessTaskForExport.parameters,
+            gpkgModified: true,
+            gpkgUploadedToS3: false,
+          },
+        };
+
+        s3ServiceMock.uploadFiles.mockResolvedValue([]);
+        fsServiceMock.deleteFile.mockResolvedValue(undefined);
+        fsServiceMock.deleteFileAndParentDir.mockResolvedValue(undefined);
+        queueClientMock.reject.mockResolvedValue(undefined);
+        jobManagerClientMock.updateJob.mockResolvedValue(undefined);
+        jobManagerClientMock.getJob.mockResolvedValue(job);
+
+        return { job, task };
+      };
+
+      const firstCallOrder = (mock: { mock: { invocationCallOrder: number[] } }): number => {
+        const order = mock.mock.invocationCallOrder[0];
+        if (order === undefined) {
+          throw new Error('expected the mock to have been called');
+        }
+        return order;
+      };
+
+      it('should mark gpkgUploadedToS3 after the S3 upload and before cleaning local artifacts', async () => {
+        const { job, task } = await buildS3Context();
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        const uploadOrder = firstCallOrder(s3ServiceMock.uploadFiles);
+        const markOrder = firstCallOrder(jobManagerClientMock.updateTask);
+        const deleteJsonOrder = firstCallOrder(fsServiceMock.deleteFile);
+        const deleteGpkgOrder = firstCallOrder(fsServiceMock.deleteFileAndParentDir);
+
+        expect(uploadOrder).toBeLessThan(markOrder);
+        expect(markOrder).toBeLessThan(deleteJsonOrder);
+        expect(markOrder).toBeLessThan(deleteGpkgOrder);
+      });
+
+      it('should delete the json file before the gpkg and its parent directory', async () => {
+        const { job, task } = await buildS3Context();
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        expect(firstCallOrder(fsServiceMock.deleteFile)).toBeLessThan(firstCallOrder(fsServiceMock.deleteFileAndParentDir));
+      });
+
+      it('should still complete the job and delete the gpkg when deleting the json file fails', async () => {
+        const { job, task } = await buildS3Context();
+        fsServiceMock.deleteFile.mockRejectedValue(new Error('json delete failed'));
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        expect(queueClientMock.reject).not.toHaveBeenCalled();
+        expect(fsServiceMock.deleteFile).toHaveBeenCalledWith(jsonFilePath);
+        expect(fsServiceMock.deleteFileAndParentDir).toHaveBeenCalledWith(gpkgFilePath);
+        expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
+          parameters: { ...task.parameters, gpkgUploadedToS3: true },
+        });
+      });
+
+      it('should still complete the job when deleting the gpkg and its parent directory fails', async () => {
+        const { job, task } = await buildS3Context();
+        fsServiceMock.deleteFileAndParentDir.mockRejectedValue(new Error('gpkg delete failed'));
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        expect(queueClientMock.reject).not.toHaveBeenCalled();
+        expect(fsServiceMock.deleteFile).toHaveBeenCalledWith(jsonFilePath);
+        expect(jobManagerClientMock.updateTask).toHaveBeenCalledWith(job.id, task.id, {
+          parameters: { ...task.parameters, gpkgUploadedToS3: true },
+        });
+      });
+
+      it('should not clean local artifacts when marking the step as completed fails', async () => {
+        const { job, task } = await buildS3Context();
+        jobManagerClientMock.updateTask.mockRejectedValue(new Error('job manager unavailable'));
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        expect(queueClientMock.reject).toHaveBeenCalledWith(job.id, task.id, true, expect.stringContaining('job manager unavailable'));
+        expect(fsServiceMock.deleteFile).not.toHaveBeenCalled();
+        expect(fsServiceMock.deleteFileAndParentDir).not.toHaveBeenCalled();
+      });
+
+      it('should not clean local artifacts when the S3 upload fails', async () => {
+        const { job, task } = await buildS3Context();
+        s3ServiceMock.uploadFiles.mockRejectedValue(new Error('S3 upload failed'));
+
+        await exportJobHandler.handleJobFinalize(job, task);
+
+        expect(fsServiceMock.deleteFile).not.toHaveBeenCalled();
+        expect(fsServiceMock.deleteFileAndParentDir).not.toHaveBeenCalled();
       });
 
       it('should skip S3 upload when storage provider is not S3', async () => {
