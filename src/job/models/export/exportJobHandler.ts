@@ -364,21 +364,14 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       { filePath: gpkgFilePath, s3Key: gpkgS3Key, contentType: GPKG_CONTENT_TYPE },
       { filePath: jsonFilePath, s3Key: jsonS3Key, contentType: JSON_CONTENT_TYPE },
     ]);
-    // Mark the step as completed before cleaning up, so a failed cleanup can never fail a job whose files are already in S3.
-    // If the marking itself fails, the local files are still intact and the retry can upload them again.
     const updatedParams = await this.markFinalizeStepAsCompleted(jobId, taskId, taskParams, 'gpkgUploadedToS3');
     await this.cleanupLocalArtifacts(gpkgFilePath, jsonFilePath, jobId, taskId);
     return updatedParams;
   }
 
-  /**
-   * Best-effort removal of the local artifacts after they were uploaded to S3.
-   * Failures are logged as warnings and never thrown.
-   */
   private async cleanupLocalArtifacts(gpkgFilePath: string, jsonFilePath: string, jobId: string, taskId: string): Promise<void> {
     const logger = this.logger.child({ jobId, taskId });
 
-    //TODO: In future, we will remove the json metadata file and support only gpkg
     try {
       await this.fsService.deleteFile(jsonFilePath);
     } catch (err) {
