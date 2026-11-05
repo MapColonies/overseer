@@ -41,7 +41,7 @@ import { createExpirationDate } from '../../../utils/dateUtil';
 import { CallbackClient } from '../../../httpClients/callbackClient';
 import { JobTrackerClient } from '../../../httpClients/jobTrackerClient';
 import { PolygonPartsMangerClient } from '../../../httpClients/polygonPartsMangerClient';
-import { convertObjectKeysToSnakeCase } from '../../../utils/db/dbUtils';
+import { convertArrayValuesToDelimitedString, convertObjectKeysToSnakeCase } from '../../../utils/db/dbUtils';
 import { ArtifactPathBuilder } from '../../../utils/storage/artifactPathBuilder';
 
 @injectable()
@@ -343,9 +343,10 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
 
   private createGpkgMetadata(feature: Feature<Polygon | MultiPolygon, GpkgArtifactProperties>): Feature<Polygon | MultiPolygon> {
     const snakeCaseProps = convertObjectKeysToSnakeCase(feature.properties);
+    const gpkgProps = convertArrayValuesToDelimitedString(snakeCaseProps);
     return {
       ...feature,
-      properties: snakeCaseProps,
+      properties: gpkgProps,
     };
   }
 

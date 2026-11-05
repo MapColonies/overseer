@@ -205,6 +205,12 @@ describe('ExportJobHandler', () => {
           })
         );
 
+        // GPKG cannot store lists: array properties must be written as delimited text, not as OGR StringList
+        const gpkgFeature = (ogr2ogr as unknown as MockInstance).mock.calls.at(-1)?.[0] as { properties: Record<string, unknown> };
+
+        expect(gpkgFeature.properties).toEqual(expect.objectContaining({ sensors: aggregatedLayerMetadata.sensors.join(',') }));
+        expect(Object.values(gpkgFeature.properties).some((value) => Array.isArray(value))).toBe(false);
+
         expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(gpkgFilePath);
         expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(jsonFilePath);
 

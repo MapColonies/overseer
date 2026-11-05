@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { convertObjectKeysToSnakeCase } from '../../../src/utils/db/dbUtils';
+import { convertArrayValuesToDelimitedString, convertObjectKeysToSnakeCase } from '../../../src/utils/db/dbUtils';
 
 describe('dbUtils', () => {
   describe('convertObjectKeysToSnakeCase', () => {
@@ -44,6 +44,28 @@ describe('dbUtils', () => {
       const expected = { first_name: 'John', last_name: 'Doe' };
 
       expect(convertObjectKeysToSnakeCase(input)).toEqual(expected);
+    });
+  });
+
+  describe('convertArrayValuesToDelimitedString', () => {
+    it('should join array values with the default comma separator', () => {
+      const input = { sensors: ['optical', 'sar'], region: ['Automation'] };
+
+      expect(convertArrayValuesToDelimitedString(input)).toEqual({ sensors: 'optical,sar', region: 'Automation' });
+    });
+
+    it('should turn an empty array into an empty string', () => {
+      expect(convertArrayValuesToDelimitedString({ sensors: [] })).toEqual({ sensors: '' });
+    });
+
+    it('should use the given separator', () => {
+      expect(convertArrayValuesToDelimitedString({ sensors: ['optical', 'sar'] }, ';')).toEqual({ sensors: 'optical;sar' });
+    });
+
+    it('should leave non-array values untouched', () => {
+      const input = { name: 'layer', scale: 5, missing: null, nested: { a: 1 } };
+
+      expect(convertArrayValuesToDelimitedString(input)).toEqual(input);
     });
   });
 });
