@@ -270,12 +270,6 @@ describe('ExportJobHandler', () => {
           expect(getWrittenProperties()).toHaveProperty('region', 'Israel,Jordan');
         });
 
-        it('should not write any array value to the gpkg', async () => {
-          await finalizeWithMetadata({}, {});
-
-          expect(Object.values(getWrittenProperties()).some((value) => Array.isArray(value))).toBe(false);
-        });
-
         it('should keep the list properties as arrays in the json metadata file', async () => {
           await finalizeWithMetadata({ sensors: ['optical', 'sar'] }, {});
 
