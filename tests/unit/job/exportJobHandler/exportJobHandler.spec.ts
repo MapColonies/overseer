@@ -205,12 +205,6 @@ describe('ExportJobHandler', () => {
           })
         );
 
-        // GPKG cannot store lists: array properties must be written as delimited text, not as OGR StringList
-        const gpkgFeature = (ogr2ogr as unknown as MockInstance).mock.calls.at(-1)?.[0] as { properties: Record<string, unknown> };
-
-        expect(gpkgFeature.properties).toEqual(expect.objectContaining({ sensors: aggregatedLayerMetadata.sensors.join(',') }));
-        expect(Object.values(gpkgFeature.properties).some((value) => Array.isArray(value))).toBe(false);
-
         expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(gpkgFilePath);
         expect(fsServiceMock.getFileSize).toHaveBeenCalledWith(jsonFilePath);
 
@@ -233,6 +227,59 @@ describe('ExportJobHandler', () => {
             ...task.parameters,
             gpkgModified: true,
           },
+        });
+      });
+
+      describe('when the metadata contains list properties', () => {
+        const getWrittenProperties = (): Record<string, unknown> => {
+          const [feature] = (ogr2ogr as unknown as MockInstance).mock.calls.at(-1) as [{ properties: Record<string, unknown> }];
+          return feature.properties;
+        };
+
+        const finalizeWithMetadata = async (aggregatedMetadata: object, catalogMetadata: object): Promise<void> => {
+          const task = { ...finalizeSuccessTaskForExport, parameters: { ...finalizeSuccessTaskForExport.parameters, gpkgModified: false } };
+          polygonPartsManagerClientMock.getAggregatedLayerMetadata.mockResolvedValue({ ...createFakeAggregatedPartData(), ...aggregatedMetadata });
+          catalogClientMock.findLayer.mockResolvedValue({ ...layerRecord, metadata: { ...layerRecord.metadata, ...catalogMetadata } });
+
+          await exportJobHandler.handleJobFinalize(job, task);
+        };
+
+        const job = {
+          ...exportJob,
+          parameters: {
+            ...exportJob.parameters,
+            additionalParams: { ...exportJob.parameters.additionalParams, packageRelativePath: gpkgRelativePath },
+          },
+        };
+
+        beforeEach(() => {
+          jobManagerClientMock.getJob.mockResolvedValue(job);
+          fsServiceMock.getFileSize.mockResolvedValue(1);
+          fsServiceMock.calculateFileSha256.mockResolvedValue('test-sha256');
+        });
+
+        it('should write the aggregated sensors as comma-separated text', async () => {
+          await finalizeWithMetadata({ sensors: ['optical', 'sar'] }, {});
+
+          expect(getWrittenProperties()).toHaveProperty('sensors', 'optical,sar');
+        });
+
+        it('should write the catalog region as comma-separated text', async () => {
+          await finalizeWithMetadata({}, { region: ['Israel', 'Jordan'] });
+
+          expect(getWrittenProperties()).toHaveProperty('region', 'Israel,Jordan');
+        });
+
+        it('should not write any array value to the gpkg', async () => {
+          await finalizeWithMetadata({}, {});
+
+          expect(Object.values(getWrittenProperties()).some((value) => Array.isArray(value))).toBe(false);
+        });
+
+        it('should keep the list properties as arrays in the json metadata file', async () => {
+          await finalizeWithMetadata({ sensors: ['optical', 'sar'] }, {});
+
+          expect(fsServiceMock.uploadJsonFile).toHaveBeenCalledWith(jsonFilePath, expect.objectContaining({ sensors: ['optical', 'sar'] }));
         });
       });
 
