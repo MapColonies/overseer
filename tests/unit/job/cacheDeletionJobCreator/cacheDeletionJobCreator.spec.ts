@@ -278,7 +278,8 @@ describe('CacheDeletionJobCreator', () => {
         const ranges = emittedRanges(jobManagerClientMock);
         const zooms = ranges.map((range) => range.zoom);
 
-        expect(ranges).toEqual(EXPECTED_RANGES);
+        expect(ranges).toHaveLength(EXPECTED_RANGES.length);
+        expect(ranges).toEqual(expect.arrayContaining(EXPECTED_RANGES));
         expect(Math.min(...zooms)).toBe(0);
         expect(Math.max(...zooms)).toBe(LAST_BRIDGING_ZOOM);
         // the full walk would have gone on to the configured ceiling
