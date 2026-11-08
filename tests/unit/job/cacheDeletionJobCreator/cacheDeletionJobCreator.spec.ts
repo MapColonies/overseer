@@ -11,7 +11,7 @@ import type { IngestionUpdateFinalizeJob } from '../../../../src/utils/zod/schem
 import { registerDefaultConfig, configMock, setValue } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { LayerCacheType } from '../../../../src/common/constants';
-import { LayerCacheNotFoundError, UnexpectedCacheGridsError, UnsupportedGridError } from '../../../../src/common/errors';
+import { LayerCacheNotFoundError, UnsupportedGridError } from '../../../../src/common/errors';
 import { ingestionSwapUpdateFinalizeJob, ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import type { CacheDeletionJobCreatorTestContext } from './cacheDeletionJobCreatorSetup';
 import { setupCacheDeletionJobCreatorTest } from './cacheDeletionJobCreatorSetup';
