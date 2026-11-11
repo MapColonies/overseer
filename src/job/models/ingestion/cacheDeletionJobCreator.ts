@@ -1,5 +1,5 @@
 import type { Logger } from '@map-colonies/js-logger';
-import { footprintsSharedTileRanges, footprintToTileRanges } from '@map-colonies/mc-utils';
+import { footprintToTileRanges } from '@map-colonies/mc-utils';
 import type { ICreateJobBody, ICreateTaskBody } from '@map-colonies/mc-priority-queue';
 import { OperationStatus, TaskHandler as QueueClient } from '@map-colonies/mc-priority-queue';
 import type { CacheDeletionJobParams, LayerName } from '@map-colonies/raster-shared';
@@ -154,10 +154,8 @@ export class CacheDeletionJobCreator {
 
     // only the tiles touching both the update area and the previous footprint can hold changed cache; without the
     // previous footprint (jobs created before init recorded it) every tile of the update area is covered
-    const ranges =
-      previousFootprint === undefined
-        ? footprintToTileRanges(updateArea, { minZoom: 0, maxZoom })
-        : footprintsSharedTileRanges(updateArea, previousFootprint, { minZoom: 0, maxZoom });
+    const footprints = previousFootprint === undefined ? [updateArea] : [updateArea, previousFootprint];
+    const ranges = footprintToTileRanges(footprints, { minZoom: 0, maxZoom });
 
     for await (const batch of limitedTileBatchGenerator(tileBatchSize, maxRangesPerTask, ranges)) {
       yield {
