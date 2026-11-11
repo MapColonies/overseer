@@ -155,7 +155,7 @@ export class CacheDeletionJobCreator {
     // only the tiles touching both the update area and the previous footprint can hold changed cache; without the
     // previous footprint (jobs created before init recorded it) every tile of the update area is covered
     const footprints = previousFootprint === undefined ? [updateArea] : [updateArea, previousFootprint];
-    const ranges = footprintToTileRanges(footprints, { minZoom: 0, maxZoom });
+    const ranges = footprintToTileRanges(footprints, { minZoom: 0, maxZoom }, { maxHeldSingleTiles: tileBatchSize });
 
     for await (const batch of limitedTileBatchGenerator(tileBatchSize, maxRangesPerTask, ranges)) {
       yield {
