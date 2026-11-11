@@ -154,7 +154,7 @@ The service can be configured using environment variables or a configuration fil
 | SWAP_CACHE_DELETION_JOB_TYPE | string | Cache deletion job type created after a swap-update ingestion | `"Swap_Delete_Cache"` |
 | CACHE_DELETION_TASK_TYPE | string | Cache deletion task type | `"tiles-deletion"` |
 | CACHE_DELETION_MAX_ZOOM | number | Maximum zoom level for the deleted tile ranges | `21` |
-| CACHE_DELETION_TILE_BATCH_SIZE | number | Maximum tiles per range-deletion task | `100000` |
+| CACHE_DELETION_TILE_BATCH_SIZE | number | Maximum tiles per range-deletion task; also caps the single tiles held per zoom for merging | `1000000` |
 | CACHE_DELETION_MAX_RANGES_PER_TASK | number | Maximum tile ranges per task, bounding the serialized task params | `5000` |
 | CACHE_DELETION_TASK_BATCH_SIZE | number | Number of tasks enqueued per job-manager call | `5` |
 | CACHE_DELETION_GRACEFUL_RELOAD_MAX_SECONDS | number | Serving pods' config reload window, waited out before wiping cache keys | `300` |
