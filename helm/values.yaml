@@ -175,7 +175,7 @@ jobDefinitions:
     cacheDeletion:
       type: ""
       maxZoom: 21
-      tileBatchSize: 100000 # max tiles per range-deletion task
+      tileBatchSize: 1000000 # max tiles per range-deletion task
       maxRangesPerTask: 5000 # bounds the serialized task params for jagged footprints
       taskBatchSize: 5
       reloadWindowMarginSeconds: 8 # added to global.gracefulReloadMaxSeconds: mapproxinator's poll plus drain
