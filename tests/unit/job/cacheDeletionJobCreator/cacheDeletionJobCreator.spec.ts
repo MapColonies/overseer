@@ -254,21 +254,16 @@ describe('CacheDeletionJobCreator', () => {
         // 1.41 wide and cannot, so no tile touches both areas from there on
         const UPDATE = square(2.5, 0, 1);
         const LAST_BRIDGING_ZOOM = 6;
-        // the one column of tiles that touches both squares at each zoom, straddling the equator from zoom 1 on
+        // the one column of tiles that touches both squares at each zoom, straddling the equator from zoom 1 on;
+        // the two tiles of each zoom are vertical neighbours, so they come out merged into one 1x2 range
         const EXPECTED_RANGES: ITileRange[] = [
           { zoom: 0, minX: 1, minY: 0, maxX: 1, maxY: 0 },
-          { zoom: 1, minX: 2, minY: 0, maxX: 2, maxY: 0 },
-          { zoom: 1, minX: 2, minY: 1, maxX: 2, maxY: 1 },
-          { zoom: 2, minX: 4, minY: 1, maxX: 4, maxY: 1 },
-          { zoom: 2, minX: 4, minY: 2, maxX: 4, maxY: 2 },
-          { zoom: 3, minX: 8, minY: 3, maxX: 8, maxY: 3 },
-          { zoom: 3, minX: 8, minY: 4, maxX: 8, maxY: 4 },
-          { zoom: 4, minX: 16, minY: 7, maxX: 16, maxY: 7 },
-          { zoom: 4, minX: 16, minY: 8, maxX: 16, maxY: 8 },
-          { zoom: 5, minX: 32, minY: 15, maxX: 32, maxY: 15 },
-          { zoom: 5, minX: 32, minY: 16, maxX: 32, maxY: 16 },
-          { zoom: 6, minX: 64, minY: 31, maxX: 64, maxY: 31 },
-          { zoom: 6, minX: 64, minY: 32, maxX: 64, maxY: 32 },
+          { zoom: 1, minX: 2, minY: 0, maxX: 2, maxY: 1 },
+          { zoom: 2, minX: 4, minY: 1, maxX: 4, maxY: 2 },
+          { zoom: 3, minX: 8, minY: 3, maxX: 8, maxY: 4 },
+          { zoom: 4, minX: 16, minY: 7, maxX: 16, maxY: 8 },
+          { zoom: 5, minX: 32, minY: 15, maxX: 32, maxY: 16 },
+          { zoom: 6, minX: 64, minY: 31, maxX: 64, maxY: 32 },
         ];
 
         readProductGeometryMock.mockResolvedValue(UPDATE);
