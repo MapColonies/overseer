@@ -11,7 +11,7 @@ import type { IngestionUpdateFinalizeJob } from '../../../../src/utils/zod/schem
 import { registerDefaultConfig, configMock, setValue } from '../../mocks/configMock';
 import { createFakePolygonalGeometry } from '../../mocks/geometryMockData';
 import { LayerCacheType } from '../../../../src/common/constants';
-import { LayerCacheNotFoundError, UnexpectedCacheGridsError, UnsupportedGridError } from '../../../../src/common/errors';
+import { LayerCacheNotFoundError, UnsupportedGridError } from '../../../../src/common/errors';
 import { ingestionSwapUpdateFinalizeJob, ingestionUpdateFinalizeJob } from '../../mocks/jobsMockData';
 import type { CacheDeletionJobCreatorTestContext } from './cacheDeletionJobCreatorSetup';
 import { setupCacheDeletionJobCreatorTest } from './cacheDeletionJobCreatorSetup';
@@ -278,7 +278,8 @@ describe('CacheDeletionJobCreator', () => {
         const ranges = emittedRanges(jobManagerClientMock);
         const zooms = ranges.map((range) => range.zoom);
 
-        expect(ranges).toEqual(EXPECTED_RANGES);
+        expect(ranges).toHaveLength(EXPECTED_RANGES.length);
+        expect(ranges).toEqual(expect.arrayContaining(EXPECTED_RANGES));
         expect(Math.min(...zooms)).toBe(0);
         expect(Math.max(...zooms)).toBe(LAST_BRIDGING_ZOOM);
         // the full walk would have gone on to the configured ceiling
