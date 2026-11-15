@@ -85,7 +85,7 @@ data:
   CACHE_DELETION_RELOAD_WINDOW_MARGIN_SECONDS: {{ $jobDefinitions.tasks.cacheDeletion.reloadWindowMarginSeconds | quote }}
   TILES_EXPORTING_TASK_TYPE: {{ $jobDefinitions.tasks.export.type | quote }}
   MAPPROXY_API_URL: {{ $serviceUrls.mapproxyApi | quote }}
-  GEOSERVER_API_URL: {{ $serviceUrls.geoserverApiUrl | quote }}
+  GEOSERVER_URL: {{ $serviceUrls.geoserverInternalUrl | quote }}
   GEOSERVER_DNS: {{ $serviceUrls.geoserverUrl | quote }}
   MAPPROXY_DNS: {{ $serviceUrls.mapServerPublicDNS | quote }}
   CATALOG_MANAGER_URL: {{ $serviceUrls.catalogManager | quote }}

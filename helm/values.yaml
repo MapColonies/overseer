@@ -115,10 +115,15 @@ serviceUrls:
   catalogManager: ""
   mapServerPublicDNS: ""
   mapproxyApi: ""
-  geoserverApiUrl: ""
   geoserverUrl: ""
+  geoserverInternalUrl: ""
   polygonPartsManager: ""
   downloadServerPublicDNS: ""
+
+geoserver:
+  secrets:
+    # secret with GEOSERVER_USER and GEOSERVER_PASS keys, e.g. the one created by the pp-geoserver chart
+    externalSecretName: ''
 
 tracing:
   enabled: false

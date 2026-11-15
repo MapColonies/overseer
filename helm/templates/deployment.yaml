@@ -6,6 +6,7 @@
 {{- $cloudProviderDockerRegistryUrl := include "overseer.cloudProviderDockerRegistryUrl" . -}}
 {{- $imageTag := include "overseer.tag" . -}}
 {{- $storage := (include "common.storage.merged" .) | fromYaml }}
+{{- $geoserver := (include "common.geoserver.merged" .) | fromYaml }}
 
 {{- /* PVC handling - check if both PVCs point to the same claim */ -}}
 {{- $samePvc := and $storage.fs.ingestionSourcePvc.enabled $storage.fs.internalPvc.enabled (eq $storage.fs.internalPvc.name $storage.fs.ingestionSourcePvc.name) }}
@@ -98,6 +99,18 @@ spec:
             {{- end }}
             {{- if .Values.extraEnvVars }}
             {{- toYaml .Values.extraEnvVars | nindent 12 }}
+            {{- end }}
+            {{- if eq .Values.instanceType "ingestion" }}
+            - name: GEOSERVER_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "geoserver.secrets.externalSecretName is required for the ingestion instance" $geoserver.secrets.externalSecretName }}
+                  key: GEOSERVER_USER
+            - name: GEOSERVER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $geoserver.secrets.externalSecretName }}
+                  key: GEOSERVER_PASS
             {{- end }}
             {{- if eq (upper $storage.gpkgProvider) "S3" }}
             - name: S3_ACCESS_KEY_ID

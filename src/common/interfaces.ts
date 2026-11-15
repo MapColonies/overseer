@@ -49,7 +49,11 @@ export interface JobManagerConfig {
 
 export interface GeoserverConfig {
   workspace: string;
-  datastore: string;
+  dataStore: string;
+  auth: {
+    username: string;
+    password: string;
+  };
 }
 
 export interface TaskConfig {
@@ -349,13 +353,6 @@ export interface GetMapproxyCacheResponse {
   grids?: string[];
 }
 //#endregion mapproxyApi
-
-//#region geoserverApi
-export interface InsertGeoserverRequest {
-  name: LayerName;
-  nativeName: string;
-}
-//#endregion geoserverApi
 
 //#region catalogClient
 
