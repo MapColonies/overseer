@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.2](https://github.com/MapColonies/overseer/compare/v3.0.1...v3.0.2) (2026-11-15)
+
+
+### Bug Fixes
+
+* delete only cache tiles that can touch the previous footprint (MAPCO-12035) ([#124](https://github.com/MapColonies/overseer/issues/124)) ([9197336](https://github.com/MapColonies/overseer/commit/919733624f88edbbeaa4d4775a6af157b3639949))
+
+
+### Performance Improvements
+
+* compute cache deletion ranges with footprintsToTileRanges (MAPCO-12035) ([#129](https://github.com/MapColonies/overseer/issues/129)) ([9197336](https://github.com/MapColonies/overseer/commit/919733624f88edbbeaa4d4775a6af157b3639949))
+* merge neighbouring tile ranges via mc-utils[#106](https://github.com/MapColonies/overseer/issues/106) (MAPCO-12039) ([#130](https://github.com/MapColonies/overseer/issues/130)) ([9197336](https://github.com/MapColonies/overseer/commit/919733624f88edbbeaa4d4775a6af157b3639949))
+
 ## [3.0.1](https://github.com/MapColonies/overseer/compare/v3.0.0...v3.0.1) (2026-10-04)
 
 
