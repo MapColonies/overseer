@@ -141,11 +141,21 @@ export class CacheDeletionJobCreator {
 
   private async *buildRangeTasks(job: IngestionFinalizeJob, prefix: string, logger: Logger): AsyncGenerator<CacheDeletionTask> {
     const { maxZoom, tileBatchSize, maxRangesPerTask } = this.taskConfig;
+    const { previousFootprint } = job.parameters.additionalParams;
 
-    const geometry = await this.readProductGeometry(job.parameters.inputFiles.productShapefilePath);
-    logger.info({ msg: 'Computing tile ranges over the updated footprint', maxZoom, tileBatchSize, maxRangesPerTask });
+    const updateArea = await this.readProductGeometry(job.parameters.inputFiles.productShapefilePath);
+    logger.info({
+      msg: 'Computing tile ranges over the updated footprint',
+      maxZoom,
+      tileBatchSize,
+      maxRangesPerTask,
+      restrictedToPreviousFootprint: previousFootprint !== undefined,
+    });
 
-    const ranges = footprintToTileRanges(geometry, { minZoom: 0, maxZoom });
+    // only the tiles touching both the update area and the previous footprint can hold changed cache; without the
+    // previous footprint (jobs created before init recorded it) every tile of the update area is covered
+    const footprints = previousFootprint === undefined ? [updateArea] : [updateArea, previousFootprint];
+    const ranges = footprintToTileRanges(footprints, { minZoom: 0, maxZoom }, { maxHeldSingleTiles: tileBatchSize });
 
     for await (const batch of limitedTileBatchGenerator(tileBatchSize, maxRangesPerTask, ranges)) {
       yield {
