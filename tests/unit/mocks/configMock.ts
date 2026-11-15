@@ -177,7 +177,7 @@ const registerDefaultConfig = (): void => {
           cacheDeletion: {
             type: 'tiles-deletion',
             maxZoom: 21,
-            tileBatchSize: 100000,
+            tileBatchSize: 1000000,
             maxRangesPerTask: 5000,
             taskBatchSize: 5,
             gracefulReloadMaxSeconds: 300,
