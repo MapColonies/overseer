@@ -8,3 +8,12 @@ export const convertObjectKeysToSnakeCase = (obj: Record<string, unknown>): Reco
   }
   return newObj;
 };
+
+export const convertArrayValuesToDelimitedString = (obj: Record<string, unknown>, separator = ','): Record<string, unknown> => {
+  const newObj: Record<string, unknown> = {};
+  for (const key in obj) {
+    const value = obj[key];
+    newObj[key] = Array.isArray(value) ? value.join(separator) : value;
+  }
+  return newObj;
+};
