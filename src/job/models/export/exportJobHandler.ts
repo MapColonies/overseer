@@ -364,9 +364,25 @@ export class ExportJobHandler extends JobHandler implements IJobHandler<ExportJo
       { filePath: gpkgFilePath, s3Key: gpkgS3Key, contentType: GPKG_CONTENT_TYPE },
       { filePath: jsonFilePath, s3Key: jsonS3Key, contentType: JSON_CONTENT_TYPE },
     ]);
-    await this.fsService.deleteFileAndParentDir(gpkgFilePath);
     const updatedParams = await this.markFinalizeStepAsCompleted(jobId, taskId, taskParams, 'gpkgUploadedToS3');
+    await this.cleanupLocalArtifacts(gpkgFilePath, jsonFilePath, jobId, taskId);
     return updatedParams;
+  }
+
+  private async cleanupLocalArtifacts(gpkgFilePath: string, jsonFilePath: string, jobId: string, taskId: string): Promise<void> {
+    const logger = this.logger.child({ jobId, taskId });
+
+    try {
+      await this.fsService.deleteFile(jsonFilePath);
+    } catch (err) {
+      logger.warn({ msg: 'Failed to delete local json artifact after S3 upload', jsonFilePath, err });
+    }
+
+    try {
+      await this.fsService.deleteFileAndParentDir(gpkgFilePath);
+    } catch (err) {
+      logger.warn({ msg: 'Failed to delete local gpkg artifact after S3 upload', gpkgFilePath, err });
+    }
   }
 
   private async updateCallbackParams(job: ExportJob, status: CallbacksStatus, callbackParams: Partial<CallbackExportResponse> = {}): Promise<void> {
