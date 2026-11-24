@@ -9,8 +9,6 @@ Expand the name of the chart.
 Common labels
 */}}
 {{- define "overseer.labels" -}}
-app.kubernetes.io/name: {{ include "overseer.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
 helm.sh/chart: {{ include "overseer.chart" . }}
 {{ include "overseer.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
