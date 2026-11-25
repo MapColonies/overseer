@@ -90,13 +90,21 @@
   "ingestionSourcesDirPath": "INGESTION_SOURCES_DIR_PATH",
   "servicesUrl": {
     "mapproxyApi": "MAPPROXY_API_URL",
-    "geoserverApi": "GEOSERVER_API_URL",
+    "geoserver": "GEOSERVER_URL",
     "geoserverDns": "GEOSERVER_DNS",
     "catalogManager": "CATALOG_MANAGER_URL",
     "mapproxyDns": "MAPPROXY_DNS",
     "polygonPartsManager": "POLYGON_PARTS_MANAGER_URL",
     "downloadServerPublicDNS": "DOWNLOAD_SERVER_PUBLIC_DNS",
     "jobTracker": "JOB_TRACKER_URL"
+  },
+  "geoserver": {
+    "workspace": "GEOSERVER_WORKSPACE",
+    "dataStore": "GEOSERVER_DATASTORE",
+    "auth": {
+      "username": "GEOSERVER_USER",
+      "password": "GEOSERVER_PASSWORD"
+    }
   },
   "instanceType": "INSTANCE_TYPE",
   "jobManagement": {
@@ -113,10 +121,6 @@
         "__name": "DEQUEUE_INTERVAL_MS",
         "__format": "number"
       }
-    },
-    "geoserver": {
-      "workspace": "GEOSERVER_WORKSPACE",
-      "datastore": "GEOSERVER_DATASTORE"
     },
     "polling": {
       "maxTaskAttempts": {
