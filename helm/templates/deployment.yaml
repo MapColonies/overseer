@@ -37,7 +37,7 @@ spec:
         app: {{ $chartName }}
         release: {{ $releaseName }}
         run: {{ $releaseName }}-{{ $chartName }}
-        {{- include "overseer.selectorLabels" . | nindent 8 }}
+        {{- include "overseer.labels" . | nindent 8 }}
       annotations:
         {{- if .Values.resetOnConfigChange }}
         checksum/configmap: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
