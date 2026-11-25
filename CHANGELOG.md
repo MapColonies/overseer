@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.3](https://github.com/MapColonies/overseer/compare/v3.0.2...v3.0.3) (2026-11-25)
+
+
+### Bug Fixes
+
+* **helm:** add mclabels to pod template labels ([#132](https://github.com/MapColonies/overseer/issues/132)) ([5e8c1b3](https://github.com/MapColonies/overseer/commit/5e8c1b36c02687113e8eb19c211b14958b374baa))
+
 ## [3.0.2](https://github.com/MapColonies/overseer/compare/v3.0.1...v3.0.2) (2026-11-15)
 
 
